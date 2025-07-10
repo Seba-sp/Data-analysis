@@ -1,0 +1,5 @@
+.env
+*.pdf
+already_sent.csv
+__pycache__/
+.env.* 

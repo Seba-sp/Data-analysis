@@ -1,0 +1,14 @@
+i want to make the following changes, currently the descarga_procesa_datos.py file is downloading all the data from the users, assessments and grades again, in the case of the grades and users i have a data called "created" which has the datetime the user was created or the assessment responded and the grade created, for these two cases. now, instead of downloading all the data going through all the pages and calling the api every time, first reads the first value of the json that already exist in the json users, which would be the last user created, and saves that user, then starts downloading the first page of the api, sees if the last of the 20 records of the new downloaded users is new or not, if it's new, continues to the new page until it gets to a time before or at the user saved, then adds only the new users to the json file and adds them in order from newest user to oldest to the json file. do the same for grades and handle the case of the first download when there's no json to get the last record from
+
+
+Let's make the following changes, 
+
+add a time variable on the report showing how many minutes did it take the user to answer the assessment based on the columns "created" and "submittedTimestamp" to know now how much time does it take the user to answer each assessment, also add a column in the metrics the average time it took the users that answered that assessment.
+
+Later, when creating the excel reports, when creating each sheet, before creating the name check for symbols that are not supported in excel sheet names and delete them all, then create the sheet with the adjusted name, later, change the pdf report, just show the metrics, the rest leave it on the excel report.
+
+
+I want this to be a report that gets generated daily, and save the data too, to a google drive, so i want to know where can i host this so the code gets executed, it goes to get the existing files to not download everything again, the data gets stored, and the reports also get created and stored, also these json files won't get too big, just a few mb at most when i have 5000 students, also the students get replaced every six months or every year so i won't need the data of the old ones, what can i do in those cases.
+
+If i also want to host other cronjobs that start running based on receiving data from a webhook or a webpage that has a frontend, databases and a python backend where the code does analysis based on the inputs of the user in the frontend
+
