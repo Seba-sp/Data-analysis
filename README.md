@@ -114,6 +114,21 @@ test-de-diagnostico-m0m
 - **Metrics**: `data/metrics/kpi/{course_id}.csv`
 - **Reports**: `data/reports/{course_id}/reporte.pdf`, `reporte_listas.xlsx`
 
+## 🚀 Google Cloud Platform Integration
+
+For automated daily execution, see the complete GCP integration guide:
+
+**[📖 README_GCP.md](README_GCP.md)**
+
+This includes:
+- Cloud Function deployment
+- Cloud Scheduler setup (8am Santiago time)
+- Cloud Storage integration (single files, not dated)
+- Google Drive storage (reports + CSV files)
+- Slack notifications
+- Environment variable configuration
+- Complete setup instructions
+
 ## Features
 
 - ✅ No hard-coded course IDs
@@ -125,3 +140,8 @@ test-de-diagnostico-m0m
 - ✅ Timestamp conversion for all date fields
 - ✅ Ignored users filtering
 - ✅ Comprehensive error handling
+- ✅ **Google Cloud Platform Integration** (see [README_GCP.md](README_GCP.md))
+  - Automated daily execution at 8am Santiago time
+  - Cloud Storage for data storage
+  - Google Drive for report storage
+  - Slack notifications with report links

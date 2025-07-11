@@ -1,5 +1,5 @@
 .env
 *.pdf
-already_sent.csv
+*.xlsx
 __pycache__/
 .env.* 
