@@ -1,5 +1,20 @@
 [
   {
+    "id": "687534975a41de4b96057d56",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1752511639.119639,
+    "submittedTimestamp": 1752511646.707942,
+    "modified": 1752511646.845444,
+    "learningUnit": {
+      "id": "687518ce0083d0cbd80f9e56",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "68752b9a489803c374060398",
     "user_id": "685aef7af6675ccea0eb2afa",
     "email": "soporte@preum30m.com",

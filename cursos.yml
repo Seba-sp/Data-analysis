@@ -22,3 +22,17 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
+  nivel-2-m30m:
+    name: "Gúias acumulativas nivel 2 M30M"
+    kpis:
+      - attendance_rate
+      - average_grade
+      - completion_rate
+      - response_rate
+  nivel-3-m30m:
+    name: "Gúias acumulativas nivel 3 M30M"
+    kpis:
+      - attendance_rate
+      - average_grade
+      - completion_rate
+      - response_rate

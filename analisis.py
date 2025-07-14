@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 import yaml
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import base64
 from typing import Dict, List, Any
@@ -36,6 +36,7 @@ def parse_arguments():
     parser.add_argument('--course', '-c', required=True, help='Course ID to analyze')
     parser.add_argument('--upload', '-u', action='store_true', help='Upload reports to Google Drive and send Slack notification')
     parser.add_argument('--no-upload', action='store_true', help='Skip upload and notification (default behavior)')
+    parser.add_argument('--up-to-date', action='store_true', help='Filter analysis to only include students up to date with planification')
     return parser.parse_args()
 
 def load_course_config(config_path: str = "cursos.yml"):
@@ -349,7 +350,77 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
         print(f"📊 Resumen: {len(report_links)} reportes subidos")
     return all_uploaded_files
 
-def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
+def load_planification_data(course_id: str) -> pd.DataFrame:
+    """Load planification data for a course"""
+    planification_path = Path("data") / "planification" / f"{course_id}.csv"
+    
+    if not planification_path.exists():
+        print(f"Warning: Planification file not found at {planification_path}")
+        return pd.DataFrame()
+    
+    try:
+        # Load planification data with semicolon separator
+        df_plan = pd.read_csv(planification_path, sep=';')
+        
+        # Convert date column to datetime
+        df_plan['date'] = pd.to_datetime(df_plan['date'], format='%d-%m-%Y', errors='coerce')
+        
+        # Remove rows with invalid dates
+        df_plan = df_plan.dropna(subset=['date'])
+        
+        print(f"Loaded planification data: {len(df_plan)} assessments")
+        return df_plan
+        
+    except Exception as e:
+        print(f"Error loading planification data: {e}")
+        return pd.DataFrame()
+
+def get_assessments_due_until_today(planification_df: pd.DataFrame) -> List[str]:
+    """Get list of assessment names that should have been completed until yesterday"""
+    if planification_df.empty:
+        return []
+    
+    # Get yesterday's date (since data is downloaded in the morning)
+    yesterday = datetime.now().date() - timedelta(days=1)
+    
+    # Filter assessments due until yesterday
+    due_assessments = planification_df[planification_df['date'].dt.date <= yesterday]
+    
+    assessment_names = due_assessments['assessment_name'].tolist()
+    print(f"Assessments due until {yesterday}: {len(assessment_names)} assessments")
+    
+    return assessment_names
+
+def filter_up_to_date_students(user_response_df: pd.DataFrame, due_assessments: List[str]) -> pd.DataFrame:
+    """Filter students who have completed all assessments due until today"""
+    if not due_assessments:
+        print("No assessments due, returning all students")
+        return user_response_df
+    
+    # Get unique user IDs
+    all_user_ids = user_response_df['user_id'].unique()
+    up_to_date_users = []
+    
+    for user_id in all_user_ids:
+        user_data = user_response_df[user_response_df['user_id'] == user_id]
+        
+        # Check if user has completed all due assessments
+        user_completed_assessments = user_data[user_data['responded']]['assessment'].tolist()
+        
+        # Check if all due assessments are in user's completed list
+        all_completed = all(assessment in user_completed_assessments for assessment in due_assessments)
+        
+        if all_completed:
+            up_to_date_users.append(user_id)
+    
+    print(f"Students up to date: {len(up_to_date_users)} out of {len(all_user_ids)}")
+    
+    # Filter user_response_df to only include up-to-date students
+    filtered_df = user_response_df[user_response_df['user_id'].isin(up_to_date_users)]
+    
+    return filtered_df
+
+def run_analysis_pipeline(course_id: str, upload_reports: bool = False, filter_up_to_date: bool = False):
     """Main analysis pipeline function"""
     print(f"Analyzing course: {course_id}")
     
@@ -424,6 +495,20 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
             })
     user_response_df = pd.DataFrame(user_response_summary)
 
+    # Filter students up to date if requested
+    if filter_up_to_date:
+        print("🔍 Filtering students up to date with planification...")
+        planification_df = load_planification_data(course_id)
+        due_assessments = get_assessments_due_until_today(planification_df)
+        
+        if due_assessments:
+            original_user_count = len(user_response_df['user_id'].unique())
+            user_response_df = filter_up_to_date_students(user_response_df, due_assessments)
+            filtered_user_count = len(user_response_df['user_id'].unique())
+            print(f"📊 Analysis will be performed on {filtered_user_count} students (up to date) out of {original_user_count} total students")
+        else:
+            print("⚠️  No planification data found or no assessments due, analyzing all students")
+
     # --- Lists for report ---
     no_response_users = users_df.copy()
     no_response_users['responded_any'] = no_response_users['id'].apply(lambda uid: user_response_df[user_response_df['user_id'] == uid]['responded'].any())
@@ -470,14 +555,20 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     metrics_df = pd.DataFrame(metrics)
 
     # Save metrics to CSV
-    metrics_df.to_csv(metrics_dir / f"{course_id}.csv", index=False)
-    print(f"Metrics saved to: {metrics_dir / f'{course_id}.csv'}")
+    suffix = "_up_to_date" if filter_up_to_date else ""
+    metrics_df.to_csv(metrics_dir / f"{course_id}{suffix}.csv", index=False)
+    print(f"Metrics saved to: {metrics_dir / f'{course_id}{suffix}.csv'}")
 
     # --- PDF REPORT GENERATION (simplified to show only metrics) ---
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.cell(0, 10, f"Métricas de notas y tiempos - Curso: {course_id}", ln=True, align="C")
+    
+    # Add title with up-to-date indicator
+    title = f"Métricas de notas y tiempos - Curso: {course_id}"
+    if filter_up_to_date:
+        title += " (Estudiantes al día)"
+    pdf.cell(0, 10, title, ln=True, align="C")
 
     # Metrics Table
     pdf.set_font("Arial", size=12)
@@ -520,15 +611,24 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     pdf.cell(0, 8, f"Total de alumnos: {total_users}", ln=True)
     pdf.cell(0, 8, f"Alumnos que respondieron al menos una evaluación: {unique_responded}", ln=True)
     pdf.cell(0, 8, f"Porcentaje de asistencia: {attendance_pct:.2f}%", ln=True)
+    
+    # Add up-to-date information if filtering was applied
+    if filter_up_to_date:
+        planification_df = load_planification_data(course_id)
+        due_assessments = get_assessments_due_until_today(planification_df)
+        if due_assessments:
+            pdf.cell(0, 8, f"Alumnos al día (completaron {len(due_assessments)} evaluaciones hasta ayer): {unique_responded}", ln=True)
+    
     pdf.ln(5)
 
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
-    pdf_path = reports_dir / f"reporte_{course_id}_{fecha_actual}.pdf"
+    suffix = "_up_to_date" if filter_up_to_date else ""
+    pdf_path = reports_dir / f"reporte_{course_id}{suffix}_{fecha_actual}.pdf"
     pdf.output(str(pdf_path))
     print(f"PDF report generated: {pdf_path}")
 
     # --- Export lists to Excel (grouped by assessment for responded) ---
-    excel_path = reports_dir / f"reporte_{course_id}_{fecha_actual}.xlsx"
+    excel_path = reports_dir / f"reporte_{course_id}{suffix}_{fecha_actual}.xlsx"
     with pd.ExcelWriter(excel_path) as writer:
         # Sheet for users with no response
         pd.DataFrame(no_response_list, columns=["correo", "usuario"]).to_excel(
@@ -576,4 +676,7 @@ if __name__ == "__main__":
     if args.no_upload:
         upload_enabled = False
     
-    run_analysis_pipeline(args.course, upload_enabled) 
+    # Determine if up-to-date filtering should be enabled
+    filter_up_to_date = args.up_to_date
+
+    run_analysis_pipeline(args.course, upload_enabled, filter_up_to_date) 

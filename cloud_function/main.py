@@ -235,14 +235,15 @@ def send_slack_notification(course_results: List[Dict[str, Any]]):
     except Exception as e:
         logger.error(f"Error sending Slack notification: {e}")
 
-def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, Any]:
+def process_course(course_id: str, course_config: Dict[str, Any], up_to_date: bool = False) -> Dict[str, Any]:
     """Process a single course and return results"""
     result = {
         'course_id': course_id,
         'course_name': course_config.get('name', course_id),
         'status': 'success',
         'drive_links': [],
-        'gcs_files': []
+        'gcs_files': [],
+        'up_to_date_filter': up_to_date
     }
     
     try:
@@ -256,6 +257,7 @@ def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, A
             os.makedirs('data/raw', exist_ok=True)
             os.makedirs('data/processed', exist_ok=True)
             os.makedirs('data/reports', exist_ok=True)
+            os.makedirs('data/planification', exist_ok=True)
             
             # Copy configuration files
             # Note: In production, these should be stored in Cloud Storage or environment variables
@@ -263,13 +265,22 @@ def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, A
                 import yaml
                 yaml.dump({'courses': {course_id: course_config}}, f)
             
+            # Copy planification file if it exists
+            planification_source = f"data/planification/{course_id}.csv"
+            if os.path.exists(planification_source):
+                import shutil
+                shutil.copy2(planification_source, f"data/planification/{course_id}.csv")
+                logger.info(f"Copied planification file for {course_id}")
+            
             # Run download pipeline (now handles Cloud Storage uploads directly)
             logger.info(f"Starting download pipeline for {course_id}")
             run_download_pipeline(course_id)
             
-            # Run analysis pipeline with upload enabled
+            # Run analysis pipeline with upload enabled and up-to-date filtering if requested
             logger.info(f"Starting analysis pipeline for {course_id}")
-            run_analysis_pipeline(course_id, upload_reports=True)
+            if up_to_date:
+                logger.info(f"Up-to-date filtering enabled for {course_id}")
+            run_analysis_pipeline(course_id, upload_reports=True, filter_up_to_date=up_to_date)
             
             # Note: Raw data is now uploaded directly to Cloud Storage by the download pipeline
             # Processed data and reports are uploaded by the analysis pipeline
@@ -327,13 +338,20 @@ def course_analysis_pipeline(request):
             logger.error("No courses found in configuration")
             return (json.dumps({'error': 'No courses configured'}), 400, headers)
         
+        # Check if up-to-date filtering is requested
+        request_data = request.get_json() if request.is_json else {}
+        up_to_date = request_data.get('up_to_date', False)
+        
+        if up_to_date:
+            logger.info("Up-to-date filtering enabled for all courses")
+        
         logger.info(f"Processing {len(courses)} courses")
         
         # Process each course
         course_results = []
         for course_id, course_config in courses.items():
             logger.info(f"Processing course: {course_id}")
-            result = process_course(course_id, course_config)
+            result = process_course(course_id, course_config, up_to_date=up_to_date)
             course_results.append(result)
             
             if result['status'] == 'success':
@@ -352,6 +370,7 @@ def course_analysis_pipeline(request):
             'total_courses': len(courses),
             'successful': len(successful_courses),
             'failed': len(failed_courses),
+            'up_to_date_filter': up_to_date,
             'results': course_results
         }
         

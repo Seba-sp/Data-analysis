@@ -1,3 +1,5 @@
 test-de-diagnostico-m30m
 lecciones-m0m
 nivel-1-m30m
+nivel-2-m30m
+nivel-3-m30m

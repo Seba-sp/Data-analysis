@@ -22,6 +22,7 @@ def parse_arguments():
     parser.add_argument('--download-only', action='store_true', help='Only download data, skip analysis')
     parser.add_argument('--analysis-only', action='store_true', help='Only run analysis, skip download')
     parser.add_argument('--upload-only', action='store_true', help='Only upload reports/CSVs to Google Drive, skip download and analysis')
+    parser.add_argument('--up-to-date', action='store_true', help='Filter analysis to only include students up to date with planification')
     return parser.parse_args()
 
 # --- Google Drive upload logic ---
@@ -205,7 +206,8 @@ def get_slack_client():
     return WebClient(token=slack_token)
 
 def run_batch_pipeline(config_path: str, specific_courses: list = None, 
-                      download_only: bool = False, analysis_only: bool = False, upload_only: bool = False):
+                      download_only: bool = False, analysis_only: bool = False, upload_only: bool = False,
+                      up_to_date: bool = False):
     """Run pipeline for multiple courses"""
     
     # Load configuration
@@ -227,6 +229,9 @@ def run_batch_pipeline(config_path: str, specific_courses: list = None,
     print(f"Processing {len(courses_to_process)} courses:")
     for course_id in courses_to_process:
         print(f"  - {course_id}: {courses_to_process[course_id].get('name', 'Unknown')}")
+    
+    if up_to_date:
+        print("🔍 Up-to-date filtering enabled - only students current with planification will be analyzed")
     
     # Process each course
     for course_id, course_config in courses_to_process.items():
@@ -251,7 +256,7 @@ def run_batch_pipeline(config_path: str, specific_courses: list = None,
             # Analysis phase
             if not download_only:
                 print(f"Analyzing data for {course_id}...")
-                run_analysis_pipeline(course_id)
+                run_analysis_pipeline(course_id, upload_reports=False, filter_up_to_date=up_to_date)
                 print(f"Analysis completed for {course_id}")
                 
         except Exception as e:
@@ -268,5 +273,6 @@ if __name__ == "__main__":
         specific_courses=args.courses,
         download_only=args.download_only,
         analysis_only=args.analysis_only,
-        upload_only=args.upload_only
+        upload_only=args.upload_only,
+        up_to_date=args.up_to_date
     ) 

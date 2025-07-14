@@ -1,0 +1,77 @@
+[
+  {
+    "id": "687535f9c34a7fdb520848c6",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1752511993.200004,
+    "submittedTimestamp": 1752512001.381583,
+    "modified": 1752512001.533383,
+    "learningUnit": {
+      "id": "686fc337b17d46df910e1716",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6875090b332f23edcb0fed66",
+    "user_id": "686bd47ab9052e876a0c4182",
+    "email": "lepecony2007@gmail.com",
+    "grade": 72,
+    "created": 1752500491.338452,
+    "submittedTimestamp": 1752504421.423815,
+    "modified": 1752504421.597105,
+    "learningUnit": {
+      "id": "687115e1339bd4ec120307a6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "687026a8ea52dc4bd8062856",
+    "user_id": "686bd47ab9052e876a0c4182",
+    "email": "lepecony2007@gmail.com",
+    "grade": 85,
+    "created": 1752180392.800682,
+    "submittedTimestamp": 1752186975.238196,
+    "modified": 1752186975.368386,
+    "learningUnit": {
+      "id": "686e9bdd8b74a3c177007c66",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "686f06d030043ef11d079555",
+    "user_id": "686bd47ab9052e876a0c4182",
+    "email": "lepecony2007@gmail.com",
+    "grade": 80,
+    "created": 1752106704.636564,
+    "submittedTimestamp": 1752110740.292858,
+    "modified": 1752110740.432763,
+    "learningUnit": {
+      "id": "686e9adc3146b6b69109cb76",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "686eb9770d791ed8c8094385",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1752086903.391873,
+    "submittedTimestamp": 1752086910.197103,
+    "modified": 1752086910.301265,
+    "learningUnit": {
+      "id": "686e9adc3146b6b69109cb76",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  }
+]

@@ -8,7 +8,10 @@ This project provides a complete pipeline for downloading, processing, and analy
 proyecto/
 ├── data/
 │   ├── raw/{course_id}/...          # Raw JSON data from API
-│   └── processed/{course_id}/...     # Processed CSV files
+│   ├── processed/{course_id}/...     # Processed CSV files
+│   ├── planification/               # Assessment schedule files
+│   │   └── {course_id}.csv         # Assessment names and due dates
+│   └── reports/{course_id}/...       # Generated reports (PDF, Excel)
 ├── metrics/{kpi}/{course_id}.csv     # KPI metrics per course
 └── reports/{course_id}/...           # Generated reports (PDF, Excel)
 ```
@@ -47,12 +50,21 @@ This will delete all raw data for the course and re-download everything from the
 python analisis.py --course test-de-diagnostico-m30m
 ```
 
+#### Analyze Data with Up-to-Date Student Filtering
+```bash
+python analisis.py --course test-de-diagnostico-m30m --up-to-date
+```
+This will filter the analysis to only include students who have completed all assessments due until yesterday (based on the planification schedule).
+
 #### Analyze Data and Upload to Google Drive with Slack Notification
 ```bash
 python analisis.py --course test-de-diagnostico-m30m --upload
 ```
-- This will upload only today's reports and processed files for the course to its folder in Google Drive, replacing any files with the same name.
-- After upload, a Slack notification will be sent with links to the uploaded reports.
+
+#### Analyze Data with Up-to-Date Filtering and Upload
+```bash
+python analisis.py --course test-de-diagnostico-m30m --up-to-date --upload
+```
 
 ### Batch Processing
 
@@ -60,14 +72,20 @@ python analisis.py --course test-de-diagnostico-m30m --upload
 ```bash
 python batch_process.py
 ```
-- To upload only today's files for all courses (replacing files with the same name) and send Slack notifications, use:
+
+#### Process All Courses with Up-to-Date Filtering
 ```bash
-python batch_process.py --upload-only
+python batch_process.py --up-to-date
 ```
 
-#### Process Specific Courses
+#### Process Specific Courses with Up-to-Date Filtering
 ```bash
-python batch_process.py --courses test-de-diagnostico-m30m test-de-diagnostico-m0m
+python batch_process.py --courses test-de-diagnostico-m30m test-de-diagnostico-m0m --up-to-date
+```
+
+#### To upload only today's files for all courses (replacing files with the same name) and send Slack notifications, use:
+```bash
+python batch_process.py --upload-only
 ```
 
 #### Download Only (Skip Analysis)
@@ -90,6 +108,43 @@ while IFS= read -r course_id; do
     python analisis.py --course "$course_id"
 done < cursos.txt
 ```
+
+## Planification Feature
+
+The system now supports filtering analysis to only include students who are up to date with their assessments based on a planification schedule.
+
+### Planification Files
+
+Create CSV files in `data/planification/` with the following structure:
+- **Filename**: `{course_id}.csv` (e.g., `nivel-1-m30m.csv`)
+- **Format**: CSV with semicolon separator
+- **Columns**:
+  - `assessment_name`: Name of the assessment (must match exactly with assessment names in the course)
+  - `date`: Due date in format `DD-MM-YYYY`
+
+Example planification file (`data/planification/nivel-1-m30m.csv`):
+```csv
+assessment_name;date
+Test [M30M-CNE1];08-07-2025
+Test [M30M-CNE2];08-07-2025
+Test [M30M-CNE3];08-07-2025
+Guía acumulativa 1;08-07-2025
+```
+
+### How Up-to-Date Filtering Works
+
+1. **Date Logic**: Since data is downloaded in the morning, the system considers assessments due until **yesterday** as "up to date"
+2. **Student Filtering**: Only students who have completed ALL assessments due until yesterday are included in the analysis
+3. **Report Generation**: Reports are generated with the suffix `_up_to_date` to distinguish them from regular reports
+4. **Metrics**: Both regular and up-to-date metrics are saved separately
+
+### Use Cases
+
+- **Regular Analysis**: Analyze all students regardless of their progress
+- **Up-to-Date Analysis**: Focus on students who are following the schedule, useful for:
+  - Identifying students who need intervention
+  - Analyzing performance of engaged students
+  - Planning interventions for students falling behind
 
 ## Configuration
 
@@ -145,8 +200,8 @@ test-de-diagnostico-m0m
 
 - **Raw Data**: `data/raw/{course_id}/assessments.json`, `users.json`, `grades.json`
 - **Processed Data**: `data/processed/{course_id}/assessments.csv`, `users.csv`, `grades.csv`
-- **Metrics**: `data/metrics/kpi/{course_id}.csv`
-- **Reports**: `data/reports/{course_id}/reporte.pdf`, `reporte_listas.xlsx`
+- **Metrics**: `data/metrics/kpi/{course_id}.csv` (regular) and `data/metrics/kpi/{course_id}_up_to_date.csv` (filtered)
+- **Reports**: `data/reports/{course_id}/reporte.pdf`, `reporte_listas.xlsx` (regular) and `data/reports/{course_id}/reporte_up_to_date.pdf`, `reporte_up_to_date.xlsx` (filtered)
 
 ## 🚀 Google Cloud Platform Integration
 
@@ -163,6 +218,20 @@ This includes:
 - Environment variable configuration
 - Complete setup instructions
 
+### Cloud Function with Up-to-Date Filtering
+
+The Cloud Function now supports up-to-date filtering via HTTP request:
+
+```bash
+# Regular execution (all students)
+curl -X POST https://your-function-url
+
+# Up-to-date filtering
+curl -X POST https://your-function-url \
+  -H "Content-Type: application/json" \
+  -d '{"up_to_date": true}'
+```
+
 ## Features
 
 - ✅ No hard-coded course IDs
@@ -174,6 +243,10 @@ This includes:
 - ✅ Timestamp conversion for all date fields
 - ✅ Ignored users filtering
 - ✅ Comprehensive error handling
+- ✅ **Up-to-Date Student Filtering**
+  - Filter analysis to students following planification schedule
+  - Separate reports for regular and filtered analysis
+  - Configurable assessment due dates via CSV files
 - ✅ **Google Drive and Slack Integration**
   - Automatic upload of reports and CSV files to Google Drive
   - Slack notifications with file links
@@ -183,3 +256,4 @@ This includes:
   - Cloud Storage for data storage
   - Google Drive for report storage
   - Slack notifications with report links
+  - Support for up-to-date filtering via HTTP requests

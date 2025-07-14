@@ -1,5 +1,35 @@
 [
   {
+    "id": "687539629cbc2fb9f7061495",
+    "user_id": "686bd474b9052e876a0c40ce",
+    "email": "antitobecerraa@gmail.com",
+    "grade": 60,
+    "created": 1752512866.23405,
+    "submittedTimestamp": 1752513512.138307,
+    "modified": 1752513512.314162,
+    "learningUnit": {
+      "id": "6866df736d7874650503fd26",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6875333958ee2b61140cee35",
+    "user_id": "686bd479b9052e876a0c415e",
+    "email": "josefaacatalan@gmail.com",
+    "grade": 100,
+    "created": 1752511289.277248,
+    "submittedTimestamp": 1752511793.618975,
+    "modified": 1752511793.751039,
+    "learningUnit": {
+      "id": "6866e5731580dba3ed0f68b6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "687527ff7a7fbd323b0ca759",
     "user_id": "686bd476b9052e876a0c410d",
     "email": "constanzaignaciafuentes@gmail.com",
