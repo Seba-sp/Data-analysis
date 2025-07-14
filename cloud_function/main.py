@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Any
 import pytz
+import functions_framework
 
 # Google Cloud imports
 from google.cloud import storage
@@ -27,24 +28,41 @@ from descarga_procesa_datos import run_full_pipeline as run_download_pipeline
 from analisis import run_analysis_pipeline as run_analysis_pipeline
 from batch_process import load_course_config
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging for Cloud Functions
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Environment variables
-PROJECT_ID = os.environ.get('GCP_PROJECT_ID')
-BUCKET_NAME = os.environ.get('GCP_BUCKET_NAME')
-SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
-SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL')
-GOOGLE_DRIVE_FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
+# Environment variables with defaults for local testing
+PROJECT_ID = os.environ.get('GCP_PROJECT_ID', 'your-project-id')
+BUCKET_NAME = os.environ.get('GCP_BUCKET_NAME', 'your-bucket-name')
+SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
+SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL', '#general')
+GOOGLE_DRIVE_FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID', '')
 IGNORED_USERS = os.environ.get('IGNORED_USERS', '').split(',') if os.environ.get('IGNORED_USERS') else []
 
 # Initialize clients
-storage_client = storage.Client()
-bucket = storage_client.bucket(BUCKET_NAME)
+storage_client = None
+bucket = None
+
+def initialize_clients():
+    """Initialize Google Cloud clients"""
+    global storage_client, bucket
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        logger.info(f"Initialized Cloud Storage client for bucket: {BUCKET_NAME}")
+    except Exception as e:
+        logger.error(f"Failed to initialize Cloud Storage client: {e}")
+        raise
 
 def get_slack_client():
     """Initialize Slack client"""
+    if not SLACK_BOT_TOKEN:
+        logger.warning("SLACK_BOT_TOKEN not configured")
+        return None
     return WebClient(token=SLACK_BOT_TOKEN)
 
 def get_drive_service():
@@ -53,6 +71,10 @@ def get_drive_service():
     
     # Get the service account key (could be base64 encoded or raw JSON)
     service_account_key = os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY')
+    
+    if not service_account_key:
+        logger.error("GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set")
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_KEY not configured")
     
     try:
         # Try to decode as base64 first
@@ -74,6 +96,9 @@ def get_drive_service():
 
 def upload_to_cloud_storage(local_path: str, gcs_path: str) -> str:
     """Upload file to Google Cloud Storage"""
+    if not storage_client or not bucket:
+        initialize_clients()
+    
     try:
         blob = bucket.blob(gcs_path)
         blob.upload_from_filename(local_path)
@@ -128,23 +153,26 @@ def upload_report_to_drive(file_path: str, filename: str) -> str:
 
 def send_slack_notification(course_results: List[Dict[str, Any]]):
     """Send Slack notification with results summary"""
+    slack_client = get_slack_client()
+    if not slack_client:
+        logger.warning("Slack client not available, skipping notification")
+        return
+    
     try:
-        slack_client = get_slack_client()
-        
         # Create message blocks
         blocks = [
             {
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "📊 Daily Course Analysis Report"
+                    "text": "📊 Reporte Diario de Análisis de Cursos"
                 }
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Analysis completed at:* {datetime.now(pytz.timezone('America/Santiago')).strftime('%Y-%m-%d %H:%M:%S %Z')}"
+                    "text": f"*Análisis completado:* {datetime.now(pytz.timezone('America/Santiago')).strftime('%Y-%m-%d %H:%M:%S %Z')}"
                 }
             }
         ]
@@ -157,12 +185,12 @@ def send_slack_notification(course_results: List[Dict[str, Any]]):
             
             # Create course section
             course_text = f"*{course_name}*\n"
-            course_text += f"Status: {status}\n"
+            course_text += f"Estado: {status}\n"
             
             if drive_links:
-                course_text += "Files:\n"
+                course_text += "Archivos:\n"
                 for link in drive_links:
-                    course_text += f"• <{link}|View File>\n"
+                    course_text += f"• <{link}|Ver Archivo>\n"
             
             blocks.append({
                 "type": "section",
@@ -181,14 +209,22 @@ def send_slack_notification(course_results: List[Dict[str, Any]]):
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": "🤖 Automated by Google Cloud Function"
+                    "text": "🤖 Automatizado por Google Cloud Function"
                 }
             ]
         })
         
+        # Create fallback text for accessibility
+        fallback_text = f"📊 Reporte Diario de Análisis de Cursos\nAnálisis completado: {datetime.now(pytz.timezone('America/Santiago')).strftime('%Y-%m-%d %H:%M:%S %Z')}"
+        for result in course_results:
+            course_name = result.get('course_name', result.get('course_id', 'Unknown'))
+            status = result.get('status', 'Unknown')
+            fallback_text += f"\n{course_name}: {status}"
+        
         # Send message
         slack_client.chat_postMessage(
             channel=SLACK_CHANNEL,
+            text=fallback_text,  # Required for accessibility
             blocks=blocks
         )
         
@@ -227,55 +263,22 @@ def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, A
                 import yaml
                 yaml.dump({'courses': {course_id: course_config}}, f)
             
-            # Run download pipeline
+            # Run download pipeline (now handles Cloud Storage uploads directly)
             logger.info(f"Starting download pipeline for {course_id}")
             run_download_pipeline(course_id)
             
-            # Run analysis pipeline
+            # Run analysis pipeline with upload enabled
             logger.info(f"Starting analysis pipeline for {course_id}")
-            run_analysis_pipeline(course_id)
+            run_analysis_pipeline(course_id, upload_reports=True)
             
-            # Upload raw data to Cloud Storage (single file, not dated)
-            raw_dir = f'data/raw/{course_id}'
-            if os.path.exists(raw_dir):
-                gcs_prefix = f'raw/{course_id}'
-                result['gcs_files'].extend(upload_directory_to_gcs(raw_dir, gcs_prefix))
-            
-            # Upload processed data to Cloud Storage (single file, not dated)
-            processed_dir = f'data/processed/{course_id}'
-            if os.path.exists(processed_dir):
-                gcs_prefix = f'processed/{course_id}'
-                result['gcs_files'].extend(upload_directory_to_gcs(processed_dir, gcs_prefix))
-            
-            # Upload reports to Google Drive
-            reports_dir = f'data/reports/{course_id}'
-            if os.path.exists(reports_dir):
-                for file in os.listdir(reports_dir):
-                    if file.endswith(('.xlsx', '.pdf')):
-                        file_path = os.path.join(reports_dir, file)
-                        timestamp = datetime.now().strftime("%Y-%m-%d")
-                        filename = f"{course_id}_{file.replace('.', f'_{timestamp}.')}"
-                        
-                        try:
-                            drive_link = upload_report_to_drive(file_path, filename)
-                            result['drive_links'].append(drive_link)
-                        except Exception as e:
-                            logger.error(f"Failed to upload report {file}: {e}")
-            
-            # Upload processed CSV files to Google Drive
-            processed_dir = f'data/processed/{course_id}'
-            if os.path.exists(processed_dir):
-                for file in os.listdir(processed_dir):
-                    if file.endswith('.csv'):
-                        file_path = os.path.join(processed_dir, file)
-                        timestamp = datetime.now().strftime("%Y-%m-%d")
-                        filename = f"{course_id}_{file.replace('.csv', f'_{timestamp}.csv')}"
-                        
-                        try:
-                            drive_link = upload_report_to_drive(file_path, filename)
-                            result['drive_links'].append(drive_link)
-                        except Exception as e:
-                            logger.error(f"Failed to upload CSV {file}: {e}")
+            # Note: Raw data is now uploaded directly to Cloud Storage by the download pipeline
+            # Processed data and reports are uploaded by the analysis pipeline
+            # Track the Cloud Storage paths for reporting
+            result['gcs_files'].extend([
+                f"gs://{BUCKET_NAME}/raw/{course_id}/assessments.json",
+                f"gs://{BUCKET_NAME}/raw/{course_id}/grades.json", 
+                f"gs://{BUCKET_NAME}/raw/{course_id}/users.json"
+            ])
             
             # Restore original working directory
             os.chdir(original_cwd)
@@ -287,10 +290,34 @@ def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, A
     
     return result
 
+@functions_framework.http
 def course_analysis_pipeline(request):
-    """Main Cloud Function entry point"""
+    """
+    Main Cloud Function entry point for HTTP triggers
+    
+    Args:
+        request: Flask request object
+        
+    Returns:
+        Flask response object with JSON data
+    """
+    # Set CORS headers for web requests
+    if request.method == 'OPTIONS':
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '3600'
+        }
+        return ('', 204, headers)
+    
+    headers = {'Access-Control-Allow-Origin': '*'}
+    
     try:
         logger.info("Starting daily course analysis pipeline")
+        
+        # Initialize clients
+        initialize_clients()
         
         # Load course configuration
         config = load_course_config()
@@ -298,7 +325,7 @@ def course_analysis_pipeline(request):
         
         if not courses:
             logger.error("No courses found in configuration")
-            return {'error': 'No courses configured'}, 400
+            return (json.dumps({'error': 'No courses configured'}), 400, headers)
         
         logger.info(f"Processing {len(courses)} courses")
         
@@ -330,11 +357,11 @@ def course_analysis_pipeline(request):
         
         logger.info(f"Pipeline completed. {len(successful_courses)} successful, {len(failed_courses)} failed")
         
-        return summary, 200
+        return (json.dumps(summary, indent=2), 200, headers)
         
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
-        return {'error': str(e)}, 500
+        return (json.dumps({'error': str(e)}, indent=2), 500, headers)
 
 # For local testing
 if __name__ == "__main__":

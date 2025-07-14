@@ -1,144 +1,291 @@
-# Copy of the existing descarga_procesa_datos.py file for Cloud Function
-# This file will be copied from the main directory during deployment
-
 import os
 import json
-import requests
 import pandas as pd
+import requests
 from pathlib import Path
 from datetime import datetime
-import argparse
+import shutil
 from typing import Dict, List, Any
 import yaml
+import tempfile
+
+# Google Cloud Storage imports
+from google.cloud import storage
+from google.oauth2 import service_account
+import base64
 
 def load_course_config(config_path: str = "cursos.yml"):
     """Load course configuration from YAML file"""
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-def get_api_credentials():
-    """Get API credentials from environment variables"""
-    return {
-        'client_id': os.getenv('CLIENT_ID'),
-        'school_domain': os.getenv('SCHOOL_DOMAIN'),
-        'access_token': os.getenv('ACCESS_TOKEN')
-    }
-
-def download_course_data(course_id: str, data_type: str) -> List[Dict[str, Any]]:
-    """Download data from LearnWorlds API"""
-    credentials = get_api_credentials()
-    
-    if not all(credentials.values()):
-        raise ValueError("Missing API credentials. Set CLIENT_ID, SCHOOL_DOMAIN, and ACCESS_TOKEN environment variables.")
-    
-    base_url = f"https://{credentials['school_domain']}.learnworlds.com/api/v2"
-    headers = {
-        'Authorization': f'Bearer {credentials["access_token"]}',
-        'Content-Type': 'application/json'
-    }
-    
-    # API endpoints for different data types
-    endpoints = {
-        'assessments': f'/courses/{course_id}/assessments',
-        'grades': f'/courses/{course_id}/grades',
-        'users': f'/courses/{course_id}/users'
-    }
-    
-    if data_type not in endpoints:
-        raise ValueError(f"Invalid data type: {data_type}")
-    
-    url = f"{base_url}{endpoints[data_type]}"
-    
+def get_storage_client():
+    """Initialize Google Cloud Storage client"""
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        raise Exception(f"API request failed for {data_type}: {str(e)}")
-
-def save_json_data(data: List[Dict[str, Any]], file_path: str):
-    """Save data as JSON file"""
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def convert_timestamps(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Convert timestamp fields to readable format"""
-    timestamp_fields = ['created_at', 'updated_at', 'completed_at', 'started_at']
-    
-    for item in data:
-        for field in timestamp_fields:
-            if field in item and item[field]:
-                try:
-                    # Convert Unix timestamp to datetime
-                    dt = datetime.fromtimestamp(int(item[field]))
-                    item[field] = dt.isoformat()
-                except (ValueError, TypeError):
-                    # If not a Unix timestamp, leave as is
-                    pass
-    
-    return data
-
-def filter_ignored_users(data: List[Dict[str, Any]], ignored_users: List[str]) -> List[Dict[str, Any]]:
-    """Filter out ignored users from data"""
-    if not ignored_users:
-        return data
-    
-    filtered_data = []
-    for item in data:
-        # Check if user email is in ignored list
-        user_email = item.get('email') or item.get('user_email')
-        if user_email not in ignored_users:
-            filtered_data.append(item)
-    
-    return filtered_data
-
-def process_course_data(course_id: str, course_config: Dict[str, Any]):
-    """Process data for a single course"""
-    print(f"Processing course: {course_id}")
-    
-    # Create directories
-    raw_dir = Path(f"data/raw/{course_id}")
-    processed_dir = Path(f"data/processed/{course_id}")
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    processed_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Get ignored users from environment variable
-    ignored_users_str = os.getenv('IGNORED_USERS', '')
-    ignored_users = [email.strip() for email in ignored_users_str.split(',') if email.strip()] if ignored_users_str else []
-    
-    # Download and process each data type
-    data_types = ['assessments', 'grades', 'users']
-    
-    for data_type in data_types:
-        print(f"  Downloading {data_type}...")
+        # Try to use default credentials first (for Cloud Functions)
+        return storage.Client()
+    except Exception:
+        # Fallback to service account key from environment
+        service_account_key = os.getenv('GOOGLE_SERVICE_ACCOUNT_KEY')
+        if not service_account_key:
+            raise ValueError("GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set")
         
         try:
-            # Download data
-            raw_data = download_course_data(course_id, data_type)
-            
-            # Convert timestamps
-            raw_data = convert_timestamps(raw_data)
-            
-            # Filter ignored users
-            raw_data = filter_ignored_users(raw_data, ignored_users)
-            
-            # Save raw JSON
-            json_path = raw_dir / f"{data_type}.json"
-            save_json_data(raw_data, str(json_path))
-            
-            # Convert to CSV
-            if raw_data:
-                df = pd.json_normalize(raw_data)
-                csv_path = processed_dir / f"{data_type}.csv"
-                df.to_csv(csv_path, index=False, encoding='utf-8')
-                print(f"    Saved {len(raw_data)} {data_type} records")
-            else:
-                print(f"    No {data_type} data found")
-                
-        except Exception as e:
-            print(f"    Error processing {data_type}: {str(e)}")
-            continue
+            # Try to decode as base64 first
+            decoded_key = base64.b64decode(service_account_key).decode('utf-8')
+            key_data = json.loads(decoded_key)
+        except:
+            # If base64 fails, try as raw JSON
+            key_data = json.loads(service_account_key)
+        
+        credentials = service_account.Credentials.from_service_account_info(key_data)
+        return storage.Client(credentials=credentials)
+
+def get_bucket():
+    """Get Cloud Storage bucket"""
+    client = get_storage_client()
+    bucket_name = os.getenv('GCP_BUCKET_NAME')
+    if not bucket_name:
+        raise ValueError("GCP_BUCKET_NAME environment variable not set")
+    return client.bucket(bucket_name)
+
+def download_from_gcs(gcs_path: str) -> Any:
+    """Download JSON data from Cloud Storage"""
+    try:
+        bucket = get_bucket()
+        blob = bucket.blob(gcs_path)
+        
+        if not blob.exists():
+            return None
+        
+        # Download to temporary file
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+            blob.download_to_filename(temp_file.name)
+            temp_file.seek(0)
+            data = json.load(temp_file)
+        
+        # Clean up temp file
+        os.unlink(temp_file.name)
+        return data
+    except Exception as e:
+        print(f"Error downloading from GCS {gcs_path}: {e}")
+        return None
+
+def upload_to_gcs(data: Any, gcs_path: str):
+    """Upload JSON data to Cloud Storage"""
+    try:
+        bucket = get_bucket()
+        blob = bucket.blob(gcs_path)
+        
+        # Upload JSON data
+        blob.upload_from_string(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            content_type='application/json'
+        )
+        print(f"Uploaded data to gs://{bucket.name}/{gcs_path}")
+    except Exception as e:
+        print(f"Error uploading to GCS {gcs_path}: {e}")
+        raise
+
+def get_latest_timestamp_from_gcs(course_id: str, data_type: str) -> float:
+    """Get the latest timestamp from Cloud Storage JSON file"""
+    gcs_path = f"raw/{course_id}/{data_type}.json"
+    
+    try:
+        data = download_from_gcs(gcs_path)
+        if not data:
+            return None
+        
+        # Get the first record (newest) since data is sorted by created timestamp
+        latest_record = data[0]
+        return latest_record.get('created')
+    except Exception as e:
+        print(f"Error getting latest timestamp from GCS: {e}")
+        return None
+
+def setup_directories(course_id: str):
+    """Create temporary directory structure for processing"""
+    root = Path("data")
+    directories = [
+        root / "raw" / course_id,
+        root / "processed" / course_id,
+        root / "metrics" / "kpi" / course_id,
+        root / "reports" / course_id
+    ]
+    
+    for directory in directories:
+        directory.mkdir(parents=True, exist_ok=True)
+    
+    return root
+
+def get_assessments(course_id, school_domain, headers):
+    assessment_dict = {}
+    page = 1
+    while True:
+        url = f"https://{school_domain}/admin/api/v2/courses/{course_id}/contents?page={page}"
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"Failed to fetch assessments: {response.status_code}")
+            break
+        resp_json = response.json()
+        for section in resp_json.get("sections", []):
+            for unit in section.get("learningUnits", []):
+                if unit.get("type") == "assessmentV2":
+                    key = unit.get("title") or f"{section['title']} - sin título"
+                    assessment_dict[key] = unit["id"]
+        total_pages = resp_json.get("meta", {}).get("totalPages", 1)
+        if page >= total_pages:
+            break
+        page += 1
+    return assessment_dict
+
+def get_course_grades_incremental(course_id, school_domain, headers):
+    """Download grades incrementally based on the latest timestamp from Cloud Storage"""
+    print("Checking for existing grades data in Cloud Storage...")
+    latest_timestamp = get_latest_timestamp_from_gcs(course_id, "grades")
+    
+    if latest_timestamp is None:
+        print("No existing grades data found. Performing full download...")
+        return get_course_grades_full(course_id, school_domain, headers)
+    
+    print(f"Latest grade timestamp: {datetime.fromtimestamp(latest_timestamp)}")
+    print("Downloading new grades only...")
+    
+    # Load existing data from Cloud Storage
+    existing_data = download_from_gcs(f"raw/{course_id}/grades.json") or []
+    
+    new_data = []
+    page = 1
+    reached_existing = False
+    
+    while not reached_existing:
+        url = f"https://{school_domain}/admin/api/v2/courses/{course_id}/grades?page={page}"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code != 200:
+            print(f"Failed to fetch grades: {response.status_code}")
+            break
+        
+        data = response.json()
+        page_data = data.get("data", [])
+        
+        if not page_data:
+            break
+        
+        # Check if we've reached existing data
+        for record in page_data:
+            record_timestamp = record.get('created')
+            if record_timestamp and record_timestamp <= latest_timestamp:
+                reached_existing = True
+                break
+            new_data.append(record)
+        
+        total_pages = data.get("meta", {}).get("totalPages", 1)
+        if page >= total_pages:
+            break
+        page += 1
+    
+    if new_data:
+        print(f"Found {len(new_data)} new grade records")
+        # Combine new data with existing data and sort by created timestamp (newest first)
+        combined_data = new_data + existing_data
+        combined_data.sort(key=lambda x: x.get('created', 0), reverse=True)
+        return combined_data
+    else:
+        print("No new grades found")
+        return existing_data
+
+def get_course_grades_full(course_id, school_domain, headers):
+    """Download all grades (original function)"""
+    all_data = []
+    page = 1
+    while True:
+        url = f"https://{school_domain}/admin/api/v2/courses/{course_id}/grades?page={page}"
+        response = requests.get(url, headers=headers)
+        data = response.json()
+        if response.status_code != 200:
+            print(f"Failed to fetch grades: {response.status_code}")
+            break
+        all_data.extend(data.get("data", []))
+        total_pages = data.get("meta", {}).get("totalPages", 1)
+        if page >= total_pages:
+            break
+        page += 1
+    return all_data
+
+def get_course_users_incremental(course_id, school_domain, headers):
+    """Download users incrementally based on the latest timestamp from Cloud Storage"""
+    print("Checking for existing users data in Cloud Storage...")
+    latest_timestamp = get_latest_timestamp_from_gcs(course_id, "users")
+    
+    if latest_timestamp is None:
+        print("No existing users data found. Performing full download...")
+        return get_course_users_full(course_id, school_domain, headers)
+    
+    print(f"Latest user timestamp: {datetime.fromtimestamp(latest_timestamp)}")
+    print("Downloading new users only...")
+    
+    # Load existing data from Cloud Storage
+    existing_data = download_from_gcs(f"raw/{course_id}/users.json") or []
+    
+    new_data = []
+    page = 1
+    reached_existing = False
+    
+    while not reached_existing:
+        url = f"https://{school_domain}/admin/api/v2/courses/{course_id}/users?page={page}"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code != 200:
+            print(f"Failed to fetch users: {response.status_code}")
+            break
+        
+        data = response.json()
+        page_data = data.get("data", [])
+        
+        if not page_data:
+            break
+        
+        # Check if we've reached existing data
+        for record in page_data:
+            record_timestamp = record.get('created')
+            if record_timestamp and record_timestamp <= latest_timestamp:
+                reached_existing = True
+                break
+            new_data.append(record)
+        
+        total_pages = data.get("meta", {}).get("totalPages", 1)
+        if page >= total_pages:
+            break
+        page += 1
+    
+    if new_data:
+        print(f"Found {len(new_data)} new user records")
+        # Combine new data with existing data and sort by created timestamp (newest first)
+        combined_data = new_data + existing_data
+        combined_data.sort(key=lambda x: x.get('created', 0), reverse=True)
+        return combined_data
+    else:
+        print("No new users found")
+        return existing_data
+
+def get_course_users_full(course_id, school_domain, headers):
+    """Download all users (original function)"""
+    all_data = []
+    page = 1
+    while True:
+        url = f"https://{school_domain}/admin/api/v2/courses/{course_id}/users?page={page}"
+        response = requests.get(url, headers=headers)
+        data = response.json()
+        if response.status_code != 200:
+            print(f"Failed to fetch users: {response.status_code}")
+            break
+        all_data.extend(data.get("data", []))
+        total_pages = data.get("meta", {}).get("totalPages", 1)
+        if page >= total_pages:
+            break
+        page += 1
+    return all_data
 
 def run_full_pipeline(course_id: str):
     """Run the complete download and processing pipeline for a course"""
@@ -151,29 +298,73 @@ def run_full_pipeline(course_id: str):
             raise ValueError(f"Course {course_id} not found in configuration")
         
         course_config = courses[course_id]
-        process_course_data(course_id, course_config)
+        
+        # Setup temporary directories for processing
+        root = setup_directories(course_id)
+        
+        # Get API credentials from environment variables
+        client_id = os.getenv('CLIENT_ID')
+        school_domain = os.getenv('SCHOOL_DOMAIN')
+        access_token = os.getenv('ACCESS_TOKEN')
+        
+        if not all([client_id, school_domain, access_token]):
+            raise ValueError("Missing API credentials. Set CLIENT_ID, SCHOOL_DOMAIN, and ACCESS_TOKEN environment variables.")
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        print(f"Processing course: {course_id}")
+        print(f"School domain: {school_domain}")
+        
+        # Get assessments (always full download as they don't have timestamps)
+        print("Downloading assessments...")
+        assessments = get_assessments(course_id, school_domain, headers)
+        print(f"Found {len(assessments)} assessments")
+        
+        # Save assessments to Cloud Storage
+        upload_to_gcs(assessments, f"raw/{course_id}/assessments.json")
+        
+        # Convert assessments to DataFrame and save as CSV locally for processing
+        assessments_list = [{"assessment_name": name, "assessment_id": id} for name, id in assessments.items()]
+        df_assessments = pd.DataFrame(assessments_list)
+        assessments_csv_path = root / "processed" / course_id / "assessments.csv"
+        df_assessments.to_csv(assessments_csv_path, index=False, sep=';')
+        print(f"Assessments saved to: {assessments_csv_path}")
+        
+        # Download grades incrementally from Cloud Storage
+        grades_data = get_course_grades_incremental(course_id, school_domain, headers)
+        
+        # Save grades to Cloud Storage
+        upload_to_gcs(grades_data, f"raw/{course_id}/grades.json")
+        
+        # Convert grades to DataFrame and save as CSV locally for processing
+        if grades_data:
+            df_grades = pd.json_normalize(grades_data)
+            grades_csv_path = root / "processed" / course_id / "grades.csv"
+            df_grades.to_csv(grades_csv_path, index=False, sep=';')
+            print(f"Grades saved to: {grades_csv_path} ({len(grades_data)} records)")
+        else:
+            print("No grades data found")
+        
+        # Download users incrementally from Cloud Storage
+        users_data = get_course_users_incremental(course_id, school_domain, headers)
+        
+        # Save users to Cloud Storage
+        upload_to_gcs(users_data, f"raw/{course_id}/users.json")
+        
+        # Convert users to DataFrame and save as CSV locally for processing
+        if users_data:
+            df_users = pd.json_normalize(users_data)
+            users_csv_path = root / "processed" / course_id / "users.csv"
+            df_users.to_csv(users_csv_path, index=False, sep=';')
+            print(f"Users saved to: {users_csv_path} ({len(users_data)} records)")
+        else:
+            print("No users data found")
         
         print(f"✅ Pipeline completed for {course_id}")
         
     except Exception as e:
         print(f"❌ Pipeline failed for {course_id}: {str(e)}")
-        raise
-
-def main():
-    parser = argparse.ArgumentParser(description='Download and process course data from LearnWorlds API')
-    parser.add_argument('--course', '-c', required=True, help='Course ID to process')
-    parser.add_argument('--reset-raw', action='store_true', help='Delete raw data before downloading')
-    
-    args = parser.parse_args()
-    
-    if args.reset_raw:
-        raw_dir = Path(f"data/raw/{args.course}")
-        if raw_dir.exists():
-            import shutil
-            shutil.rmtree(raw_dir)
-            print(f"Deleted raw data for {args.course}")
-    
-    run_full_pipeline(args.course)
-
-if __name__ == "__main__":
-    main() 
+        raise 

@@ -1,6 +1,3 @@
-# Copy of the existing batch_process.py file for Cloud Function
-# This file will be copied from the main directory during deployment
-
 #!/usr/bin/env python3
 """
 Batch processing script for multiple courses
@@ -8,7 +5,6 @@ Reads course configuration from cursos.yml and processes each course
 """
 
 import yaml
-import argparse
 from pathlib import Path
 from descarga_procesa_datos import run_full_pipeline as run_download_pipeline
 from analisis import run_analysis_pipeline as run_analysis_pipeline
@@ -18,16 +14,9 @@ def load_course_config(config_path: str = "cursos.yml"):
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Batch process multiple courses')
-    parser.add_argument('--config', '-f', default='cursos.yml', help='Path to course configuration file')
-    parser.add_argument('--courses', '-c', nargs='+', help='Specific course IDs to process (overrides config)')
-    parser.add_argument('--download-only', action='store_true', help='Only download data, skip analysis')
-    parser.add_argument('--analysis-only', action='store_true', help='Only run analysis, skip download')
-    return parser.parse_args()
-
 def run_batch_pipeline(config_path: str, specific_courses: list = None, 
-                      download_only: bool = False, analysis_only: bool = False):
+                      download_only: bool = False, analysis_only: bool = False,
+                      upload_reports: bool = False):
     """Run pipeline for multiple courses"""
     
     # Load configuration
@@ -67,7 +56,7 @@ def run_batch_pipeline(config_path: str, specific_courses: list = None,
             # Analysis phase
             if not download_only:
                 print(f"Analyzing data for {course_id}...")
-                run_analysis_pipeline(course_id)
+                run_analysis_pipeline(course_id, upload_reports)
                 print(f"Analysis completed for {course_id}")
                 
         except Exception as e:
@@ -75,13 +64,4 @@ def run_batch_pipeline(config_path: str, specific_courses: list = None,
             continue
     
     print(f"\n{'='*50}")
-    print("Batch processing completed!")
-
-if __name__ == "__main__":
-    args = parse_arguments()
-    run_batch_pipeline(
-        config_path=args.config,
-        specific_courses=args.courses,
-        download_only=args.download_only,
-        analysis_only=args.analysis_only
-    ) 
+    print("Batch processing completed!") 
