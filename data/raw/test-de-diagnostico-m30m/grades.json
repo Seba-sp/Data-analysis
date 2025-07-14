@@ -1,5 +1,20 @@
 [
   {
+    "id": "68715ea5bc7e1897bd079a85",
+    "user_id": "686d96fa97d7bd6ed70b03f4",
+    "email": "cornejoamaris@gmail.com",
+    "grade": 65,
+    "created": 1752260261.954409,
+    "submittedTimestamp": 1752260785.650498,
+    "modified": 1752260786.210863,
+    "learningUnit": {
+      "id": "686bb8717a6af9cdbc0f9db6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "687026b0a34ceb078101c7f5",
     "user_id": "686d96fa97d7bd6ed70b03f4",
     "email": "cornejoamaris@gmail.com",

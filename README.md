@@ -47,6 +47,11 @@ This will delete all raw data for the course and re-download everything from the
 python analisis.py --course test-de-diagnostico-m30m
 ```
 
+#### Analyze Data and Upload to Google Drive with Slack Notification
+```bash
+python analisis.py --course test-de-diagnostico-m30m --upload
+```
+
 ### Batch Processing
 
 #### Process All Courses from Configuration
@@ -102,6 +107,21 @@ Set ignored users via the `IGNORED_USERS` environment variable (comma-separated 
 export IGNORED_USERS="user1@email.com,user2@email.com,user3@email.com"
 ```
 
+### Google Drive and Slack Integration
+For automatic upload to Google Drive and Slack notifications, set these environment variables:
+
+```bash
+# Google Drive
+export GOOGLE_DRIVE_FOLDER_ID="your-google-drive-folder-id"
+export GOOGLE_SERVICE_ACCOUNT_KEY="your-service-account-key-json"
+
+# Slack
+export SLACK_BOT_TOKEN="xoxb-your-slack-bot-token"
+export SLACK_CHANNEL="#your-channel-name"
+```
+
+**Note:** The service account key should be the full JSON content or base64-encoded JSON.
+
 ### cursos.txt
 Simple text file with one course ID per line:
 ```
@@ -142,6 +162,10 @@ This includes:
 - ✅ Timestamp conversion for all date fields
 - ✅ Ignored users filtering
 - ✅ Comprehensive error handling
+- ✅ **Google Drive and Slack Integration**
+  - Automatic upload of reports and CSV files to Google Drive
+  - Slack notifications with file links
+  - Optional functionality (use `--upload` flag)
 - ✅ **Google Cloud Platform Integration** (see [README_GCP.md](README_GCP.md))
   - Automated daily execution at 8am Santiago time
   - Cloud Storage for data storage

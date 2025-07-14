@@ -6,10 +6,34 @@ from pathlib import Path
 import yaml
 import re
 from datetime import datetime
+import json
+import base64
+from typing import Dict, List, Any
+
+# Google Drive imports
+try:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    GOOGLE_DRIVE_AVAILABLE = True
+except ImportError:
+    GOOGLE_DRIVE_AVAILABLE = False
+    print("Warning: Google Drive libraries not available. Install with: pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client")
+
+# Slack imports
+try:
+    from slack_sdk import WebClient
+    from slack_sdk.errors import SlackApiError
+    SLACK_AVAILABLE = True
+except ImportError:
+    SLACK_AVAILABLE = False
+    print("Warning: Slack libraries not available. Install with: pip install slack-sdk")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Analyze course data and generate reports')
     parser.add_argument('--course', '-c', required=True, help='Course ID to analyze')
+    parser.add_argument('--upload', '-u', action='store_true', help='Upload reports to Google Drive and send Slack notification')
+    parser.add_argument('--no-upload', action='store_true', help='Skip upload and notification (default behavior)')
     return parser.parse_args()
 
 def load_course_config(config_path: str = "cursos.yml"):
@@ -51,7 +75,220 @@ def calculate_completion_time(created, submitted):
     except:
         return None
 
-def run_analysis_pipeline(course_id: str):
+def get_drive_service():
+    """Initialize Google Drive service"""
+    if not GOOGLE_DRIVE_AVAILABLE:
+        raise ImportError("Google Drive libraries not available")
+    
+    # Get the service account key from environment variable
+    service_account_key = os.getenv('GOOGLE_SERVICE_ACCOUNT_KEY')
+    
+    if not service_account_key:
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set")
+    
+    try:
+        # Try to decode as base64 first
+        try:
+            decoded_key = base64.b64decode(service_account_key).decode('utf-8')
+            key_data = json.loads(decoded_key)
+        except:
+            # If base64 fails, try as raw JSON
+            key_data = json.loads(service_account_key)
+        
+        credentials = service_account.Credentials.from_service_account_info(
+            key_data,
+            scopes=['https://www.googleapis.com/auth/drive.file']
+        )
+        return build('drive', 'v3', credentials=credentials)
+    except Exception as e:
+        print(f"Error parsing service account key: {e}")
+        raise
+
+def upload_file_to_drive(file_path: str, filename: str, folder_id: str = None) -> str:
+    """Upload file to Google Drive and return the web view link"""
+    if not GOOGLE_DRIVE_AVAILABLE:
+        print("Warning: Google Drive not available, skipping upload")
+        return None
+    
+    try:
+        drive_service = get_drive_service()
+        
+        # Use provided folder_id or get from environment
+        if not folder_id:
+            folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+            if not folder_id:
+                raise ValueError("GOOGLE_DRIVE_FOLDER_ID environment variable not set")
+        
+        file_metadata = {
+            'name': filename,
+            'parents': [folder_id]
+        }
+        
+        media = MediaFileUpload(file_path, resumable=True)
+        file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id,webViewLink'
+        ).execute()
+        
+        print(f"Uploaded {filename} to Google Drive: {file.get('webViewLink')}")
+        return file.get('webViewLink')
+        
+    except Exception as e:
+        print(f"Error uploading to Google Drive: {e}")
+        return None
+
+def get_slack_client():
+    """Initialize Slack client"""
+    if not SLACK_AVAILABLE:
+        raise ImportError("Slack libraries not available")
+    
+    slack_token = os.getenv('SLACK_BOT_TOKEN')
+    if not slack_token:
+        raise ValueError("SLACK_BOT_TOKEN environment variable not set")
+    
+    return WebClient(token=slack_token)
+
+def send_slack_notification(course_id: str, course_name: str, drive_links: List[str], channel: str = None):
+    """Send Slack notification with report links"""
+    if not SLACK_AVAILABLE:
+        print("Warning: Slack not available, skipping notification")
+        return
+    
+    try:
+        slack_client = get_slack_client()
+        
+        # Use provided channel or get from environment
+        if not channel:
+            channel = os.getenv('SLACK_CHANNEL')
+            if not channel:
+                raise ValueError("SLACK_CHANNEL environment variable not set")
+        
+        # Create message blocks
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"📊 Reporte de Análisis de Curso - {course_name}"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Curso:* {course_name}\n*ID del Curso:* {course_id}\n*Análisis completado:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                }
+            }
+        ]
+        
+        # Add file links
+        if drive_links:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*📁 Archivos Generados:*"
+                }
+            })
+            
+            for link in drive_links:
+                blocks.append({
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"• <{link}|Ver Archivo>"
+                    }
+                })
+        
+        # Add divider
+        blocks.append({"type": "divider"})
+        
+        # Add footer
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "🤖 Automatizado por el Pipeline de Análisis de Cursos"
+                }
+            ]
+        })
+        
+        # Create fallback text for accessibility
+        fallback_text = f"📊 Reporte de Análisis de Curso - {course_name}\nCurso: {course_name}\nID del Curso: {course_id}\nAnálisis completado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        if drive_links:
+            fallback_text += f"\nArchivos generados: {len(drive_links)} archivos"
+        
+        # Send message
+        slack_client.chat_postMessage(
+            channel=channel,
+            text=fallback_text,  # Required for accessibility
+            blocks=blocks
+        )
+        
+        print(f"Notificación de Slack enviada a {channel}")
+        
+    except SlackApiError as e:
+        print(f"Error de API de Slack: {e.response['error']}")
+    except Exception as e:
+        print(f"Error enviando notificación de Slack: {e}")
+
+def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Path, processed_dir: Path):
+    """Upload reports and CSV files to Google Drive and send Slack notification for reports only"""
+    report_links = []  # Links for Slack notification (reports only)
+    all_uploaded_files = []  # All uploaded files for return value
+    
+    # Upload report files (PDF and Excel) - these will be included in Slack notification
+    if reports_dir.exists():
+        for file in reports_dir.glob("*"):
+            if file.suffix in ['.xlsx', '.pdf']:
+                timestamp = datetime.now().strftime("%Y-%m-%d")
+                filename = f"{course_id}_{file.stem}_{timestamp}{file.suffix}"
+                
+                try:
+                    drive_link = upload_file_to_drive(str(file), filename)
+                    if drive_link:
+                        report_links.append(drive_link)
+                        all_uploaded_files.append(drive_link)
+                        print(f"✅ Reporte subido: {filename}")
+                except Exception as e:
+                    print(f"❌ Error subiendo reporte {file.name}: {e}")
+    
+    # Upload processed CSV files - these will NOT be included in Slack notification
+    csv_count = 0
+    if processed_dir.exists():
+        for file in processed_dir.glob("*.csv"):
+            timestamp = datetime.now().strftime("%Y-%m-%d")
+            filename = f"{course_id}_{file.stem}_{timestamp}.csv"
+            
+            try:
+                drive_link = upload_file_to_drive(str(file), filename)
+                if drive_link:
+                    all_uploaded_files.append(drive_link)
+                    csv_count += 1
+                    print(f"📁 CSV subido: {filename}")
+            except Exception as e:
+                print(f"❌ Error subiendo CSV {file.name}: {e}")
+    
+    # Send Slack notification only for report files
+    if report_links:
+        try:
+            send_slack_notification(course_id, course_name, report_links)
+        except Exception as e:
+            print(f"❌ Error enviando notificación de Slack: {e}")
+    else:
+        print("⚠️  No se subieron reportes, omitiendo notificación de Slack")
+    
+    # Print summary
+    if csv_count > 0:
+        print(f"📊 Resumen: {len(report_links)} reportes y {csv_count} archivos CSV subidos")
+    else:
+        print(f"📊 Resumen: {len(report_links)} reportes subidos")
+    
+    return all_uploaded_files
+
+def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     """Main analysis pipeline function"""
     print(f"Analyzing course: {course_id}")
     
@@ -111,6 +348,8 @@ def run_analysis_pipeline(course_id: str):
             has_responded = not grade_row.empty
             grade = grade_row['grade'].iloc[0] if not grade_row.empty else None
             completion_time = grade_row['completion_time_minutes'].iloc[0] if not grade_row.empty else None
+            created_timestamp = grade_row['created'].iloc[0] if not grade_row.empty else None
+            submitted_timestamp = grade_row['submittedTimestamp'].iloc[0] if not grade_row.empty else None
             user_response_summary.append({
                 'user_id': user_id,
                 'email': user_email,
@@ -118,7 +357,9 @@ def run_analysis_pipeline(course_id: str):
                 'assessment': assess_name,
                 'responded': has_responded,
                 'grade': grade,
-                'completion_time_minutes': completion_time
+                'completion_time_minutes': completion_time,
+                'created_timestamp': created_timestamp,
+                'submitted_timestamp': submitted_timestamp
             })
     user_response_df = pd.DataFrame(user_response_summary)
 
@@ -127,12 +368,12 @@ def run_analysis_pipeline(course_id: str):
     no_response_users['responded_any'] = no_response_users['id'].apply(lambda uid: user_response_df[user_response_df['user_id'] == uid]['responded'].any())
     no_response_list = no_response_users[~no_response_users['responded_any']][['email', 'username']].values.tolist()
 
-    responded_list = user_response_df[user_response_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes']].values.tolist()
+    responded_list = user_response_df[user_response_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes', 'created_timestamp', 'submitted_timestamp']].values.tolist()
 
     from collections import defaultdict
     responded_by_assessment = defaultdict(list)
-    for email, username, assessment, grade, completion_time in responded_list:
-        responded_by_assessment[assessment].append([email, username, assessment, grade, completion_time])
+    for email, username, assessment, grade, completion_time, created_timestamp, submitted_timestamp in responded_list:
+        responded_by_assessment[assessment].append([email, username, assessment, grade, completion_time, created_timestamp, submitted_timestamp])
 
     # --- Metrics ---
     metrics = []
@@ -237,11 +478,41 @@ def run_analysis_pipeline(course_id: str):
         for assessment, rows in responded_by_assessment.items():
             # Clean the assessment name for Excel sheet name
             clean_sheet_name = clean_excel_sheet_name(assessment)
-            df_response = pd.DataFrame(rows, columns=["correo", "usuario", "evaluación", "nota", "tiempo_minutos"])
+            df_response = pd.DataFrame(rows, columns=["correo", "usuario", "evaluación", "nota", "tiempo_minutos", "fecha_creación", "fecha_envío"])
             df_response.to_excel(writer, sheet_name=clean_sheet_name, index=False)
     
     print(f"Excel file generated: {excel_path}")
 
+    # --- Upload reports to Google Drive and send Slack notification ---
+    if upload_reports:
+        try:
+            # Get course name from configuration
+            config = load_course_config()
+            courses = config.get('courses', {})
+            course_config = courses.get(course_id, {})
+            course_name = course_config.get('name', course_id)
+            
+            # Upload reports and send notification
+            drive_links = upload_reports_and_notify(course_id, course_name, reports_dir, processed_dir)
+            
+            if drive_links:
+                print(f"✅ Se subieron {len(drive_links)} archivos a Google Drive")
+                print(f"✅ Notificación de Slack enviada con enlaces a reportes")
+            else:
+                print("⚠️  No se subieron archivos (verificar variables de entorno y permisos)")
+                
+        except Exception as e:
+            print(f"❌ Error durante la subida/notificación: {e}")
+            print("   Esta es funcionalidad opcional - el análisis se completó exitosamente")
+    else:
+        print("📁 Reportes generados localmente (usar --upload para subir a Google Drive y enviar notificación de Slack)")
+
 if __name__ == "__main__":
     args = parse_arguments()
-    run_analysis_pipeline(args.course) 
+    
+    # Determine if upload should be enabled
+    upload_enabled = args.upload
+    if args.no_upload:
+        upload_enabled = False
+    
+    run_analysis_pipeline(args.course, upload_enabled) 
