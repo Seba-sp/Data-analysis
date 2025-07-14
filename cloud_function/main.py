@@ -221,15 +221,11 @@ def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, A
             os.makedirs('data/processed', exist_ok=True)
             os.makedirs('data/reports', exist_ok=True)
             
-            # Copy configuration files and update with environment variables
+            # Copy configuration files
             # Note: In production, these should be stored in Cloud Storage or environment variables
             with open('cursos.yml', 'w') as f:
                 import yaml
-                # Update course config with environment variable ignored users
-                updated_config = course_config.copy()
-                if IGNORED_USERS:
-                    updated_config['ignored_users'] = IGNORED_USERS
-                yaml.dump({'courses': {course_id: updated_config}}, f)
+                yaml.dump({'courses': {course_id: course_config}}, f)
             
             # Run download pipeline
             logger.info(f"Starting download pipeline for {course_id}")

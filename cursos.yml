@@ -6,16 +6,6 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
-    ignored_users:
-      - jairopera03@gmail.com
-      - jairopera02@gmail.com
-      - renepuente9000@gmail.com
-      - nicolas.valenzuelar@sansano.usm.cl
-      - sebastian.san.martin.p@gmail.com
-      - jairopera01@gmail.com
-      - tetahac783@iridales.com
-      - theflaviomc@gmail.com
-      - soporte@preum30m.com
   
   lecciones-m0m:
     name: "lecciones M30M"
@@ -24,16 +14,6 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
-    ignored_users:
-      - jairopera03@gmail.com
-      - jairopera02@gmail.com
-      - renepuente9000@gmail.com
-      - nicolas.valenzuelar@sansano.usm.cl
-      - sebastian.san.martin.p@gmail.com
-      - jairopera01@gmail.com 
-      - tetahac783@iridales.com
-      - theflaviomc@gmail.com
-      - soporte@preum30m.com
 
   nivel-1-m30m:
     name: "Gúias acumulativas nivel 1 M30M"
@@ -42,13 +22,3 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
-    ignored_users:
-      - jairopera03@gmail.com
-      - jairopera02@gmail.com
-      - renepuente9000@gmail.com
-      - nicolas.valenzuelar@sansano.usm.cl
-      - sebastian.san.martin.p@gmail.com
-      - jairopera01@gmail.com
-      - tetahac783@iridales.com
-      - theflaviomc@gmail.com
-      - soporte@preum30m.com

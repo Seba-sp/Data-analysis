@@ -94,10 +94,12 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
-    ignored_users:
-      - jairopera03@gmail.com
-      - jairopera02@gmail.com
-      # ... more ignored users
+```
+
+### Environment Variables
+Set ignored users via the `IGNORED_USERS` environment variable (comma-separated list):
+```bash
+export IGNORED_USERS="user1@email.com,user2@email.com,user3@email.com"
 ```
 
 ### cursos.txt

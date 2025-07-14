@@ -7,7 +7,7 @@ courses:
       - completion_rate
       - response_rate
   
-    lecciones-m0m:
+  lecciones-m0m:
     name: "lecciones M30M"
     kpis:
       - attendance_rate

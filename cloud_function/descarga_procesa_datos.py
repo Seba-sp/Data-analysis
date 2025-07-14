@@ -103,8 +103,9 @@ def process_course_data(course_id: str, course_config: Dict[str, Any]):
     raw_dir.mkdir(parents=True, exist_ok=True)
     processed_dir.mkdir(parents=True, exist_ok=True)
     
-    # Get ignored users from config
-    ignored_users = course_config.get('ignored_users', [])
+    # Get ignored users from environment variable
+    ignored_users_str = os.getenv('IGNORED_USERS', '')
+    ignored_users = [email.strip() for email in ignored_users_str.split(',') if email.strip()] if ignored_users_str else []
     
     # Download and process each data type
     data_types = ['assessments', 'grades', 'users']

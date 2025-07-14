@@ -18,11 +18,12 @@ def load_course_config(config_path: str = "cursos.yml"):
         return yaml.safe_load(f)
 
 def get_ignored_users(course_id: str, config_path: str = "cursos.yml"):
-    """Get ignored users for a specific course from configuration"""
-    config = load_course_config(config_path)
-    courses = config.get('courses', {})
-    course_config = courses.get(course_id, {})
-    return course_config.get('ignored_users', [])
+    """Get ignored users from environment variable"""
+    import os
+    ignored_users_str = os.getenv('IGNORED_USERS', '')
+    if ignored_users_str:
+        return [email.strip() for email in ignored_users_str.split(',') if email.strip()]
+    return []
 
 def clean_excel_sheet_name(name: str) -> str:
     """Clean sheet name to be compatible with Excel"""
@@ -54,7 +55,7 @@ def run_analysis_pipeline(course_id: str):
     """Main analysis pipeline function"""
     print(f"Analyzing course: {course_id}")
     
-    # Get ignored users from configuration
+    # Get ignored users from environment variable
     ignore_emails = get_ignored_users(course_id)
     print(f"Ignored users for {course_id}: {ignore_emails}")
     
