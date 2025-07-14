@@ -40,28 +40,28 @@ gcloud services enable storage.googleapis.com
 gcloud services enable iam.googleapis.com
 
 # Create Cloud Storage bucket
-echo "🪣 Creating Cloud Storage bucket..."
-gsutil mb -l $REGION gs://$BUCKET_NAME
+#echo "🪣 Creating Cloud Storage bucket..."
+#gsutil mb -l $REGION gs://$BUCKET_NAME
 
 # Create service account for the function
-echo "👤 Creating service account..."
-gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME \
-    --display-name="Course Analysis Function Service Account" \
-    --description="Service account for course analysis Cloud Function"
+#echo "👤 Creating service account..."
+#gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME \
+#    --display-name="Course Analysis Function Service Account" \
+#    --description="Service account for course analysis Cloud Function"
 
 # Grant necessary permissions to service account
-echo "🔐 Granting permissions to service account..."
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-    --role="roles/storage.objectViewer"
+# echo "🔐 Granting permissions to service account..."
+# gcloud projects add-iam-policy-binding $PROJECT_ID \
+#     --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+#     --role="roles/storage.objectViewer"
 
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-    --role="roles/storage.objectCreator"
+# gcloud projects add-iam-policy-binding $PROJECT_ID \
+#     --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+#     --role="roles/storage.objectCreator"
 
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-    --role="roles/drive.file"
+#gcloud projects add-iam-policy-binding $PROJECT_ID \
+#    --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+#    --role="roles/drive.file"
 
 # Create service account key (for Google Drive API)
 echo "🔑 Creating service account key..."

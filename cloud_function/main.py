@@ -49,11 +49,28 @@ def get_slack_client():
 
 def get_drive_service():
     """Initialize Google Drive service"""
-    credentials = service_account.Credentials.from_service_account_info(
-        json.loads(os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY')),
-        scopes=['https://www.googleapis.com/auth/drive.file']
-    )
-    return build('drive', 'v3', credentials=credentials)
+    import base64
+    
+    # Get the service account key (could be base64 encoded or raw JSON)
+    service_account_key = os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY')
+    
+    try:
+        # Try to decode as base64 first
+        try:
+            decoded_key = base64.b64decode(service_account_key).decode('utf-8')
+            key_data = json.loads(decoded_key)
+        except:
+            # If base64 fails, try as raw JSON
+            key_data = json.loads(service_account_key)
+        
+        credentials = service_account.Credentials.from_service_account_info(
+            key_data,
+            scopes=['https://www.googleapis.com/auth/drive.file']
+        )
+        return build('drive', 'v3', credentials=credentials)
+    except Exception as e:
+        logger.error(f"Error parsing service account key: {e}")
+        raise
 
 def upload_to_cloud_storage(local_path: str, gcs_path: str) -> str:
     """Upload file to Google Cloud Storage"""
@@ -274,7 +291,7 @@ def process_course(course_id: str, course_config: Dict[str, Any]) -> Dict[str, A
     
     return result
 
-def main(request):
+def course_analysis_pipeline(request):
     """Main Cloud Function entry point"""
     try:
         logger.info("Starting daily course analysis pipeline")
@@ -339,5 +356,5 @@ if __name__ == "__main__":
             self.headers = {}
             self.get_json = lambda: {}
     
-    result = main(MockRequest())
+    result = course_analysis_pipeline(MockRequest())
     print(json.dumps(result, indent=2)) 

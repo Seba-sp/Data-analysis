@@ -1,4 +1,5 @@
 id;user_id;email;grade;created;submittedTimestamp;modified;learningUnit;assessment_id
+687026b0a34ceb078101c7f5;686d96fa97d7bd6ed70b03f4;cornejoamaris@gmail.com;96;2025-07-10 20:46:40;2025-07-10 21:20:30;2025-07-10 21:20:31;{'id': '686b302e08a2721eb60b67a6', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};686b302e08a2721eb60b67a6
 686ed355e212626a0a0bb9d5;686bd47cb9052e876a0c41c1;monserrat.jmnnz@gmail.com;53;2025-07-09 20:38:45;2025-07-09 21:38:47;2025-07-09 21:38:48;{'id': '686b302e08a2721eb60b67a6', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};686b302e08a2721eb60b67a6
 686d9f794bb2deee390d13d5;686d96fa97d7bd6ed70b03f4;cornejoamaris@gmail.com;77;2025-07-08 22:45:13;2025-07-08 23:43:30;2025-07-08 23:43:31;{'id': '686b302e08a2721eb60b67a6', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};686b302e08a2721eb60b67a6
 686d663b3d3b34060d0320c5;686d2d8970a52c714c086124;estudiaconmimi@gmail.com;64;2025-07-08 18:40:59;2025-07-08 19:40:58;2025-07-08 19:40:58;{'id': '686b302e08a2721eb60b67a6', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};686b302e08a2721eb60b67a6
