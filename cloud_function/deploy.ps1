@@ -4,7 +4,7 @@
 param(
     [string]$FunctionName = "course-analysis-pipeline",
     [string]$Region = "us-central1",
-    [string]$Runtime = "python39",
+    [string]$Runtime = "python311",
     [string]$Memory = "2GB",
     [string]$Timeout = "540s"
 )

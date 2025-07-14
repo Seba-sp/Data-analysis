@@ -51,12 +51,18 @@ python analisis.py --course test-de-diagnostico-m30m
 ```bash
 python analisis.py --course test-de-diagnostico-m30m --upload
 ```
+- This will upload only today's reports and processed files for the course to its folder in Google Drive, replacing any files with the same name.
+- After upload, a Slack notification will be sent with links to the uploaded reports.
 
 ### Batch Processing
 
 #### Process All Courses from Configuration
 ```bash
 python batch_process.py
+```
+- To upload only today's files for all courses (replacing files with the same name) and send Slack notifications, use:
+```bash
+python batch_process.py --upload-only
 ```
 
 #### Process Specific Courses
@@ -119,6 +125,12 @@ export GOOGLE_SERVICE_ACCOUNT_KEY="your-service-account-key-json"
 export SLACK_BOT_TOKEN="xoxb-your-slack-bot-token"
 export SLACK_CHANNEL="#your-channel-name"
 ```
+
+**How uploads work:**
+- Files are uploaded to a subfolder in Google Drive named after each course (`{course_id}`) inside your main Drive folder.
+- If a file with the same name already exists in the course folder (e.g., `users.csv`, `reporte_{course_id}_YYYY-MM-DD.pdf`), it is replaced (not duplicated).
+- Only files created or modified today are uploaded.
+- After upload, a Slack notification is sent (for reports only) with links to the uploaded files.
 
 **Note:** The service account key should be the full JSON content or base64-encoded JSON.
 

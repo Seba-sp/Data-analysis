@@ -265,7 +265,7 @@ def get_course_users_incremental(course_id, school_domain, headers):
         combined_data = new_data + existing_data
         combined_data.sort(key=lambda x: x.get('created', 0), reverse=True)
         return combined_data
-    else:
+            else:
         print("No new users found")
         return existing_data
 
@@ -367,4 +367,4 @@ def run_full_pipeline(course_id: str):
         
     except Exception as e:
         print(f"❌ Pipeline failed for {course_id}: {str(e)}")
-        raise 
+        raise

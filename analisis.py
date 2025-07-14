@@ -9,6 +9,8 @@ from datetime import datetime
 import json
 import base64
 from typing import Dict, List, Any
+from dotenv import load_dotenv
+load_dotenv()
 
 # Google Drive imports
 try:
@@ -97,43 +99,99 @@ def get_drive_service():
         
         credentials = service_account.Credentials.from_service_account_info(
             key_data,
-            scopes=['https://www.googleapis.com/auth/drive.file']
+            scopes=['https://www.googleapis.com/auth/drive']
         )
         return build('drive', 'v3', credentials=credentials)
     except Exception as e:
         print(f"Error parsing service account key: {e}")
         raise
 
-def upload_file_to_drive(file_path: str, filename: str, folder_id: str = None) -> str:
-    """Upload file to Google Drive and return the web view link"""
+def find_or_create_folder(drive_service, parent_folder_id, folder_name, drive_id=None):
+    query = f"mimeType='application/vnd.google-apps.folder' and trashed=false and name='{folder_name}' and '{parent_folder_id}' in parents"
+    results = drive_service.files().list(
+        q=query,
+        fields="files(id, name)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+        corpora='drive' if drive_id else None,
+        driveId=drive_id
+    ).execute()
+    files = results.get('files', [])
+    if files:
+        return files[0]['id']
+    folder_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder',
+        'parents': [parent_folder_id]
+    }
+    create_args = dict(
+        body=folder_metadata,
+        fields='id, name',
+        supportsAllDrives=True
+    )
+    if drive_id:
+        create_args['driveId'] = drive_id
+    folder = drive_service.files().create(**create_args).execute()
+    print(f"[DEBUG] Carpeta creada en Drive: {folder['name']} (ID: {folder['id']})")
+    return folder['id']
+
+def find_file_in_folder(drive_service, folder_id, filename, drive_id=None):
+    query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
+    results = drive_service.files().list(
+        q=query,
+        fields="files(id, name)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+        corpora='drive' if drive_id else None,
+        driveId=drive_id
+    ).execute()
+    files = results.get('files', [])
+    if files:
+        return files[0]['id']
+    return None
+
+def upload_file_to_drive(file_path: str, filename: str, folder_id: str = None, drive_id: str = None) -> str:
+    """Upload or replace file in Google Drive and return the web view link"""
     if not GOOGLE_DRIVE_AVAILABLE:
         print("Warning: Google Drive not available, skipping upload")
         return None
-    
     try:
         drive_service = get_drive_service()
-        
-        # Use provided folder_id or get from environment
         if not folder_id:
             folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
             if not folder_id:
                 raise ValueError("GOOGLE_DRIVE_FOLDER_ID environment variable not set")
-        
+        if not drive_id:
+            drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
         file_metadata = {
             'name': filename,
             'parents': [folder_id]
         }
-        
         media = MediaFileUpload(file_path, resumable=True)
-        file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id,webViewLink'
-        ).execute()
-        
-        print(f"Uploaded {filename} to Google Drive: {file.get('webViewLink')}")
-        return file.get('webViewLink')
-        
+        existing_file_id = find_file_in_folder(drive_service, folder_id, filename, drive_id)
+        if existing_file_id:
+            print(f"[DEBUG] Archivo ya existe en Drive, actualizando: {filename} (ID: {existing_file_id})")
+            update_args = dict(
+                fileId=existing_file_id,
+                media_body=media,
+                fields='id,webViewLink',
+                supportsAllDrives=True
+            )
+            if drive_id:
+                update_args['driveId'] = drive_id
+            uploaded = drive_service.files().update(**update_args).execute()
+        else:
+            upload_args = dict(
+                body=file_metadata,
+                media_body=media,
+                fields='id,webViewLink',
+                supportsAllDrives=True
+            )
+            if drive_id:
+                upload_args['driveId'] = drive_id
+            uploaded = drive_service.files().create(**upload_args).execute()
+        print(f"Uploaded {filename} to Google Drive: {uploaded.get('webViewLink')}")
+        return uploaded.get('webViewLink')
     except Exception as e:
         print(f"Error uploading to Google Drive: {e}")
         return None
@@ -235,42 +293,47 @@ def send_slack_notification(course_id: str, course_name: str, drive_links: List[
         print(f"Error enviando notificación de Slack: {e}")
 
 def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Path, processed_dir: Path):
-    """Upload reports and CSV files to Google Drive and send Slack notification for reports only"""
-    report_links = []  # Links for Slack notification (reports only)
-    all_uploaded_files = []  # All uploaded files for return value
-    
-    # Upload report files (PDF and Excel) - these will be included in Slack notification
+    """Upload today's reports and CSV files to Google Drive (per-course folder), send Slack notification for reports only"""
+    from datetime import datetime
+    drive_service = get_drive_service()
+    parent_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+    drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
+    course_folder_id = find_or_create_folder(drive_service, parent_folder_id, course_id, drive_id)
+    today = datetime.now().date()
+    report_links = []
+    all_uploaded_files = []
+    # Upload report files (PDF and Excel) - included in Slack notification
     if reports_dir.exists():
         for file in reports_dir.glob("*"):
             if file.suffix in ['.xlsx', '.pdf']:
-                timestamp = datetime.now().strftime("%Y-%m-%d")
-                filename = f"{course_id}_{file.stem}_{timestamp}{file.suffix}"
-                
+                mtime = datetime.fromtimestamp(file.stat().st_mtime).date()
+                ctime = datetime.fromtimestamp(file.stat().st_ctime).date()
+                if mtime != today and ctime != today:
+                    continue
                 try:
-                    drive_link = upload_file_to_drive(str(file), filename)
+                    drive_link = upload_file_to_drive(str(file), file.name, course_folder_id, drive_id)
                     if drive_link:
                         report_links.append(drive_link)
                         all_uploaded_files.append(drive_link)
-                        print(f"✅ Reporte subido: {filename}")
+                        print(f"✅ Reporte subido: {file.name}")
                 except Exception as e:
                     print(f"❌ Error subiendo reporte {file.name}: {e}")
-    
-    # Upload processed CSV files - these will NOT be included in Slack notification
+    # Upload processed CSV files - NOT included in Slack notification
     csv_count = 0
     if processed_dir.exists():
         for file in processed_dir.glob("*.csv"):
-            timestamp = datetime.now().strftime("%Y-%m-%d")
-            filename = f"{course_id}_{file.stem}_{timestamp}.csv"
-            
+            mtime = datetime.fromtimestamp(file.stat().st_mtime).date()
+            ctime = datetime.fromtimestamp(file.stat().st_ctime).date()
+            if mtime != today and ctime != today:
+                continue
             try:
-                drive_link = upload_file_to_drive(str(file), filename)
+                drive_link = upload_file_to_drive(str(file), file.name, course_folder_id, drive_id)
                 if drive_link:
                     all_uploaded_files.append(drive_link)
                     csv_count += 1
-                    print(f"📁 CSV subido: {filename}")
+                    print(f"📁 CSV subido: {file.name}")
             except Exception as e:
                 print(f"❌ Error subiendo CSV {file.name}: {e}")
-    
     # Send Slack notification only for report files
     if report_links:
         try:
@@ -279,13 +342,11 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
             print(f"❌ Error enviando notificación de Slack: {e}")
     else:
         print("⚠️  No se subieron reportes, omitiendo notificación de Slack")
-    
     # Print summary
     if csv_count > 0:
         print(f"📊 Resumen: {len(report_links)} reportes y {csv_count} archivos CSV subidos")
     else:
         print(f"📊 Resumen: {len(report_links)} reportes subidos")
-    
     return all_uploaded_files
 
 def run_analysis_pipeline(course_id: str, upload_reports: bool = False):

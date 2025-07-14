@@ -1,5 +1,35 @@
 [
   {
+    "id": "68752b9a489803c374060398",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1752509338.009236,
+    "submittedTimestamp": 1752509344.275178,
+    "modified": 1752509344.387614,
+    "learningUnit": {
+      "id": "68713ff09dc10136c000a546",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68750282835ba6543e07bee5",
+    "user_id": "686d96fa97d7bd6ed70b03f4",
+    "email": "cornejoamaris@gmail.com",
+    "grade": 80,
+    "created": 1752498818.534407,
+    "submittedTimestamp": 1752498880.331097,
+    "modified": 1752498880.48483,
+    "learningUnit": {
+      "id": "686e817abaa4de8b57089606",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "687453c1532256a68000f1b5",
     "user_id": "686bd480b9052e876a0c422d",
     "email": "ycruzv.2006@gmail.com",

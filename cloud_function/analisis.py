@@ -274,7 +274,7 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
     # Print summary
     if csv_count > 0:
         print(f"📊 Resumen: {len(report_links)} reportes y {csv_count} archivos CSV subidos")
-    else:
+        else:
         print(f"📊 Resumen: {len(report_links)} reportes subidos")
     
     return all_uploaded_files
