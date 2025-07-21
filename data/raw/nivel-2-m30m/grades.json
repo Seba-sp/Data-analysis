@@ -1,5 +1,20 @@
 [
   {
+    "id": "687a7272c252f79f640aab18",
+    "user_id": "686bd47ab9052e876a0c4182",
+    "email": "lepecony2007@gmail.com",
+    "grade": 84,
+    "created": 1752855154.905105,
+    "submittedTimestamp": 1752855237.366042,
+    "modified": 1752855237.550922,
+    "learningUnit": {
+      "id": "687115f151f3d5df1e0ffb96",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "687535f9c34a7fdb520848c6",
     "user_id": "685aef7af6675ccea0eb2afa",
     "email": "soporte@preum30m.com",

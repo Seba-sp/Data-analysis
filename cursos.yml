@@ -6,7 +6,6 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
-  
   lecciones-m0m:
     name: "lecciones M30M"
     kpis:
@@ -14,7 +13,6 @@ courses:
       - average_grade
       - completion_rate
       - response_rate
-
   nivel-1-m30m:
     name: "Gúias acumulativas nivel 1 M30M"
     kpis:

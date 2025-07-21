@@ -281,11 +281,8 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
 
 def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     """Main analysis pipeline function"""
-    print(f"Analyzing course: {course_id}")
-    
     # Get ignored users from environment variable
     ignore_emails = get_ignored_users(course_id)
-    print(f"Ignored users for {course_id}: {ignore_emails}")
     
     # Setup paths
     root = Path("data")
@@ -305,14 +302,10 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
 
     # Create ignored users DataFrame
     ignored_users = df_users[df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])].copy()
-    print(f"Usuarios ignorados: {len(ignored_users)}")
 
     # Remove ignored users from all DataFrames
     df_users = df_users[~df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])]
     df_grades = df_grades[~df_grades['user_id'].isin(ignored_users['id'])]
-
-    print(f"Usuarios restantes después de limpieza: {len(df_users)}")
-    print(f"Calificaciones restantes después de limpieza: {len(df_grades)}")
 
     # Calculate completion time for each grade
     df_grades['completion_time_minutes'] = df_grades.apply(

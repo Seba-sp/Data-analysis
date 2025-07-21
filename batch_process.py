@@ -22,7 +22,6 @@ def parse_arguments():
     parser.add_argument('--download-only', action='store_true', help='Only download data, skip analysis')
     parser.add_argument('--analysis-only', action='store_true', help='Only run analysis, skip download')
     parser.add_argument('--upload-only', action='store_true', help='Only upload reports/CSVs to Google Drive, skip download and analysis')
-    parser.add_argument('--up-to-date', action='store_true', help='Filter analysis to only include students up to date with planification')
     return parser.parse_args()
 
 # --- Google Drive upload logic ---
@@ -206,40 +205,30 @@ def get_slack_client():
     return WebClient(token=slack_token)
 
 def run_batch_pipeline(config_path: str, specific_courses: list = None, 
-                      download_only: bool = False, analysis_only: bool = False, upload_only: bool = False,
-                      up_to_date: bool = False):
+                      download_only: bool = False, analysis_only: bool = False, upload_only: bool = False):
     """Run pipeline for multiple courses"""
-    
-    # Load configuration
+    import os
+    base_course = os.getenv("UP_TO_DATE_BASE_COURSE", "lecciones-m0m")
     config = load_course_config(config_path)
     courses = config.get('courses', {})
-    
-    # Determine which courses to process
     if specific_courses:
         courses_to_process = {course_id: courses[course_id] 
                             for course_id in specific_courses 
                             if course_id in courses}
     else:
         courses_to_process = courses
-    
     if not courses_to_process:
         print("No courses found to process")
         return
-    
     print(f"Processing {len(courses_to_process)} courses:")
     for course_id in courses_to_process:
         print(f"  - {course_id}: {courses_to_process[course_id].get('name', 'Unknown')}")
-    
-    if up_to_date:
-        print("🔍 Up-to-date filtering enabled - only students current with planification will be analyzed")
-    
-    # Process each course
+    print(f"Base course for up-to-date intersection: {base_course}")
     for course_id, course_config in courses_to_process.items():
         print(f"\n{'='*50}")
         print(f"Processing course: {course_id}")
         print(f"Name: {course_config.get('name', 'Unknown')}")
         print(f"{'='*50}")
-        
         try:
             if upload_only:
                 print(f"Uploading reports/CSVs para {course_id}...")
@@ -247,22 +236,17 @@ def run_batch_pipeline(config_path: str, specific_courses: list = None,
                 print(f"Upload completed for {course_id}")
                 send_slack_notification_for_upload(course_id, course_config, uploaded_links)
                 continue
-            # Download phase
             if not analysis_only:
                 print(f"Downloading data for {course_id}...")
                 run_download_pipeline(course_id)
                 print(f"Download completed for {course_id}")
-            
-            # Analysis phase
             if not download_only:
                 print(f"Analyzing data for {course_id}...")
-                run_analysis_pipeline(course_id, upload_reports=False, filter_up_to_date=up_to_date)
+                run_analysis_pipeline(course_id, upload_reports=False)
                 print(f"Analysis completed for {course_id}")
-                
         except Exception as e:
             print(f"Error processing course {course_id}: {str(e)}")
             continue
-    
     print(f"\n{'='*50}")
     print("Batch processing completed!")
 
@@ -273,6 +257,5 @@ if __name__ == "__main__":
         specific_courses=args.courses,
         download_only=args.download_only,
         analysis_only=args.analysis_only,
-        upload_only=args.upload_only,
-        up_to_date=args.up_to_date
+        upload_only=args.upload_only
     ) 

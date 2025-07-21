@@ -10,6 +10,8 @@ import json
 import base64
 from typing import Dict, List, Any
 from dotenv import load_dotenv
+import unicodedata
+import numpy as np
 load_dotenv()
 
 # Google Drive imports
@@ -31,12 +33,14 @@ except ImportError:
     SLACK_AVAILABLE = False
     print("Warning: Slack libraries not available. Install with: pip install slack-sdk")
 
+GRADE_ZERO_THRESHOLD = float(os.getenv('GRADE_ZERO_THRESHOLD', 0))
+TIME_MAX_THRESHOLD_MINUTES = float(os.getenv('TIME_MAX_THRESHOLD_MINUTES', 100))
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Analyze course data and generate reports')
     parser.add_argument('--course', '-c', required=True, help='Course ID to analyze')
     parser.add_argument('--upload', '-u', action='store_true', help='Upload reports to Google Drive and send Slack notification')
     parser.add_argument('--no-upload', action='store_true', help='Skip upload and notification (default behavior)')
-    parser.add_argument('--up-to-date', action='store_true', help='Filter analysis to only include students up to date with planification')
     return parser.parse_args()
 
 def load_course_config(config_path: str = "cursos.yml"):
@@ -351,26 +355,26 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
     return all_uploaded_files
 
 def load_planification_data(course_id: str) -> pd.DataFrame:
-    """Load planification data for a course"""
+    """Load planification data for a course, robust to encoding issues"""
     planification_path = Path("data") / "planification" / f"{course_id}.csv"
-    
     if not planification_path.exists():
         print(f"Warning: Planification file not found at {planification_path}")
         return pd.DataFrame()
-    
     try:
-        # Load planification data with semicolon separator
-        df_plan = pd.read_csv(planification_path, sep=';')
-        
+        try:
+            df_plan = pd.read_csv(planification_path, sep=';', encoding='utf-8')
+        except UnicodeDecodeError:
+            print("[DEBUG] UTF-8 decode failed, trying latin1")
+            df_plan = pd.read_csv(planification_path, sep=';', encoding='latin1')
+        # Normalize all string columns except 'date' to remove encoding artifacts
+        for col in df_plan.select_dtypes(include=["object"]).columns:
+            if col != 'date':
+                df_plan[col] = df_plan[col].apply(normalize_str)
         # Convert date column to datetime
-        df_plan['date'] = pd.to_datetime(df_plan['date'], format='%d-%m-%Y', errors='coerce')
-        
-        # Remove rows with invalid dates
-        df_plan = df_plan.dropna(subset=['date'])
-        
+        if 'date' in df_plan.columns:
+            df_plan['date'] = pd.to_datetime(df_plan['date'], format='%d-%m-%Y', errors='coerce')
         print(f"Loaded planification data: {len(df_plan)} assessments")
         return df_plan
-        
     except Exception as e:
         print(f"Error loading planification data: {e}")
         return pd.DataFrame()
@@ -392,84 +396,55 @@ def get_assessments_due_until_today(planification_df: pd.DataFrame) -> List[str]
     return assessment_names
 
 def filter_up_to_date_students(user_response_df: pd.DataFrame, due_assessments: List[str]) -> pd.DataFrame:
-    """Filter students who have completed all assessments due until today"""
+    """Filter students who have completed all assessments due until today (using normalized assessment names if available)"""
     if not due_assessments:
         print("No assessments due, returning all students")
         return user_response_df
-    
+    # Use normalized column if present
+    assessment_col = 'assessment_normalized' if 'assessment_normalized' in user_response_df.columns else 'assessment'
     # Get unique user IDs
     all_user_ids = user_response_df['user_id'].unique()
     up_to_date_users = []
-    
     for user_id in all_user_ids:
         user_data = user_response_df[user_response_df['user_id'] == user_id]
-        
-        # Check if user has completed all due assessments
-        user_completed_assessments = user_data[user_data['responded']]['assessment'].tolist()
-        
-        # Check if all due assessments are in user's completed list
+        # Check if user has completed all due assessments (normalized)
+        user_completed_assessments = user_data[user_data['responded']][assessment_col].tolist()
         all_completed = all(assessment in user_completed_assessments for assessment in due_assessments)
+        missing = [assessment for assessment in due_assessments if assessment not in user_completed_assessments]
         
         if all_completed:
             up_to_date_users.append(user_id)
-    
     print(f"Students up to date: {len(up_to_date_users)} out of {len(all_user_ids)}")
-    
     # Filter user_response_df to only include up-to-date students
     filtered_df = user_response_df[user_response_df['user_id'].isin(up_to_date_users)]
-    
     return filtered_df
 
-def run_analysis_pipeline(course_id: str, upload_reports: bool = False, filter_up_to_date: bool = False):
-    """Main analysis pipeline function"""
-    print(f"Analyzing course: {course_id}")
-    
-    # Get ignored users from environment variable
+def normalize_str(s):
+    if pd.isnull(s):
+        return s
+    return ''.join(c for c in unicodedata.normalize('NFKD', str(s)) if not unicodedata.combining(c))
+
+def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     ignore_emails = get_ignored_users(course_id)
-    print(f"Ignored users for {course_id}: {ignore_emails}")
-    
-    # Setup paths
     root = Path("data")
     processed_dir = root / "processed" / course_id
     reports_dir = root / "reports" / course_id
     metrics_dir = root / "metrics" / "kpi"
-    
-    # Ensure reports directory exists
     reports_dir.mkdir(parents=True, exist_ok=True)
     metrics_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Load processed DataFrames from CSV
     sep = ";"
     df_assessments = pd.read_csv(processed_dir / "assessments.csv", sep=sep)
     df_users = pd.read_csv(processed_dir / "users.csv", sep=sep)
     df_grades = pd.read_csv(processed_dir / "grades.csv", sep=sep)
-
-    # Create ignored users DataFrame
     ignored_users = df_users[df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])].copy()
-    print(f"Usuarios ignorados: {len(ignored_users)}")
-
-    # Remove ignored users from all DataFrames
     df_users = df_users[~df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])]
     df_grades = df_grades[~df_grades['user_id'].isin(ignored_users['id'])]
-
-    print(f"Usuarios restantes después de limpieza: {len(df_users)}")
-    print(f"Calificaciones restantes después de limpieza: {len(df_grades)}")
-
-    # Calculate completion time for each grade
     df_grades['completion_time_minutes'] = df_grades.apply(
-        lambda row: calculate_completion_time(row['created'], row['submittedTimestamp']), 
-        axis=1
-    )
-
-    # Merge grades with assessment names using a fast pandas merge on 'assessment_id'
+        lambda row: calculate_completion_time(row['created'], row['submittedTimestamp']), axis=1)
     df_grades = df_grades.merge(df_assessments, on="assessment_id", how="left")
-
-    # 1. Get all users enrolled in the course
     users_df = df_users.copy()
     if 'username' not in users_df.columns:
         users_df['username'] = users_df['email'].apply(lambda x: x.split('@')[0] if pd.notnull(x) else None)
-
-    # 2. For each assessment, check which users have a grade (as a proxy for response)
     user_response_summary = []
     for assess_name in df_assessments['assessment_name']:
         for _, user in users_df.iterrows():
@@ -495,173 +470,261 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False, filter_u
             })
     user_response_df = pd.DataFrame(user_response_summary)
 
-    # Filter students up to date if requested
-    if filter_up_to_date:
-        print("🔍 Filtering students up to date with planification...")
-        planification_df = load_planification_data(course_id)
-        due_assessments = get_assessments_due_until_today(planification_df)
-        
-        if due_assessments:
-            original_user_count = len(user_response_df['user_id'].unique())
-            user_response_df = filter_up_to_date_students(user_response_df, due_assessments)
-            filtered_user_count = len(user_response_df['user_id'].unique())
-            print(f"📊 Analysis will be performed on {filtered_user_count} students (up to date) out of {original_user_count} total students")
-        else:
-            print("⚠️  No planification data found or no assessments due, analyzing all students")
-
-    # --- Lists for report ---
+    # --- Regular report data ---
     no_response_users = users_df.copy()
     no_response_users['responded_any'] = no_response_users['id'].apply(lambda uid: user_response_df[user_response_df['user_id'] == uid]['responded'].any())
     no_response_list = no_response_users[~no_response_users['responded_any']][['email', 'username']].values.tolist()
-
     responded_list = user_response_df[user_response_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes', 'created_timestamp', 'submitted_timestamp']].values.tolist()
-
     from collections import defaultdict
     responded_by_assessment = defaultdict(list)
     for email, username, assessment, grade, completion_time, created_timestamp, submitted_timestamp in responded_list:
         responded_by_assessment[assessment].append([email, username, assessment, grade, completion_time, created_timestamp, submitted_timestamp])
 
-    # --- Metrics ---
+    # After user_response_df is created and before metrics are calculated, filter out users with grade 0 and time > threshold
+    if 'grade' in user_response_df.columns and 'completion_time_minutes' in user_response_df.columns:
+        mask = ~((user_response_df['grade'] == GRADE_ZERO_THRESHOLD) & (user_response_df['completion_time_minutes'] > TIME_MAX_THRESHOLD_MINUTES))
+        user_response_df = user_response_df[mask]
+
     metrics = []
     for assess_name in df_assessments['assessment_name']:
         grades = user_response_df[(user_response_df['assessment'] == assess_name) & (user_response_df['grade'].notnull())]['grade']
-        completion_times = user_response_df[(user_response_df['assessment'] == assess_name) & 
-                                          (user_response_df['completion_time_minutes'].notnull())]['completion_time_minutes']
-        
+        completion_times = user_response_df[(user_response_df['assessment'] == assess_name) & (user_response_df['completion_time_minutes'].notnull())]['completion_time_minutes']
         if not grades.empty:
             metrics.append({
                 'assessment': assess_name,
-                'min': grades.min(),
-                'q25': grades.quantile(0.25),
-                'q50': grades.quantile(0.5),
-                'q75': grades.quantile(0.75),
-                'q100': grades.max(),
+                'median': grades.median(),
                 'mean': grades.mean(),
                 'count': grades.count(),
+                'q75': grades.quantile(0.75),
+                'q100': grades.max(),
                 'avg_completion_time_minutes': completion_times.mean() if not completion_times.empty else None
             })
         else:
             metrics.append({
                 'assessment': assess_name,
-                'min': None,
-                'q25': None,
-                'q50': None,
-                'q75': None,
-                'q100': None,
+                'median': None,
                 'mean': None,
                 'count': 0,
+                'q75': None,
+                'q100': None,
                 'avg_completion_time_minutes': None
             })
     metrics_df = pd.DataFrame(metrics)
 
-    # Save metrics to CSV
-    suffix = "_up_to_date" if filter_up_to_date else ""
-    metrics_df.to_csv(metrics_dir / f"{course_id}{suffix}.csv", index=False)
-    print(f"Metrics saved to: {metrics_dir / f'{course_id}{suffix}.csv'}")
+    # --- Up-to-date section (debug: print heads of all relevant DataFrames, error handling) ---
+    planification_path = Path("data/planification") / f"{course_id}.csv"
+    include_up_to_date = planification_path.exists()
+    up_to_date_section = None
+    if include_up_to_date:
+        try:
+            planification_df = load_planification_data(course_id)
+            due_assessments = get_assessments_due_until_today(planification_df)
+            # Normalize assessment names in due_assessments and in user_response_df
+            due_assessments_normalized = [normalize_str(a) for a in due_assessments]
+            if 'assessment' in user_response_df.columns:
+                user_response_df['assessment_normalized'] = user_response_df['assessment'].apply(normalize_str)
+            # Print due assessments and which ones match actual assessments in the target course
+            if 'assessment' in user_response_df.columns:
+                actual_assessments_target = set(user_response_df['assessment_normalized'].unique())
+                matching_assessments_target = set(due_assessments_normalized) & actual_assessments_target
+            # 1. Up-to-date students in the target course (using only assessments that exist in target course)
+            up_to_date_df = filter_up_to_date_students(user_response_df, list(matching_assessments_target))
+            # 2. Up-to-date students in the base course, using only assessments that exist in base course
+            base_course = os.getenv("UP_TO_DATE_BASE_COURSE", "lecciones-m0m")
+            base_up_to_date_df = None
+            if base_course:
+                base_processed_dir = Path("data/processed") / base_course
+                base_user_response_path = base_processed_dir / "users.csv"
+                base_grades_path = base_processed_dir / "grades.csv"
+                if base_user_response_path.exists() and base_grades_path.exists():
+                    base_user_response_df = pd.read_csv(base_user_response_path)
+                    base_grades_df = pd.read_csv(base_grades_path)
+                    if 'id' in base_user_response_df.columns and 'user_id' in base_grades_df.columns:
+                        base_user_response_df = base_user_response_df.merge(base_grades_df, left_on="id", right_on="user_id", how="left")
+                    if 'assessment' in base_user_response_df.columns:
+                        base_user_response_df['assessment_normalized'] = base_user_response_df['assessment'].apply(normalize_str)
+                        actual_assessments_base = set(base_user_response_df['assessment_normalized'].unique())
+                        matching_assessments_base = set(due_assessments_normalized) & actual_assessments_base
+                        # Only filter base course if there are matching assessments
+                        if matching_assessments_base:
+                            base_up_to_date_df = filter_up_to_date_students(base_user_response_df, list(matching_assessments_base))
+                        else:
+                            print("[DEBUG] No matching assessments found in base course, skipping base course filtering")
+            # 3. Intersect both groups (by email, case-insensitive)
+            if base_up_to_date_df is not None:
+                emails_target = set(up_to_date_df['email'].str.lower())
+                emails_base = set(base_up_to_date_df['email'].str.lower())
+                intersect_emails = emails_target & emails_base
+                up_to_date_df = up_to_date_df[up_to_date_df['email'].str.lower().isin(intersect_emails)]
+            # In the up-to-date section, after up_to_date_df is created and before metrics are calculated, apply the same grade/time filter
+            if up_to_date_df is not None and 'grade' in up_to_date_df.columns and 'completion_time_minutes' in up_to_date_df.columns:
+                mask = ~((up_to_date_df['grade'] == GRADE_ZERO_THRESHOLD) & (up_to_date_df['completion_time_minutes'] > TIME_MAX_THRESHOLD_MINUTES))
+                up_to_date_df = up_to_date_df[mask]
+            # Prepare up-to-date metrics and attendance (unchanged)
+            up_to_date_metrics = []
+            for assess_name in df_assessments['assessment_name']:
+                grades = up_to_date_df[(up_to_date_df['assessment'] == assess_name) & (up_to_date_df['grade'].notnull())]['grade']
+                completion_times = up_to_date_df[(up_to_date_df['assessment'] == assess_name) & (up_to_date_df['completion_time_minutes'].notnull())]['completion_time_minutes']
+                if not grades.empty:
+                    up_to_date_metrics.append({
+                        'assessment': assess_name,
+                        'median': grades.median(),
+                        'mean': grades.mean(),
+                        'count': grades.count(),
+                        'q75': grades.quantile(0.75),
+                        'q100': grades.max(),
+                        'avg_completion_time_minutes': completion_times.mean() if not completion_times.empty else None
+                    })
+                else:
+                    up_to_date_metrics.append({
+                        'assessment': assess_name,
+                        'median': None,
+                        'mean': None,
+                        'count': 0,
+                        'q75': None,
+                        'q100': None,
+                        'avg_completion_time_minutes': None
+                    })
+            up_to_date_metrics_df = pd.DataFrame(up_to_date_metrics)
+            up_to_date_total_users = len(up_to_date_df['user_id'].unique()) if 'user_id' in up_to_date_df.columns else 0
+            up_to_date_responded_user_ids = set(up_to_date_df[up_to_date_df['responded']]['user_id']) if 'user_id' in up_to_date_df.columns and 'responded' in up_to_date_df.columns else set()
+            up_to_date_unique_responded = len(up_to_date_responded_user_ids)
+            up_to_date_attendance_pct = (up_to_date_unique_responded / up_to_date_total_users * 100) if up_to_date_total_users > 0 else 0
+            up_to_date_section = {
+                'metrics_df': up_to_date_metrics_df,
+                'total_users': up_to_date_total_users,
+                'unique_responded': up_to_date_unique_responded,
+                'attendance_pct': up_to_date_attendance_pct,
+                'df': up_to_date_df
+            }
+        except Exception as e:
+            print(f"[ERROR] Exception in up-to-date section: {e}")
+            print("[ERROR] Skipping up-to-date section for this course.")
 
-    # --- PDF REPORT GENERATION (simplified to show only metrics) ---
+    # --- PDF REPORT GENERATION ---
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    
-    # Add title with up-to-date indicator
-    title = f"Métricas de notas y tiempos - Curso: {course_id}"
-    if filter_up_to_date:
-        title += " (Estudiantes al día)"
-    pdf.cell(0, 10, title, ln=True, align="C")
-
-    # Metrics Table
+    pdf.cell(0, 10, f"Métricas de notas y tiempos - Curso: {course_id}", ln=True, align="C")
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, "Métricas de notas y tiempos por evaluación", ln=True, align="C")
     pdf.set_font("Arial", 'B', 9)
-    metric_cols_es = ["Evaluación", "Mínimo", "Q25", "Q50", "Q75", "Máximo", "Promedio", "Cantidad", "Tiempo Prom (min)"]
-    col_widths = [35, 15, 15, 15, 15, 15, 18, 15, 20]
-    pdf.set_fill_color(220, 220, 220)  # Light gray background for header
+    metric_cols_es = ["Evaluación", "Mediana", "Promedio", "Cantidad", "Q75", "Máximo", "Tiempo Prom (min)"]
+    col_widths = [35, 15, 18, 15, 15, 15, 20]
+    pdf.set_fill_color(220, 220, 220)
     for i, col in enumerate(metric_cols_es):
         pdf.cell(col_widths[i], 8, col, border=1, fill=True)
     pdf.ln()
-    pdf.set_fill_color(255, 255, 255)  # Reset to white for data rows
+    pdf.set_fill_color(255, 255, 255)
     pdf.set_font("Arial", size=8)
     for _, row in metrics_df.iterrows():
         values = [
             row["assessment"],
-            row["min"],
-            row["q25"],
-            row["q50"],
+            row["median"],
+            row["mean"],
+            row["count"],
             row["q75"],
             row["q100"],
-            f"{row['mean']:.2f}" if pd.notnull(row['mean']) else str(row['mean']),
-            row["count"],
-            f"{row['avg_completion_time_minutes']:.1f}" if pd.notnull(row['avg_completion_time_minutes']) else str(row['avg_completion_time_minutes'])
+            row["avg_completion_time_minutes"]
         ]
         for i, value in enumerate(values):
+            # Replace nan/None with '-'
+            if pd.isnull(value) or value is None:
+                value = "-"
+            elif isinstance(value, float):
+                if np.isnan(value):
+                    value = "-"
+                elif i == 6:  # avg_completion_time_minutes column
+                    value = f"{value:.2f}"
+                elif i == 2:  # mean column
+                    value = f"{value:.2f}"
             pdf.cell(col_widths[i], 8, str(value), border=1)
         pdf.ln()
     pdf.ln(5)
-
-    # Attendance Metrics
     total_users = len(users_df)
     responded_user_ids = set(user_response_df[user_response_df['responded']]['user_id'])
     unique_responded = len(responded_user_ids)
     attendance_pct = (unique_responded / total_users * 100) if total_users > 0 else 0
-
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, "Métricas de asistencia", ln=True, align="C")
     pdf.set_font("Arial", size=10)
     pdf.cell(0, 8, f"Total de alumnos: {total_users}", ln=True)
     pdf.cell(0, 8, f"Alumnos que respondieron al menos una evaluación: {unique_responded}", ln=True)
     pdf.cell(0, 8, f"Porcentaje de asistencia: {attendance_pct:.2f}%", ln=True)
-    
-    # Add up-to-date information if filtering was applied
-    if filter_up_to_date:
-        planification_df = load_planification_data(course_id)
-        due_assessments = get_assessments_due_until_today(planification_df)
-        if due_assessments:
-            pdf.cell(0, 8, f"Alumnos al día (completaron {len(due_assessments)} evaluaciones hasta ayer): {unique_responded}", ln=True)
-    
     pdf.ln(5)
-
+    # --- Up-to-date PDF section ---
+    if up_to_date_section is not None:
+        pdf.set_font("Arial", size=12)
+        pdf.cell(0, 10, "---", ln=True, align="C")
+        pdf.cell(0, 10, "Métricas SOLO estudiantes al día", ln=True, align="C")
+        pdf.set_font("Arial", 'B', 9)
+        for i, col in enumerate(metric_cols_es):
+            pdf.cell(col_widths[i], 8, col, border=1, fill=True)
+        pdf.ln()
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_font("Arial", size=8)
+        for _, row in up_to_date_section['metrics_df'].iterrows():
+            values = [
+                row["assessment"],
+                row["median"],
+                row["mean"],
+                row["count"],
+                row["q75"],
+                row["q100"],
+                row["avg_completion_time_minutes"]
+            ]
+            for i, value in enumerate(values):
+                # Replace nan/None with '-'
+                if pd.isnull(value) or value is None:
+                    value = "-"
+                elif isinstance(value, float):
+                    if np.isnan(value):
+                        value = "-"
+                    elif i == 6:  # avg_completion_time_minutes column
+                        value = f"{value:.2f}"
+                    elif i == 2:  # mean column
+                        value = f"{value:.2f}"
+                pdf.cell(col_widths[i], 8, str(value), border=1)
+            pdf.ln()
+        pdf.ln(5)
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
-    suffix = "_up_to_date" if filter_up_to_date else ""
-    pdf_path = reports_dir / f"reporte_{course_id}{suffix}_{fecha_actual}.pdf"
+    pdf_path = reports_dir / f"reporte_{course_id}_{fecha_actual}.pdf"
     pdf.output(str(pdf_path))
     print(f"PDF report generated: {pdf_path}")
 
-    # --- Export lists to Excel (grouped by assessment for responded) ---
-    excel_path = reports_dir / f"reporte_{course_id}{suffix}_{fecha_actual}.xlsx"
+    # --- Excel file generation ---
+    excel_path = reports_dir / f"reporte_{course_id}_{fecha_actual}.xlsx"
     with pd.ExcelWriter(excel_path) as writer:
-        # Sheet for users with no response
         pd.DataFrame(no_response_list, columns=["correo", "usuario"]).to_excel(
-            writer, sheet_name="Sin Respuesta", index=False
-        )
-        
-        # Sheets for each assessment with responses
+            writer, sheet_name="Sin Respuesta", index=False)
         for assessment, rows in responded_by_assessment.items():
-            # Clean the assessment name for Excel sheet name
             clean_sheet_name = clean_excel_sheet_name(assessment)
             df_response = pd.DataFrame(rows, columns=["correo", "usuario", "evaluación", "nota", "tiempo_minutos", "fecha_creación", "fecha_envío"])
             df_response.to_excel(writer, sheet_name=clean_sheet_name, index=False)
-    
+        # Add up-to-date sheet if needed
+        if up_to_date_section is not None:
+            up_to_date_df = up_to_date_section['df']
+            up_to_date_users = up_to_date_df[up_to_date_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes', 'created_timestamp', 'submitted_timestamp']]
+            up_to_date_users = up_to_date_users.rename(columns={
+                'email': 'correo', 'username': 'usuario', 'assessment': 'evaluación', 'grade': 'nota',
+                'completion_time_minutes': 'tiempo_minutos', 'created_timestamp': 'fecha_creación', 'submitted_timestamp': 'fecha_envío'
+            })
+            up_to_date_users.to_excel(writer, sheet_name="UpToDate", index=False)
     print(f"Excel file generated: {excel_path}")
 
     # --- Upload reports to Google Drive and send Slack notification ---
     if upload_reports:
         try:
-            # Get course name from configuration
             config = load_course_config()
             courses = config.get('courses', {})
             course_config = courses.get(course_id, {})
             course_name = course_config.get('name', course_id)
-            
-            # Upload reports and send notification
             drive_links = upload_reports_and_notify(course_id, course_name, reports_dir, processed_dir)
-            
             if drive_links:
                 print(f"✅ Se subieron {len(drive_links)} archivos a Google Drive")
                 print(f"✅ Notificación de Slack enviada con enlaces a reportes")
             else:
                 print("⚠️  No se subieron archivos (verificar variables de entorno y permisos)")
-                
         except Exception as e:
             print(f"❌ Error durante la subida/notificación: {e}")
             print("   Esta es funcionalidad opcional - el análisis se completó exitosamente")
@@ -676,7 +739,4 @@ if __name__ == "__main__":
     if args.no_upload:
         upload_enabled = False
     
-    # Determine if up-to-date filtering should be enabled
-    filter_up_to_date = args.up_to_date
-
-    run_analysis_pipeline(args.course, upload_enabled, filter_up_to_date) 
+    run_analysis_pipeline(args.course, upload_enabled) 

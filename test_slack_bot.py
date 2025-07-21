@@ -5,7 +5,7 @@ SLACK_TOKEN = os.environ["SLACK_BOT_TOKEN"]          # set this in your env/secr
 CHANNEL_ID  = os.environ["SLACK_CHANNEL"]                           # copy from channel → About
 payload = {
     "channel": CHANNEL_ID,
-    "text": "✅ Daily report uploaded – check it out!",
+    "text": "✅ shaa la revolucion de las maquinas",
     # you can add attachments or blocks here
 }
 headers = {"Authorization": f"Bearer {SLACK_TOKEN}"}
