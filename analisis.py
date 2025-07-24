@@ -8,10 +8,11 @@ import re
 from datetime import datetime, timedelta
 import json
 import base64
-from typing import Dict, List, Any
+from typing import List
 from dotenv import load_dotenv
 import unicodedata
 import numpy as np
+import tempfile
 load_dotenv()
 
 # Google Drive imports
@@ -33,14 +34,16 @@ except ImportError:
     SLACK_AVAILABLE = False
     print("Warning: Slack libraries not available. Install with: pip install slack-sdk")
 
+from storage import StorageClient
+
 GRADE_ZERO_THRESHOLD = float(os.getenv('GRADE_ZERO_THRESHOLD', 0))
 TIME_MAX_THRESHOLD_MINUTES = float(os.getenv('TIME_MAX_THRESHOLD_MINUTES', 100))
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Analyze course data and generate reports')
-    parser.add_argument('--course', '-c', required=True, help='Course ID to analyze')
-    parser.add_argument('--upload', '-u', action='store_true', help='Upload reports to Google Drive and send Slack notification')
-    parser.add_argument('--no-upload', action='store_true', help='Skip upload and notification (default behavior)')
+    parser.add_argument('--category', '-g', required=False, help='Category of the course (e.g., Matematicas, Ciencias, etc.)')
+    parser.add_argument('--course', '-c', required=False, help='Course ID to analyze')
+    parser.add_argument('--no-upload', action='store_true', help='Do not upload reports to Google Drive or send Slack notification')
     return parser.parse_args()
 
 def load_course_config(config_path: str = "cursos.yml"):
@@ -212,8 +215,8 @@ def get_slack_client():
     
     return WebClient(token=slack_token)
 
-def send_slack_notification(course_id: str, course_name: str, drive_links: List[str], channel: str = None):
-    """Send Slack notification with report links"""
+def send_slack_notification(category: str, course_id: str, course_name: str, drive_links: List[str], channel: str = None):
+    """Send Slack notification with report links, including file type."""
     if not SLACK_AVAILABLE:
         print("Warning: Slack not available, skipping notification")
         return
@@ -233,14 +236,14 @@ def send_slack_notification(course_id: str, course_name: str, drive_links: List[
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": f"📊 Reporte de Análisis de Curso - {course_name}"
+                    "text": f"📊 Reporte de Análisis de Curso - {course_name} ({category})"
                 }
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Curso:* {course_name}\n*ID del Curso:* {course_id}\n*Análisis completado:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    "text": f"*Categoría:* {category}\n*Curso:* {course_name}\n*ID del Curso:* {course_id}\n*Análisis completado:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 }
             }
         ]
@@ -256,11 +259,17 @@ def send_slack_notification(course_id: str, course_name: str, drive_links: List[
             })
             
             for link in drive_links:
+                # Determine file type from link or filename
+                file_type = "Archivo"
+                if "file" in link.lower():
+                    file_type = "PDF"
+                elif "spreadsheets" in link.lower():
+                    file_type = "Excel"
                 blocks.append({
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"• <{link}|Ver Archivo>"
+                        "text": f"• <{link}|Ver Archivo ({file_type})>"
                     }
                 })
         
@@ -277,9 +286,7 @@ def send_slack_notification(course_id: str, course_name: str, drive_links: List[
                 }
             ]
         })
-        
-        # Create fallback text for accessibility
-        fallback_text = f"📊 Reporte de Análisis de Curso - {course_name}\nCurso: {course_name}\nID del Curso: {course_id}\nAnálisis completado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        fallback_text = f"📊 Reporte de Análisis de Curso - {course_name} ({category})\nCategoría: {category}\nCurso: {course_name}\nID del Curso: {course_id}\nAnálisis completado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         if drive_links:
             fallback_text += f"\nArchivos generados: {len(drive_links)} archivos"
         
@@ -297,7 +304,7 @@ def send_slack_notification(course_id: str, course_name: str, drive_links: List[
     except Exception as e:
         print(f"Error enviando notificación de Slack: {e}")
 
-def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Path, processed_dir: Path):
+def upload_reports_and_notify(category: str, course_id: str, course_name: str, reports_dir: Path, processed_dir: Path):
     """Upload today's reports and CSV files to Google Drive (per-course folder), send Slack notification for reports only"""
     from datetime import datetime
     drive_service = get_drive_service()
@@ -342,7 +349,7 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
     # Send Slack notification only for report files
     if report_links:
         try:
-            send_slack_notification(course_id, course_name, report_links)
+            send_slack_notification(category, course_id, course_name, report_links)
         except Exception as e:
             print(f"❌ Error enviando notificación de Slack: {e}")
     else:
@@ -354,18 +361,19 @@ def upload_reports_and_notify(course_id: str, course_name: str, reports_dir: Pat
         print(f"📊 Resumen: {len(report_links)} reportes subidos")
     return all_uploaded_files
 
-def load_planification_data(course_id: str) -> pd.DataFrame:
-    """Load planification data for a course, robust to encoding issues"""
-    planification_path = Path("data") / "planification" / f"{course_id}.csv"
-    if not planification_path.exists():
+def load_planification_data(category: str, course_id: str) -> pd.DataFrame:
+    """Load planification data for a course, robust to encoding issues, using StorageClient"""
+    planification_path = Path("data") / "planification" / category / f"{course_id}.csv"
+    storage = StorageClient()
+    if not storage.exists(planification_path):
         print(f"Warning: Planification file not found at {planification_path}")
         return pd.DataFrame()
     try:
         try:
-            df_plan = pd.read_csv(planification_path, sep=';', encoding='utf-8')
+            df_plan = storage.read_csv(planification_path, sep=';', encoding='utf-8')
         except UnicodeDecodeError:
             print("[DEBUG] UTF-8 decode failed, trying latin1")
-            df_plan = pd.read_csv(planification_path, sep=';', encoding='latin1')
+            df_plan = storage.read_csv(planification_path, sep=';', encoding='latin1')
         # Normalize all string columns except 'date' to remove encoding artifacts
         for col in df_plan.select_dtypes(include=["object"]).columns:
             if col != 'date':
@@ -424,18 +432,20 @@ def normalize_str(s):
         return s
     return ''.join(c for c in unicodedata.normalize('NFKD', str(s)) if not unicodedata.combining(c))
 
-def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
+def run_analysis_pipeline(category: str, course_id: str, upload_reports: bool = False):
+    storage = StorageClient()
     ignore_emails = get_ignored_users(course_id)
     root = Path("data")
-    processed_dir = root / "processed" / course_id
-    reports_dir = root / "reports" / course_id
-    metrics_dir = root / "metrics" / "kpi"
+    processed_dir = root / "processed" / category / course_id
+    reports_dir = root / "reports" / category / course_id
+    metrics_dir = root / "metrics" / "kpi" / category / course_id
     reports_dir.mkdir(parents=True, exist_ok=True)
     metrics_dir.mkdir(parents=True, exist_ok=True)
     sep = ";"
-    df_assessments = pd.read_csv(processed_dir / "assessments.csv", sep=sep)
-    df_users = pd.read_csv(processed_dir / "users.csv", sep=sep)
-    df_grades = pd.read_csv(processed_dir / "grades.csv", sep=sep)
+    # Use storage for reading CSVs
+    df_assessments = storage.read_csv(str(processed_dir / "assessments.csv"), sep=sep)
+    df_users = storage.read_csv(str(processed_dir / "users.csv"), sep=sep)
+    df_grades = storage.read_csv(str(processed_dir / "grades.csv"), sep=sep)
     ignored_users = df_users[df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])].copy()
     df_users = df_users[~df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])]
     df_grades = df_grades[~df_grades['user_id'].isin(ignored_users['id'])]
@@ -512,12 +522,12 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     metrics_df = pd.DataFrame(metrics)
 
     # --- Up-to-date section (debug: print heads of all relevant DataFrames, error handling) ---
-    planification_path = Path("data/planification") / f"{course_id}.csv"
+    planification_path = Path("data/planification") / category / f"{course_id}.csv"
     include_up_to_date = planification_path.exists()
     up_to_date_section = None
     if include_up_to_date:
         try:
-            planification_df = load_planification_data(course_id)
+            planification_df = load_planification_data(category, course_id)
             due_assessments = get_assessments_due_until_today(planification_df)
             # Normalize assessment names in due_assessments and in user_response_df
             due_assessments_normalized = [normalize_str(a) for a in due_assessments]
@@ -533,12 +543,13 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
             base_course = os.getenv("UP_TO_DATE_BASE_COURSE", "lecciones-m0m")
             base_up_to_date_df = None
             if base_course:
-                base_processed_dir = Path("data/processed") / base_course
+                # NOTE: This assumes base course is in the same category. If not, you may need to update this logic.
+                base_processed_dir = Path("data/processed") / category / base_course
                 base_user_response_path = base_processed_dir / "users.csv"
                 base_grades_path = base_processed_dir / "grades.csv"
-                if base_user_response_path.exists() and base_grades_path.exists():
-                    base_user_response_df = pd.read_csv(base_user_response_path)
-                    base_grades_df = pd.read_csv(base_grades_path)
+                if storage.exists(base_user_response_path) and storage.exists(base_grades_path):
+                    base_user_response_df = storage.read_csv(str(base_user_response_path), sep=sep)
+                    base_grades_df = storage.read_csv(str(base_grades_path), sep=sep)
                     if 'id' in base_user_response_df.columns and 'user_id' in base_grades_df.columns:
                         base_user_response_df = base_user_response_df.merge(base_grades_df, left_on="id", right_on="user_id", how="left")
                     if 'assessment' in base_user_response_df.columns:
@@ -605,7 +616,7 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.cell(0, 10, f"Métricas de notas y tiempos - Curso: {course_id}", ln=True, align="C")
+    pdf.cell(0, 10, f"Métricas de notas y tiempos - Curso: {category}/{course_id}", ln=True, align="C")
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, "Métricas de notas y tiempos por evaluación", ln=True, align="C")
     pdf.set_font("Arial", 'B', 9)
@@ -688,39 +699,77 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
             pdf.ln()
         pdf.ln(5)
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
-    pdf_path = reports_dir / f"reporte_{course_id}_{fecha_actual}.pdf"
-    pdf.output(str(pdf_path))
-    print(f"PDF report generated: {pdf_path}")
-
-    # --- Excel file generation ---
-    excel_path = reports_dir / f"reporte_{course_id}_{fecha_actual}.xlsx"
-    with pd.ExcelWriter(excel_path) as writer:
-        pd.DataFrame(no_response_list, columns=["correo", "usuario"]).to_excel(
-            writer, sheet_name="Sin Respuesta", index=False)
-        for assessment, rows in responded_by_assessment.items():
-            clean_sheet_name = clean_excel_sheet_name(assessment)
-            df_response = pd.DataFrame(rows, columns=["correo", "usuario", "evaluación", "nota", "tiempo_minutos", "fecha_creación", "fecha_envío"])
-            df_response.to_excel(writer, sheet_name=clean_sheet_name, index=False)
-        # Add up-to-date sheet if needed
-        if up_to_date_section is not None:
-            up_to_date_df = up_to_date_section['df']
-            up_to_date_users = up_to_date_df[up_to_date_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes', 'created_timestamp', 'submitted_timestamp']]
-            up_to_date_users = up_to_date_users.rename(columns={
-                'email': 'correo', 'username': 'usuario', 'assessment': 'evaluación', 'grade': 'nota',
-                'completion_time_minutes': 'tiempo_minutos', 'created_timestamp': 'fecha_creación', 'submitted_timestamp': 'fecha_envío'
-            })
-            up_to_date_users.to_excel(writer, sheet_name="UpToDate", index=False)
-    print(f"Excel file generated: {excel_path}")
+    pdf_filename = f"reporte_{category}_{course_id}_{fecha_actual}.pdf"
+    excel_filename = f"reporte_{category}_{course_id}_{fecha_actual}.xlsx"
+    pdf_path = None
+    excel_path = None
+    if storage.backend == 'local':
+        pdf_path = reports_dir / pdf_filename
+        pdf.output(str(pdf_path))
+        excel_path = reports_dir / excel_filename
+        with pd.ExcelWriter(excel_path) as writer:
+            pd.DataFrame(no_response_list, columns=["correo", "usuario"]).to_excel(
+                writer, sheet_name="Sin Respuesta", index=False)
+            for assessment, rows in responded_by_assessment.items():
+                clean_sheet_name = clean_excel_sheet_name(assessment)
+                df_response = pd.DataFrame(rows, columns=["correo", "usuario", "evaluación", "nota", "tiempo_minutos", "fecha_creación", "fecha_envío"])
+                df_response.to_excel(writer, sheet_name=clean_sheet_name, index=False)
+            # Add up-to-date sheet if needed
+            if up_to_date_section is not None:
+                up_to_date_df = up_to_date_section['df']
+                up_to_date_users = up_to_date_df[up_to_date_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes', 'created_timestamp', 'submitted_timestamp']]
+                up_to_date_users = up_to_date_users.rename(columns={
+                    'email': 'correo', 'username': 'usuario', 'assessment': 'evaluación', 'grade': 'nota',
+                    'completion_time_minutes': 'tiempo_minutos', 'created_timestamp': 'fecha_creación', 'submitted_timestamp': 'fecha_envío'
+                })
+                up_to_date_users.to_excel(writer, sheet_name="UpToDate", index=False)
+    else:
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+            pdf.output(tmp_pdf.name)
+            pdf_path = tmp_pdf.name
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_xlsx:
+            with pd.ExcelWriter(tmp_xlsx.name) as writer:
+                pd.DataFrame(no_response_list, columns=["correo", "usuario"]).to_excel(
+                    writer, sheet_name="Sin Respuesta", index=False)
+                for assessment, rows in responded_by_assessment.items():
+                    clean_sheet_name = clean_excel_sheet_name(assessment)
+                    df_response = pd.DataFrame(rows, columns=["correo", "usuario", "evaluación", "nota", "tiempo_minutos", "fecha_creación", "fecha_envío"])
+                    df_response.to_excel(writer, sheet_name=clean_sheet_name, index=False)
+                # Add up-to-date sheet if needed
+                if up_to_date_section is not None:
+                    up_to_date_df = up_to_date_section['df']
+                    up_to_date_users = up_to_date_df[up_to_date_df['responded']][['email', 'username', 'assessment', 'grade', 'completion_time_minutes', 'created_timestamp', 'submitted_timestamp']]
+                    up_to_date_users = up_to_date_users.rename(columns={
+                        'email': 'correo', 'username': 'usuario', 'assessment': 'evaluación', 'grade': 'nota',
+                        'completion_time_minutes': 'tiempo_minutos', 'created_timestamp': 'fecha_creación', 'submitted_timestamp': 'fecha_envío'
+                    })
+                    up_to_date_users.to_excel(writer, sheet_name="UpToDate", index=False)
+            excel_path = tmp_xlsx.name
+    print(f"PDF report generated: {pdf_filename}")
+    print(f"Excel file generated: {excel_filename}")
 
     # --- Upload reports to Google Drive and send Slack notification ---
     if upload_reports:
         try:
             config = load_course_config()
             courses = config.get('courses', {})
-            course_config = courses.get(course_id, {})
+            # Find course config by category and course_id
+            course_config = None
+            if category in courses:
+                course_config = courses[category].get(course_id, {})
+            if not course_config:
+                course_config = courses.get(course_id, {})
             course_name = course_config.get('name', course_id)
-            drive_links = upload_reports_and_notify(course_id, course_name, reports_dir, processed_dir)
+            # Upload from the correct path (temp file for GCP, local file for local)
+            drive_links = []
+            from pathlib import Path as _Path
+            for file_path, file_name in [(pdf_path, pdf_filename), (excel_path, excel_filename)]:
+                if file_path and _Path(file_path).exists():
+                    drive_link = upload_file_to_drive(file_path, file_name)
+                    if drive_link:
+                        drive_links.append(drive_link)
             if drive_links:
+                send_slack_notification(category, course_id, course_name, drive_links)
                 print(f"✅ Se subieron {len(drive_links)} archivos a Google Drive")
                 print(f"✅ Notificación de Slack enviada con enlaces a reportes")
             else:
@@ -731,12 +780,31 @@ def run_analysis_pipeline(course_id: str, upload_reports: bool = False):
     else:
         print("📁 Reportes generados localmente (usar --upload para subir a Google Drive y enviar notificación de Slack)")
 
+def batch_analysis(category=None, course=None, upload_reports=False, no_upload=False):
+    config = load_course_config()
+    courses = config.get('courses', {})
+    if category and course:
+        # Single course in a category
+        if category in courses and course in courses[category]:
+            run_analysis_pipeline(category, course, upload_reports=upload_reports and not no_upload)
+        else:
+            print(f"Course {course} not found in category {category}.")
+    elif category:
+        # All courses in a category
+        if category in courses:
+            for course_id in courses[category]:
+                print(f"\nProcessing {category}/{course_id}")
+                run_analysis_pipeline(category, course_id, upload_reports=upload_reports and not no_upload)
+        else:
+            print(f"Category {category} not found.")
+    else:
+        # All categories and all courses
+        for cat in courses:
+            for course_id in courses[cat]:
+                print(f"\nProcessing {cat}/{course_id}")
+                run_analysis_pipeline(cat, course_id, upload_reports=upload_reports and not no_upload)
+
 if __name__ == "__main__":
     args = parse_arguments()
-    
-    # Determine if upload should be enabled
-    upload_enabled = args.upload
-    if args.no_upload:
-        upload_enabled = False
-    
-    run_analysis_pipeline(args.course, upload_enabled) 
+    upload_enabled = not args.no_upload
+    batch_analysis(category=args.category, course=args.course, upload_reports=upload_enabled, no_upload=args.no_upload) 

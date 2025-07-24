@@ -1,0 +1,941 @@
+[
+  {
+    "id": "687fa3896bd298dffb0e2375",
+    "user_id": "686bd476b9052e876a0c410d",
+    "email": "constanzaignaciafuentes@gmail.com",
+    "grade": 80,
+    "passed": true,
+    "created": 1753195401.052104,
+    "modified": 1753202358.923457,
+    "submittedTimestamp": 1753202358.721085,
+    "answers": [
+      {
+        "blockId": "mc1753103765567_885",
+        "blockType": "mc",
+        "description": "Pregunta 1",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_987",
+        "blockType": "mc",
+        "description": "Pregunta 2",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_771",
+        "blockType": "mc",
+        "description": "Pregunta 3",
+        "answer": "D",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_690",
+        "blockType": "mc",
+        "description": "Pregunta 4",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_908",
+        "blockType": "mc",
+        "description": "Pregunta 5",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_836",
+        "blockType": "mc",
+        "description": "Pregunta 6",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_940",
+        "blockType": "mc",
+        "description": "Pregunta 7",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_684",
+        "blockType": "mc",
+        "description": "Pregunta 8",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_765",
+        "blockType": "mc",
+        "description": "Pregunta 9",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_721",
+        "blockType": "mc",
+        "description": "Pregunta 10",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_696",
+        "blockType": "mc",
+        "description": "Pregunta 11",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_905",
+        "blockType": "mc",
+        "description": "Pregunta 12",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_729",
+        "blockType": "mc",
+        "description": "Pregunta 13",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_910",
+        "blockType": "mc",
+        "description": "Pregunta 14",
+        "answer": "A",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_945",
+        "blockType": "mc",
+        "description": "Pregunta 15",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_775",
+        "blockType": "mc",
+        "description": "Pregunta 16",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_875",
+        "blockType": "mc",
+        "description": "Pregunta 17",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_1005",
+        "blockType": "mc",
+        "description": "Pregunta 18",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_815",
+        "blockType": "mc",
+        "description": "Pregunta 19",
+        "answer": "A",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_943",
+        "blockType": "mc",
+        "description": "Pregunta 20",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_780",
+        "blockType": "mc",
+        "description": "Pregunta 21",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_789",
+        "blockType": "mc",
+        "description": "Pregunta 22",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_713",
+        "blockType": "mc",
+        "description": "Pregunta 23",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_776",
+        "blockType": "mc",
+        "description": "Pregunta 24",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_902",
+        "blockType": "mc",
+        "description": "Pregunta 25",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_920",
+        "blockType": "mc",
+        "description": "Pregunta 26",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_934",
+        "blockType": "mc",
+        "description": "Pregunta 27",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_863",
+        "blockType": "mc",
+        "description": "Pregunta 28",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_708",
+        "blockType": "mc",
+        "description": "Pregunta 29",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_788",
+        "blockType": "mc",
+        "description": "Pregunta 30",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      }
+    ],
+    "generalFeedback": null
+  },
+  {
+    "id": "687fa2fe04c234df7d001795",
+    "user_id": "686bd479b9052e876a0c4155",
+    "email": "jasoseaag@gmail.com",
+    "grade": 63,
+    "passed": true,
+    "created": 1753195262.786529,
+    "modified": 1753201036.351552,
+    "submittedTimestamp": 1753201036.180691,
+    "answers": [
+      {
+        "blockId": "mc1753103765567_885",
+        "blockType": "mc",
+        "description": "Pregunta 1",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_987",
+        "blockType": "mc",
+        "description": "Pregunta 2",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_771",
+        "blockType": "mc",
+        "description": "Pregunta 3",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_690",
+        "blockType": "mc",
+        "description": "Pregunta 4",
+        "answer": "A",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_908",
+        "blockType": "mc",
+        "description": "Pregunta 5",
+        "answer": "D",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_836",
+        "blockType": "mc",
+        "description": "Pregunta 6",
+        "answer": "D",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_940",
+        "blockType": "mc",
+        "description": "Pregunta 7",
+        "answer": "D",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_684",
+        "blockType": "mc",
+        "description": "Pregunta 8",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_765",
+        "blockType": "mc",
+        "description": "Pregunta 9",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_721",
+        "blockType": "mc",
+        "description": "Pregunta 10",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_696",
+        "blockType": "mc",
+        "description": "Pregunta 11",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_905",
+        "blockType": "mc",
+        "description": "Pregunta 12",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_729",
+        "blockType": "mc",
+        "description": "Pregunta 13",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_910",
+        "blockType": "mc",
+        "description": "Pregunta 14",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_945",
+        "blockType": "mc",
+        "description": "Pregunta 15",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_775",
+        "blockType": "mc",
+        "description": "Pregunta 16",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_875",
+        "blockType": "mc",
+        "description": "Pregunta 17",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_1005",
+        "blockType": "mc",
+        "description": "Pregunta 18",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_815",
+        "blockType": "mc",
+        "description": "Pregunta 19",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_943",
+        "blockType": "mc",
+        "description": "Pregunta 20",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_780",
+        "blockType": "mc",
+        "description": "Pregunta 21",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_789",
+        "blockType": "mc",
+        "description": "Pregunta 22",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_713",
+        "blockType": "mc",
+        "description": "Pregunta 23",
+        "answer": "D",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_776",
+        "blockType": "mc",
+        "description": "Pregunta 24",
+        "answer": "A",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_902",
+        "blockType": "mc",
+        "description": "Pregunta 25",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_920",
+        "blockType": "mc",
+        "description": "Pregunta 26",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_934",
+        "blockType": "mc",
+        "description": "Pregunta 27",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_863",
+        "blockType": "mc",
+        "description": "Pregunta 28",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_708",
+        "blockType": "mc",
+        "description": "Pregunta 29",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_788",
+        "blockType": "mc",
+        "description": "Pregunta 30",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      }
+    ],
+    "generalFeedback": null
+  },
+  {
+    "id": "687f9f22fe7737450f0a2306",
+    "user_id": "686bd477b9052e876a0c411f",
+    "email": "conyjiles02@gmail.com",
+    "grade": 47,
+    "passed": false,
+    "created": 1753194274.739296,
+    "modified": 1753194367.28358,
+    "submittedTimestamp": 1753194367.117521,
+    "answers": [
+      {
+        "blockId": "mc1753103765567_885",
+        "blockType": "mc",
+        "description": "Pregunta 1",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_987",
+        "blockType": "mc",
+        "description": "Pregunta 2",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_771",
+        "blockType": "mc",
+        "description": "Pregunta 3",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_690",
+        "blockType": "mc",
+        "description": "Pregunta 4",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_908",
+        "blockType": "mc",
+        "description": "Pregunta 5",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_836",
+        "blockType": "mc",
+        "description": "Pregunta 6",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_940",
+        "blockType": "mc",
+        "description": "Pregunta 7",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_684",
+        "blockType": "mc",
+        "description": "Pregunta 8",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_765",
+        "blockType": "mc",
+        "description": "Pregunta 9",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_721",
+        "blockType": "mc",
+        "description": "Pregunta 10",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_696",
+        "blockType": "mc",
+        "description": "Pregunta 11",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_905",
+        "blockType": "mc",
+        "description": "Pregunta 12",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_729",
+        "blockType": "mc",
+        "description": "Pregunta 13",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_910",
+        "blockType": "mc",
+        "description": "Pregunta 14",
+        "answer": "B",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_945",
+        "blockType": "mc",
+        "description": "Pregunta 15",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_775",
+        "blockType": "mc",
+        "description": "Pregunta 16",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_875",
+        "blockType": "mc",
+        "description": "Pregunta 17",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_1005",
+        "blockType": "mc",
+        "description": "Pregunta 18",
+        "answer": "A",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_815",
+        "blockType": "mc",
+        "description": "Pregunta 19",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_943",
+        "blockType": "mc",
+        "description": "Pregunta 20",
+        "answer": "D",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_780",
+        "blockType": "mc",
+        "description": "Pregunta 21",
+        "answer": "C",
+        "points": 1,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_789",
+        "blockType": "mc",
+        "description": "Pregunta 22",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_713",
+        "blockType": "mc",
+        "description": "Pregunta 23",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_776",
+        "blockType": "mc",
+        "description": "Pregunta 24",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_902",
+        "blockType": "mc",
+        "description": "Pregunta 25",
+        "answer": "B",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_920",
+        "blockType": "mc",
+        "description": "Pregunta 26",
+        "answer": "D",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_934",
+        "blockType": "mc",
+        "description": "Pregunta 27",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_863",
+        "blockType": "mc",
+        "description": "Pregunta 28",
+        "answer": "A",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_708",
+        "blockType": "mc",
+        "description": "Pregunta 29",
+        "answer": "A",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      },
+      {
+        "blockId": "mc1753103765567_788",
+        "blockType": "mc",
+        "description": "Pregunta 30",
+        "answer": "C",
+        "points": 0,
+        "blockMaxScore": 1,
+        "answerData": null,
+        "feedback": null
+      }
+    ],
+    "generalFeedback": null
+  }
+]

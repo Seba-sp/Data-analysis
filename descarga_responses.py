@@ -10,8 +10,7 @@ import requests
 import argparse
 from pathlib import Path
 import time
-from collections import Counter
-from fpdf import FPDF
+from storage import StorageClient
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Download and/or process assessment responses for a course')
@@ -92,16 +91,17 @@ def get_assessment_responses(assessment_id, latest_timestamp=None):
     return rows
 
 def save_responses(raw_dir, processed_dir, name, responses):
+    storage = StorageClient()
     json_path = raw_dir / f"{name.replace('/', '_')}.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(responses, f, ensure_ascii=False, indent=2)
+    storage.write_json(str(json_path), responses)
     df = pd.DataFrame(responses)
     csv_path = processed_dir / f"{name.replace('/', '_')}.csv"
-    df.to_csv(csv_path, sep=";", index=False)
+    storage.write_csv(str(csv_path), df, sep=';', index=False)
 
 def add_and_update_answer_columns_inplace(csv_path, responses):
+    storage = StorageClient()
     # Load the existing CSV
-    df = pd.read_csv(csv_path, sep=";")
+    df = storage.read_csv(str(csv_path), sep=';')
     # Convert timestamps
     for col in ["created", "modified", "submittedTimestamp"]:
         if col in df.columns:
@@ -131,7 +131,7 @@ def add_and_update_answer_columns_inplace(csv_path, responses):
     for q in ordered_questions:
         df[q] = [row.get(q) if isinstance(row, dict) else None for row in answers_per_row]
     # Do NOT reorder columns; keep original order and just append new question columns
-    df.to_csv(csv_path, sep=";", index=False)
+    storage.write_csv(str(csv_path), df, sep=';', index=False)
 
 def filter_responses(responses):
     # 1. Remove responses where the answer to the last question is empty
@@ -153,6 +153,7 @@ def filter_responses(responses):
     return list(user_latest.values())
 
 def main():
+    storage = StorageClient()
     args = parse_arguments()
     course = args.course
     raw_dir, processed_dir, questions_dir, reports_dir = setup_output_dirs(course)
@@ -178,8 +179,7 @@ def main():
             new_responses = get_assessment_responses(aid, latest_timestamp)
             # If incremental, combine with existing
             if latest_timestamp and json_path.exists():
-                with open(json_path, 'r', encoding="utf-8") as f:
-                    existing = json.load(f)
+                existing = storage.read_json(str(json_path))
                 combined = new_responses + existing
                 # Remove duplicates by response id if available
                 seen = set()
@@ -194,12 +194,10 @@ def main():
                 # Sort by created timestamp, newest first
                 unique.sort(key=lambda x: x.get('created', 0), reverse=True)
                 # Save raw JSON as downloaded (no filtering)
-                with open(json_path, "w", encoding="utf-8") as f:
-                    json.dump(unique, f, ensure_ascii=False, indent=2)
+                storage.write_json(str(json_path), unique)
             else:
                 # Save raw JSON as downloaded (no filtering)
-                with open(json_path, "w", encoding="utf-8") as f:
-                    json.dump(new_responses, f, ensure_ascii=False, indent=2)
+                storage.write_json(str(json_path), new_responses)
             print(f"Saved raw JSON for {name} to {json_path}")
         # Processing step
         if not args.download_only:
@@ -207,8 +205,7 @@ def main():
             if not json_path.exists():
                 print(f"Raw JSON file not found: {json_path}. Skipping.")
                 continue
-            with open(json_path, 'r', encoding="utf-8") as f:
-                responses = json.load(f)
+            responses = storage.read_json(str(json_path))
             filtered = filter_responses(responses)
             save_responses(raw_dir, processed_dir, name, filtered)
             add_and_update_answer_columns_inplace(processed_dir / f"{name.replace('/', '_')}.csv", filtered)

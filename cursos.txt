@@ -1,5 +1,8 @@
-test-de-diagnostico-m30m
-lecciones-m0m
-nivel-1-m30m
-nivel-2-m30m
-nivel-3-m30m
+Matemáticas,lecciones-m0m
+Matemáticas,test-de-diagnostico-m30m
+Matemáticas,nivel-1-m30m
+Matemáticas,nivel-2-m30m
+Matemáticas,nivel-3-m30m
+Matemáticas,nivel-4-m30m
+SinCategoria,stuff
+Ciencias,lecciones-c30m

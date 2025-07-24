@@ -7,24 +7,27 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 import shutil
+from storage import StorageClient
+import yaml
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Download and process course data')
-    parser.add_argument('--course', '-c', required=True, help='Course ID to process')
+    parser.add_argument('--category', '-g', required=False, help='Category of the course (e.g., Matematicas, Ciencias, etc.)')
+    parser.add_argument('--course', '-c', required=False, help='Course ID to process')
     parser.add_argument('--reset-raw', action='store_true', help='Delete raw data and download from scratch')
     return parser.parse_args()
 
 # Load environment variables
 load_dotenv()
 
-def setup_directories(course_id: str):
-    """Create the new directory structure for the course"""
+def setup_directories(category: str, course_id: str):
+    """Create the new directory structure for the course under its category"""
     root = Path("data")
     directories = [
-        root / "raw" / course_id,
-        root / "processed" / course_id,
-        root / "metrics" / "kpi" / course_id,
-        root / "reports" / course_id
+        root / "raw" / category / course_id,
+        root / "processed" / category / course_id,
+        root / "metrics" / "kpi" / category / course_id,
+        root / "reports" / category / course_id
     ]
     
     for directory in directories:
@@ -225,24 +228,22 @@ def get_course_users_full(course_id, school_domain, headers):
         page += 1
     return users
 
-def delete_raw_data(course_id: str):
+def delete_raw_data(category: str, course_id: str):
     """Delete all raw data files for a course."""
-    raw_dir = Path("data") / "raw" / course_id
+    raw_dir = Path("data") / "raw" / category / course_id
     if raw_dir.exists() and raw_dir.is_dir():
         shutil.rmtree(raw_dir)
-        print(f"Deleted raw data for course: {course_id}")
+        print(f"Deleted raw data for course: {category}/{course_id}")
     else:
-        print(f"No raw data found for course: {course_id}")
+        print(f"No raw data found for course: {category}/{course_id}")
 
-def run_full_pipeline(course_id: str):
+def run_full_pipeline(category: str, course_id: str):
     """Main pipeline function"""
-    print(f"Processing course: {course_id}")
-    
+    print(f"Processing course: {category}/{course_id}")
     # Setup environment
     client_id = os.getenv("CLIENT_ID")
     school_domain = os.getenv("SCHOOL_DOMAIN")
     access_token = os.getenv("ACCESS_TOKEN")
-    
     if not all([client_id, school_domain, access_token]):
         raise ValueError("Missing required environment variables: CLIENT_ID, SCHOOL_DOMAIN, ACCESS_TOKEN")
     
@@ -253,27 +254,24 @@ def run_full_pipeline(course_id: str):
     }
     
     # Setup directories
-    root = setup_directories(course_id)
-    raw_dir = root / "raw" / course_id
-    processed_dir = root / "processed" / course_id
-    
+    root = setup_directories(category, course_id)
+    raw_dir = root / "raw" / category / course_id
+    processed_dir = root / "processed" / category / course_id
+    storage = StorageClient()
     # Download and save assessments (full download since no timestamps)
     print("Downloading assessments...")
     assessments = get_assessments(course_id, school_domain, headers)
-    with open(raw_dir / "assessments.json", "w", encoding="utf-8") as f:
-        json.dump(assessments, f, ensure_ascii=False, indent=2)
+    storage.write_bytes(str(raw_dir / "assessments.json"), json.dumps(assessments, ensure_ascii=False, indent=2).encode("utf-8"), content_type="application/json")
 
     # Download users incrementally
     users_json_path = raw_dir / "users.json"
     users = get_course_users_incremental(course_id, school_domain, headers, users_json_path)
-    with open(users_json_path, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
+    storage.write_bytes(str(users_json_path), json.dumps(users, ensure_ascii=False, indent=2).encode("utf-8"), content_type="application/json")
 
     # Download grades incrementally
     grades_json_path = raw_dir / "grades.json"
     grades = get_course_grades_incremental(course_id, school_domain, headers, grades_json_path)
-    with open(grades_json_path, "w", encoding="utf-8") as f:
-        json.dump(grades, f, ensure_ascii=False, indent=2)
+    storage.write_bytes(str(grades_json_path), json.dumps(grades, ensure_ascii=False, indent=2).encode("utf-8"), content_type="application/json")
 
     # Procesamiento y guardado como CSV (except responses)
     print("Processing data...")
@@ -295,16 +293,47 @@ def run_full_pipeline(course_id: str):
             df_users[col] = pd.to_datetime(df_users[col], unit="s").dt.floor("s")
 
     sep = ";"
-    df_assessments.to_csv(processed_dir / "assessments.csv", sep=sep, index=False)
-    df_users.to_csv(processed_dir / "users.csv", sep=sep, index=False)
-    df_grades.to_csv(processed_dir / "grades.csv", sep=sep, index=False)
-
-    print(f"Download, processing and saving of data completed for course {course_id}")
+    storage.write_csv(str(processed_dir / "assessments.csv"), df_assessments, sep=sep)
+    storage.write_csv(str(processed_dir / "users.csv"), df_users, sep=sep)
+    storage.write_csv(str(processed_dir / "grades.csv"), df_grades, sep=sep)
+    print(f"Download, processing and saving of data completed for course {category}/{course_id}")
     print(f"Raw data saved in: {raw_dir}")
     print(f"Processed data saved in: {processed_dir}")
 
+def load_course_config(config_path: str = "cursos.yml"):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
+def batch_download(category=None, course=None, reset_raw=False):
+    config = load_course_config()
+    courses = config.get('courses', {})
+    if category and course:
+        # Single course in a category
+        if category in courses and course in courses[category]:
+            if reset_raw:
+                delete_raw_data(category, course)
+            run_full_pipeline(category, course)
+        else:
+            print(f"Course {course} not found in category {category}.")
+    elif category:
+        # All courses in a category
+        if category in courses:
+            for course_id in courses[category]:
+                print(f"\nProcessing {category}/{course_id}")
+                if reset_raw:
+                    delete_raw_data(category, course_id)
+                run_full_pipeline(category, course_id)
+        else:
+            print(f"Category {category} not found.")
+    else:
+        # All categories and all courses
+        for cat in courses:
+            for course_id in courses[cat]:
+                print(f"\nProcessing {cat}/{course_id}")
+                if reset_raw:
+                    delete_raw_data(cat, course_id)
+                run_full_pipeline(cat, course_id)
+
 if __name__ == "__main__":
     args = parse_arguments()
-    if args.reset_raw:
-        delete_raw_data(args.course)
-    run_full_pipeline(args.course) 
+    batch_download(category=args.category, course=args.course, reset_raw=args.reset_raw) 

@@ -1,0 +1,87 @@
+import os
+import pandas as pd
+import json
+from io import StringIO
+from pathlib import Path
+
+class StorageClient:
+    def __init__(self):
+        self.backend = os.getenv('STORAGE_BACKEND', 'local')
+        self.bucket_name = os.getenv('GCP_BUCKET_NAME')
+        if self.backend == 'gcp':
+            from google.cloud import storage as gcs
+            self.gcs_client = gcs.Client()
+            self.bucket = self.gcs_client.bucket(self.bucket_name)
+
+    def _local_path(self, path):
+        return Path(path)
+
+    def _gcs_path(self, path):
+        # Always use forward slashes for GCS object names
+        return str(path).replace('\\', '/')
+
+    def exists(self, path):
+        if self.backend == 'local':
+            return self._local_path(path).exists()
+        else:
+            return self.bucket.blob(self._gcs_path(path)).exists()
+
+    def read_csv(self, path, **kwargs):
+        if self.backend == 'local':
+            return pd.read_csv(self._local_path(path), **kwargs)
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            data = blob.download_as_text()
+            return pd.read_csv(StringIO(data), **kwargs)
+
+    def write_csv(self, path, df, **kwargs):
+        if self.backend == 'local':
+            df.to_csv(self._local_path(path), **kwargs)
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            csv_buffer = StringIO()
+            df.to_csv(csv_buffer, **kwargs)
+            blob.upload_from_string(csv_buffer.getvalue(), content_type='text/csv')
+
+    def read_json(self, path):
+        if self.backend == 'local':
+            with open(self._local_path(path), 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            data = blob.download_as_text()
+            return json.loads(data)
+
+    def write_json(self, path, obj):
+        if self.backend == 'local':
+            with open(self._local_path(path), 'w', encoding='utf-8') as f:
+                json.dump(obj, f, ensure_ascii=False, indent=2)
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            blob.upload_from_string(json.dumps(obj, ensure_ascii=False, indent=2), content_type='application/json')
+
+    def read_bytes(self, path):
+        if self.backend == 'local':
+            with open(self._local_path(path), 'rb') as f:
+                return f.read()
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            return blob.download_as_bytes()
+
+    def write_bytes(self, path, data, content_type=None):
+        if self.backend == 'local':
+            with open(self._local_path(path), 'wb') as f:
+                f.write(data)
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            blob.upload_from_string(data, content_type=content_type)
+
+    def list_files(self, prefix):
+        if self.backend == 'local':
+            p = self._local_path(prefix)
+            if p.is_dir():
+                return [str(f) for f in p.iterdir() if f.is_file()]
+            else:
+                return []
+        else:
+            return [b.name for b in self.bucket.list_blobs(prefix=self._gcs_path(prefix))] 

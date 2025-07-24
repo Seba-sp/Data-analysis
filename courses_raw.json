@@ -1,0 +1,264 @@
+[
+  {
+    "id": "lecciones-m0m",
+    "title": "Lecciones M30M",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Matemáticas"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/4fa6665b895af7b248d5b3acbac9c907.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "lecciones_m0m",
+      "apple_store_id": "lecciones_m0m",
+      "slug": "lecciones-m0m"
+    },
+    "access": "paid",
+    "created": 1750791050,
+    "modified": 1753231905
+  },
+  {
+    "id": "test-de-diagnostico-m30m",
+    "title": "Test de diagnóstico M30M",
+    "expires": null,
+    "expiresType": null,
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Matemáticas"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/945ad84d2a676f04956a9a63a1c4cf2e.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "test_de_diagnostico_m30m",
+      "apple_store_id": "test_de_diagnostico_m30m",
+      "slug": "test-de-diagnostico-m30m"
+    },
+    "access": "paid",
+    "created": 1751386531,
+    "modified": 1751902268
+  },
+  {
+    "id": "nivel-1-m30m",
+    "title": "Nivel 1 [M30M]",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Matemáticas"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/d8290dadd609d52229507d8c6bcdcaf1.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "nivel_1_m30m",
+      "apple_store_id": "nivel_1_m30m",
+      "slug": "nivel-1-m30m"
+    },
+    "access": "paid",
+    "created": 1751386597,
+    "modified": 1753134193
+  },
+  {
+    "id": "nivel-2-m30m",
+    "title": "Nivel 2 [M30M]",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Matemáticas"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/001883ade8587f6bd677a4d261ea494d.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "nivel_2_m30m",
+      "apple_store_id": "nivel_2_m30m",
+      "slug": "nivel-2-m30m"
+    },
+    "access": "paid",
+    "created": 1751386674,
+    "modified": 1753281715
+  },
+  {
+    "id": "nivel-3-m30m",
+    "title": "Nivel 3 [M30M]",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Matemáticas"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/9a800824ff5ccd25661c442e9ec3386e.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "nivel_3_m30m",
+      "apple_store_id": "nivel_3_m30m",
+      "slug": "nivel-3-m30m"
+    },
+    "access": "paid",
+    "created": 1751386704,
+    "modified": 1753286559
+  },
+  {
+    "id": "nivel-4-m30m",
+    "title": "Nivel 4 [M30M]",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Matemáticas"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/465fb89740f8820ccc3515c77b6b67f3.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "nivel_4_m30m",
+      "apple_store_id": "nivel_4_m30m",
+      "slug": "nivel-4-m30m"
+    },
+    "access": "paid",
+    "created": 1751386752,
+    "modified": 1751467058
+  },
+  {
+    "id": "stuff",
+    "title": "Stuff",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": null,
+    "original_price": 0,
+    "discount_price": 0,
+    "final_price": 0,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "stuff",
+      "apple_store_id": "stuff",
+      "slug": "stuff"
+    },
+    "access": "draft",
+    "created": 1751476400,
+    "modified": 1751476400
+  },
+  {
+    "id": "lecciones-c30m",
+    "title": "Lecciones C30M",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Ciencias"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": "/0102b2304b0bafac14d1c851e8681856.jpg",
+    "original_price": 1000,
+    "discount_price": 0,
+    "final_price": 1000,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "lecciones_c30m",
+      "apple_store_id": "lecciones_c30m",
+      "slug": "lecciones-c30m"
+    },
+    "access": "private",
+    "created": 1753214598,
+    "modified": 1753286110
+  }
+]

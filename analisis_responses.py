@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import subprocess
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
+from storage import StorageClient
+import tempfile
 
 load_dotenv()
 
@@ -174,7 +176,9 @@ def generate_xlsx_report(df_stats, output_path, assessment_name):
     wb.save(output_path)
 
 def process_csv(csv_path, top_percent):
-    df = pd.read_csv(csv_path, sep=';')
+    storage = StorageClient()
+    # Use storage to read CSV
+    df = storage.read_csv(str(csv_path), sep=';')
     question_cols = [col for col in df.columns if str(col).lower().startswith('pregunta ')]
     if not question_cols:
         print(f"No question columns found in {csv_path}")
@@ -206,11 +210,25 @@ def process_csv(csv_path, top_percent):
     reports_dir.mkdir(parents=True, exist_ok=True)
     assessment_name = base
     # XLSX report
-    xlsx_path = reports_dir / f"{csv_path.stem}_report.xlsx"
-    generate_xlsx_report(df_stats, xlsx_path, assessment_name)
-    # PDF report
-    pdf_path = reports_dir / f"{csv_path.stem}_top_{top_percent}pct.pdf"
-    generate_pdf_report(df_stats, pdf_path, top_percent, assessment_name)
+    import tempfile
+    xlsx_filename = f"{csv_path.stem}_report.xlsx"
+    pdf_filename = f"{csv_path.stem}_top_{top_percent}pct.pdf"
+    if storage.backend == 'local':
+        xlsx_path = reports_dir / xlsx_filename
+        generate_xlsx_report(df_stats, xlsx_path, assessment_name)
+        pdf_path = reports_dir / pdf_filename
+        generate_pdf_report(df_stats, pdf_path, top_percent, assessment_name)
+    else:
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_xlsx:
+            generate_xlsx_report(df_stats, tmp_xlsx.name, assessment_name)
+            tmp_xlsx.flush()
+            with open(tmp_xlsx.name, 'rb') as f:
+                storage.write_bytes(f"data/responses/reports/{course}/{xlsx_filename}", f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+            generate_pdf_report(df_stats, tmp_pdf.name, top_percent, assessment_name)
+            tmp_pdf.flush()
+            with open(tmp_pdf.name, 'rb') as f:
+                storage.write_bytes(f"data/responses/reports/{course}/{pdf_filename}", f.read(), content_type='application/pdf')
     print(f"Reports generated for {csv_path}")
 
 def parse_arguments():

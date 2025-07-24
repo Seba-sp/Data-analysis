@@ -9,19 +9,30 @@ import argparse
 from pathlib import Path
 from descarga_procesa_datos import run_full_pipeline as run_download_pipeline
 from analisis import run_analysis_pipeline as run_analysis_pipeline
+from storage import StorageClient
+import os
+import traceback
+from googleapiclient.http import MediaFileUpload
+from datetime import datetime
 
 def load_course_config(config_path: str = "cursos.yml"):
     """Load course configuration from YAML file"""
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
+def load_base_courses(base_courses_path: str = "base_courses.yml"):
+    """Load base course mapping from YAML file"""
+    with open(base_courses_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f).get('base_courses', {})
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Batch process multiple courses')
     parser.add_argument('--config', '-f', default='cursos.yml', help='Path to course configuration file')
-    parser.add_argument('--courses', '-c', nargs='+', help='Specific course IDs to process (overrides config)')
-    parser.add_argument('--download-only', action='store_true', help='Only download data, skip analysis')
-    parser.add_argument('--analysis-only', action='store_true', help='Only run analysis, skip download')
-    parser.add_argument('--upload-only', action='store_true', help='Only upload reports/CSVs to Google Drive, skip download and analysis')
+    parser.add_argument('--category', '-g', required=False, help='Category of the course (e.g., Matematicas, Ciencias, etc.)')
+    parser.add_argument('--course', '-c', required=False, help='Course ID to process')
+    parser.add_argument('--download-only', action='store_true', help='Only download data, skip analysis and upload')
+    parser.add_argument('--analysis-only', action='store_true', help='Only run analysis, skip download and upload')
+    parser.add_argument('--no-upload', action='store_true', help='Do not upload reports to Google Drive or send Slack notification')
     return parser.parse_args()
 
 # --- Google Drive upload logic ---
@@ -92,38 +103,37 @@ def find_file_in_folder(drive_service, folder_id, filename, drive_id=None):
         return files[0]['id']
     return None
 
-def upload_files_for_course(course_id, folder_id=None, drive_id=None):
+def upload_files_for_course(category, course_id, folder_id=None, drive_id=None):
     """
-    Uploads today's files in data/reports/{course_id}/ and data/processed/{course_id}/ to a subfolder in Google Drive.
+    Uploads today's files in data/reports/{category}/{course_id}/ to a subfolder in Google Drive.
     If a file with the same name exists, it is replaced (updated).
     Returns a dict of {filename: webViewLink}
     """
-    import os
-    import traceback
-    from pathlib import Path
-    from googleapiclient.http import MediaFileUpload
-    from datetime import datetime
+    storage = StorageClient()
+    if storage.backend == 'gcp':
+        print(f"[DEBUG] STORAGE_BACKEND is 'gcp': skipping upload_files_for_course (handled in analysis.py)")
+        return {}
     if folder_id is None:
         folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
     if drive_id is None:
         drive_id = os.environ.get('GOOGLE_DRIVE_ID') if os.environ.get('GOOGLE_DRIVE_ID') else None
-    print(f"[DEBUG] Subiendo archivos para el curso: {course_id}")
+    print(f"[DEBUG] Subiendo archivos para el curso: {category}/{course_id}")
     print(f"[DEBUG] Usando carpeta de Drive con ID: {folder_id}")
     drive_service = get_drive_service()
     # Find or create subfolder for the course
-    course_folder_id = find_or_create_folder(drive_service, folder_id, course_id, drive_id)
+    course_folder_id = find_or_create_folder(drive_service, folder_id, f"{category}_{course_id}", drive_id)
     print(f"[DEBUG] Carpeta de curso en Drive: {course_folder_id}")
     results = {}
     today = datetime.now().date()
-    for subdir in ['reports', 'processed']:
-        dir_path = Path('data') / subdir / course_id
-        print(f"[DEBUG] Buscando archivos en: {dir_path}")
-        if not dir_path.exists():
-            print(f"[DEBUG] Directorio no existe: {dir_path}")
-            continue
+    # Only upload report files (PDF, Excel) from reports directory
+    subdir = 'reports'
+    dir_path = Path('data') / subdir / category / course_id
+    print(f"[DEBUG] Buscando archivos en: {dir_path}")
+    if not dir_path.exists():
+        print(f"[DEBUG] Directorio no existe: {dir_path}")
+    else:
         for file_path in dir_path.iterdir():
-            if file_path.is_file():
-                # Only upload files created or modified today
+            if file_path.is_file() and file_path.suffix in ['.xlsx', '.pdf']:
                 mtime = datetime.fromtimestamp(file_path.stat().st_mtime).date()
                 ctime = datetime.fromtimestamp(file_path.stat().st_ctime).date()
                 if mtime != today and ctime != today:
@@ -135,40 +145,45 @@ def upload_files_for_course(course_id, folder_id=None, drive_id=None):
                         'name': file_path.name,
                         'parents': [course_folder_id]
                     }
-                    media = MediaFileUpload(str(file_path), resumable=True)
-                    # Check if file exists in Drive folder
-                    existing_file_id = find_file_in_folder(drive_service, course_folder_id, file_path.name, drive_id)
-                    if existing_file_id:
-                        print(f"[DEBUG] Archivo ya existe en Drive, actualizando: {file_path.name} (ID: {existing_file_id})")
-                        update_args = dict(
-                            fileId=existing_file_id,
-                            media_body=media,
-                            fields='id,webViewLink',
-                            supportsAllDrives=True
-                        )
-                        if drive_id:
-                            update_args['driveId'] = drive_id
-                        uploaded = drive_service.files().update(**update_args).execute()
-                    else:
-                        upload_args = dict(
-                            body=file_metadata,
-                            media_body=media,
-                            fields='id,webViewLink',
-                            supportsAllDrives=True
-                        )
-                        if drive_id:
-                            upload_args['driveId'] = drive_id
-                        uploaded = drive_service.files().create(**upload_args).execute()
-                    results[file_path.name] = uploaded.get('webViewLink')
-                    print(f"[DEBUG] Archivo subido: {file_path.name} → {uploaded.get('webViewLink')}")
+                    file_bytes = storage.read_bytes(str(file_path))
+                    # Write to a temp file for MediaFileUpload
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=file_path.suffix) as tmpf:
+                        tmpf.write(file_bytes)
+                        tmpf.flush()
+                        media = MediaFileUpload(tmpf.name, resumable=True)
+                        existing_file_id = find_file_in_folder(drive_service, course_folder_id, file_path.name, drive_id)
+                        if existing_file_id:
+                            print(f"[DEBUG] Archivo ya existe en Drive, actualizando: {file_path.name} (ID: {existing_file_id})")
+                            update_args = dict(
+                                fileId=existing_file_id,
+                                media_body=media,
+                                fields='id,webViewLink',
+                                supportsAllDrives=True
+                            )
+                            if drive_id:
+                                update_args['driveId'] = drive_id
+                            uploaded = drive_service.files().update(**update_args).execute()
+                        else:
+                            upload_args = dict(
+                                body=file_metadata,
+                                media_body=media,
+                                fields='id,webViewLink',
+                                supportsAllDrives=True
+                            )
+                            if drive_id:
+                                upload_args['driveId'] = drive_id
+                            uploaded = drive_service.files().create(**upload_args).execute()
+                        results[file_path.name] = uploaded.get('webViewLink')
+                        print(f"[DEBUG] Archivo subido: {file_path.name} → {uploaded.get('webViewLink')}")
                 except Exception as e:
                     print(f"[ERROR] Falló la subida de {file_path.name}: {e}")
                     traceback.print_exc()
-    print(f"[DEBUG] Subida finalizada para el curso: {course_id}")
+    print(f"[DEBUG] Subida finalizada para el curso: {category}/{course_id}")
     return results
 
-def send_slack_notification_for_upload(course_id, course_config, uploaded_links):
-    """Send a Slack notification listing uploaded files for a course."""
+def send_slack_notification_for_upload(category, course_id, course_config, uploaded_links):
+    """Send a Slack notification listing uploaded files for a course, including the category."""
     import os
     slack_channel = os.environ.get('SLACK_CHANNEL')
     if not slack_channel:
@@ -182,7 +197,7 @@ def send_slack_notification_for_upload(course_id, course_config, uploaded_links)
         print("[DEBUG] No hay archivos subidos para notificar a Slack.")
         return
     course_name = course_config.get('name', course_id)
-    text = f"Se han subido los siguientes archivos para el curso *{course_name}* ({course_id}):\n"
+    text = f"Se han subido los siguientes archivos para la categoría *{category}*, curso *{course_name}* ({course_id}):\n"
     for fname, link in uploaded_links.items():
         text += f"• <{link}|{fname}>\n"
     try:
@@ -190,9 +205,9 @@ def send_slack_notification_for_upload(course_id, course_config, uploaded_links)
             channel=slack_channel,
             text=text
         )
-        print(f"[DEBUG] Notificación de Slack enviada para {course_id}")
+        print(f"[DEBUG] Notificación de Slack enviada para {category}/{course_id}")
     except Exception as e:
-        print(f"[ERROR] Falló el envío de notificación Slack para {course_id}: {e}")
+        print(f"[ERROR] Falló el envío de notificación Slack para {category}/{course_id}: {e}")
 
 def get_slack_client():
     """Initialize Slack client"""
@@ -204,58 +219,62 @@ def get_slack_client():
         return None
     return WebClient(token=slack_token)
 
-def run_batch_pipeline(config_path: str, specific_courses: list = None, 
-                      download_only: bool = False, analysis_only: bool = False, upload_only: bool = False):
-    """Run pipeline for multiple courses"""
+def run_batch_pipeline(config_path: str, category: str = None, course_id: str = None, download_only: bool = False, analysis_only: bool = False, no_upload: bool = False):
+    """Run pipeline for one or more courses/categories"""
     import os
-    base_course = os.getenv("UP_TO_DATE_BASE_COURSE", "lecciones-m0m")
+    base_courses = load_base_courses()
     config = load_course_config(config_path)
     courses = config.get('courses', {})
-    if specific_courses:
-        courses_to_process = {course_id: courses[course_id] 
-                            for course_id in specific_courses 
-                            if course_id in courses}
-    else:
-        courses_to_process = courses
-    if not courses_to_process:
-        print("No courses found to process")
-        return
-    print(f"Processing {len(courses_to_process)} courses:")
-    for course_id in courses_to_process:
-        print(f"  - {course_id}: {courses_to_process[course_id].get('name', 'Unknown')}")
-    print(f"Base course for up-to-date intersection: {base_course}")
-    for course_id, course_config in courses_to_process.items():
-        print(f"\n{'='*50}")
-        print(f"Processing course: {course_id}")
+    def process_one(cat, cid):
+        base_course = base_courses.get(cat, None)
+        course_config = None
+        if cat in courses and cid in courses[cat]:
+            course_config = courses[cat][cid]
+        if not course_config:
+            print(f"No course found for category '{cat}' and course '{cid}'")
+            return
+        print(f"Processing course: {cat}/{cid}")
         print(f"Name: {course_config.get('name', 'Unknown')}")
-        print(f"{'='*50}")
+        print(f"Base course for up-to-date intersection: {base_course if base_course else 'None'}")
         try:
-            if upload_only:
-                print(f"Uploading reports/CSVs para {course_id}...")
-                uploaded_links = upload_files_for_course(course_id)
-                print(f"Upload completed for {course_id}")
-                send_slack_notification_for_upload(course_id, course_config, uploaded_links)
-                continue
-            if not analysis_only:
-                print(f"Downloading data for {course_id}...")
-                run_download_pipeline(course_id)
-                print(f"Download completed for {course_id}")
+            if not analysis_only and not download_only:
+                print(f"Downloading data for {cat}/{cid}...")
+                run_download_pipeline(cat, cid)
+                print(f"Download completed for {cat}/{cid}")
             if not download_only:
-                print(f"Analyzing data for {course_id}...")
-                run_analysis_pipeline(course_id, upload_reports=False)
-                print(f"Analysis completed for {course_id}")
+                print(f"Analyzing data for {cat}/{cid}...")
+                run_analysis_pipeline(cat, cid, upload_reports=not no_upload)
+                print(f"Analysis completed for {cat}/{cid}")
+            if not no_upload:
+                print(f"Uploading reports/CSVs para {cat}/{cid}...")
+                uploaded_links = upload_files_for_course(cat, cid)
+                print(f"Upload completed for {cat}/{cid}")
+                send_slack_notification_for_upload(cat, cid, course_config, uploaded_links)
         except Exception as e:
-            print(f"Error processing course {course_id}: {str(e)}")
-            continue
-    print(f"\n{'='*50}")
-    print("Batch processing completed!")
+            print(f"Error processing course {cat}/{cid}: {str(e)}")
+            return
+        print(f"Batch processing completed for {cat}/{cid}!")
+    # Logic for batch
+    if category and course_id:
+        process_one(category, course_id)
+    elif category:
+        if category in courses:
+            for cid in courses[category]:
+                process_one(category, cid)
+        else:
+            print(f"Category {category} not found.")
+    else:
+        for cat in courses:
+            for cid in courses[cat]:
+                process_one(cat, cid)
 
 if __name__ == "__main__":
     args = parse_arguments()
     run_batch_pipeline(
         config_path=args.config,
-        specific_courses=args.courses,
+        category=args.category,
+        course_id=args.course,
         download_only=args.download_only,
         analysis_only=args.analysis_only,
-        upload_only=args.upload_only
+        no_upload=args.no_upload
     ) 
