@@ -1,5 +1,35 @@
 [
   {
+    "id": "6883d85288a3db48f20b46e6",
+    "user_id": "686bd47ab9052e876a0c4182",
+    "email": "lepecony2007@gmail.com",
+    "grade": 70,
+    "created": 1753471058.743224,
+    "submittedTimestamp": 1753471284.871471,
+    "modified": 1753471285.161856,
+    "learningUnit": {
+      "id": "68768662d403ee4074078086",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882b38106d17da27c0581d5",
+    "user_id": "686bd47ab9052e876a0c4182",
+    "email": "lepecony2007@gmail.com",
+    "grade": 67,
+    "created": 1753396097.547391,
+    "submittedTimestamp": 1753397394.64207,
+    "modified": 1753397394.949015,
+    "learningUnit": {
+      "id": "686fc337b17d46df910e1716",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "687a7272c252f79f640aab18",
     "user_id": "686bd47ab9052e876a0c4182",
     "email": "lepecony2007@gmail.com",

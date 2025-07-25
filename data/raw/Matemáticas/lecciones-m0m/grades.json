@@ -1,5 +1,530 @@
 [
   {
+    "id": "6883bfc9c47f0e02a5085a17",
+    "user_id": "686bd47fb9052e876a0c4209",
+    "email": "studymonsee@gmail.com",
+    "grade": 100,
+    "created": 1753464777.835483,
+    "submittedTimestamp": 1753465739.823878,
+    "modified": 1753465740.153075,
+    "learningUnit": {
+      "id": "6866dfaf519760307901a4d6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6883b2d41a0d1a178f093025",
+    "user_id": "686bd477b9052e876a0c411f",
+    "email": "conyjiles02@gmail.com",
+    "grade": 60,
+    "created": 1753461460.017484,
+    "submittedTimestamp": 1753461483.540063,
+    "modified": 1753461483.780263,
+    "learningUnit": {
+      "id": "6866e3de6417725d94043cd6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68839aa903f85161350774b5",
+    "user_id": "686bd480b9052e876a0c421b",
+    "email": "valitw1@gmail.com",
+    "grade": 80,
+    "created": 1753455273.270735,
+    "submittedTimestamp": 1753458346.839859,
+    "modified": 1753458347.371244,
+    "learningUnit": {
+      "id": "6866dcd4007bb1c8e703a4d6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68839046e0d3e1700805af98",
+    "user_id": "686bd480b9052e876a0c421b",
+    "email": "valitw1@gmail.com",
+    "grade": 80,
+    "created": 1753452614.909162,
+    "submittedTimestamp": 1753452640.40526,
+    "modified": 1753452640.949246,
+    "learningUnit": {
+      "id": "6866e38ce4ec66f62b055786",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882f5be71e3a0378f08af96",
+    "user_id": "686bd479b9052e876a0c4155",
+    "email": "jasoseaag@gmail.com",
+    "grade": 80,
+    "created": 1753413054.660793,
+    "submittedTimestamp": 1753413466.658063,
+    "modified": 1753413466.913035,
+    "learningUnit": {
+      "id": "6866ea959897ec89ab0183f6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882f41ce25426185b068a28",
+    "user_id": "686bd479b9052e876a0c4155",
+    "email": "jasoseaag@gmail.com",
+    "grade": 60,
+    "created": 1753412636.0034,
+    "submittedTimestamp": 1753413033.332565,
+    "modified": 1753413033.598773,
+    "learningUnit": {
+      "id": "6866e54b98f4c7746f078766",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882f2e18ddf59605c0789d5",
+    "user_id": "686bd479b9052e876a0c4155",
+    "email": "jasoseaag@gmail.com",
+    "grade": 80,
+    "created": 1753412321.958137,
+    "submittedTimestamp": 1753412479.728473,
+    "modified": 1753412479.977835,
+    "learningUnit": {
+      "id": "6866e539335a3eb3350cccb7",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882f0cb640888237809f835",
+    "user_id": "686bd479b9052e876a0c4155",
+    "email": "jasoseaag@gmail.com",
+    "grade": 80,
+    "created": 1753411787.393265,
+    "submittedTimestamp": 1753412292.026244,
+    "modified": 1753412292.292543,
+    "learningUnit": {
+      "id": "6866e51151703933d80b28a6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882bd6287b69a3d460e8675",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 80,
+    "created": 1753398626.726522,
+    "submittedTimestamp": 1753399298.166711,
+    "modified": 1753399298.495508,
+    "learningUnit": {
+      "id": "6866da1c02bfa42de10ff576",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882a6801b5f3008170cb645",
+    "user_id": "686d97efc69fd221d4011714",
+    "email": "herrerabecerraignacia@gmail.com",
+    "grade": 100,
+    "created": 1753392768.348504,
+    "submittedTimestamp": 1753392866.326063,
+    "modified": 1753392866.511246,
+    "learningUnit": {
+      "id": "6866dbc7ccd76d93960bc096",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882a5ac0e09e0c9360b80e5",
+    "user_id": "686d97efc69fd221d4011714",
+    "email": "herrerabecerraignacia@gmail.com",
+    "grade": 100,
+    "created": 1753392556.74211,
+    "submittedTimestamp": 1753392736.196525,
+    "modified": 1753392736.410145,
+    "learningUnit": {
+      "id": "6866db4679133a1a31095ec6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688284aa3bf6b7096009c735",
+    "user_id": "686bd47fb9052e876a0c4209",
+    "email": "studymonsee@gmail.com",
+    "grade": 100,
+    "created": 1753384106.399872,
+    "submittedTimestamp": 1753385017.04167,
+    "modified": 1753385017.338113,
+    "learningUnit": {
+      "id": "6866df736d7874650503fd26",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68827bfe73094e647c0a05b5",
+    "user_id": "686bd480b9052e876a0c422d",
+    "email": "ycruzv.2006@gmail.com",
+    "grade": 60,
+    "created": 1753381886.152933,
+    "submittedTimestamp": 1753383632.900205,
+    "modified": 1753383633.419751,
+    "learningUnit": {
+      "id": "6866dd4a2e3cb5bf94005446",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688268d0390b61f8c506a7a5",
+    "user_id": "686bd480b9052e876a0c422d",
+    "email": "ycruzv.2006@gmail.com",
+    "grade": 80,
+    "created": 1753376976.688247,
+    "submittedTimestamp": 1753377303.846572,
+    "modified": 1753377304.341246,
+    "learningUnit": {
+      "id": "6866dcd4007bb1c8e703a4d6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68825493f4ec4ba9f50eba48",
+    "user_id": "686bd47eb9052e876a0c41f7",
+    "email": "sofia.riverostapia@gmail.com",
+    "grade": 100,
+    "created": 1753371795.494877,
+    "submittedTimestamp": 1753371818.358012,
+    "modified": 1753371818.628443,
+    "learningUnit": {
+      "id": "6866dfaf519760307901a4d6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68825395f744e150100b8635",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 100,
+    "created": 1753371541.186463,
+    "submittedTimestamp": 1753371838.749392,
+    "modified": 1753371839.064614,
+    "learningUnit": {
+      "id": "6866d998da8f0dd38605f886",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68825227852cab8294024515",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 80,
+    "created": 1753371175.436713,
+    "submittedTimestamp": 1753371521.103634,
+    "modified": 1753371521.403495,
+    "learningUnit": {
+      "id": "6866d849c411c18773002817",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68825083c0201808f40db1e5",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 100,
+    "created": 1753370755.076423,
+    "submittedTimestamp": 1753371081.513485,
+    "modified": 1753371081.840351,
+    "learningUnit": {
+      "id": "6866d7eaa5a421fc4b093896",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68824ef02ba7d219d20ba875",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 80,
+    "created": 1753370352.599305,
+    "submittedTimestamp": 1753370730.270824,
+    "modified": 1753370730.60633,
+    "learningUnit": {
+      "id": "6866d74d737033c71a0b01f6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68824e642d034956eb000a45",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 100,
+    "created": 1753370212.749904,
+    "submittedTimestamp": 1753370310.246663,
+    "modified": 1753370310.559821,
+    "learningUnit": {
+      "id": "6866d6d18118083ae709bcf6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68824d281b3e7868770615f6",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 100,
+    "created": 1753369896.721854,
+    "submittedTimestamp": 1753370171.152969,
+    "modified": 1753370171.489278,
+    "learningUnit": {
+      "id": "6866deeb2409ed93ed04b997",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68824c6a76af9ff8b907b225",
+    "user_id": "686bd47eb9052e876a0c41f7",
+    "email": "sofia.riverostapia@gmail.com",
+    "grade": 100,
+    "created": 1753369706.131713,
+    "submittedTimestamp": 1753370010.609625,
+    "modified": 1753370010.913272,
+    "learningUnit": {
+      "id": "6866df736d7874650503fd26",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68824a224481bd7da3073da8",
+    "user_id": "686bd480b9052e876a0c4224",
+    "email": "victoria.calvio07@gmail.com",
+    "grade": 100,
+    "created": 1753369122.14272,
+    "submittedTimestamp": 1753369859.549684,
+    "modified": 1753369859.851268,
+    "learningUnit": {
+      "id": "6866dfe933189e56010932b6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688247bc5a02bbff3a0f2ed5",
+    "user_id": "686bd47eb9052e876a0c41f7",
+    "email": "sofia.riverostapia@gmail.com",
+    "grade": 100,
+    "created": 1753368508.663301,
+    "submittedTimestamp": 1753368806.478601,
+    "modified": 1753368806.784668,
+    "learningUnit": {
+      "id": "6866deeb2409ed93ed04b997",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688242aa7a2957d3fe07d1c5",
+    "user_id": "686bd480b9052e876a0c421b",
+    "email": "valitw1@gmail.com",
+    "grade": 80,
+    "created": 1753367210.025466,
+    "submittedTimestamp": 1753368245.245525,
+    "modified": 1753368245.832522,
+    "learningUnit": {
+      "id": "6866e2c79d9a0d32720b8de6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882370499c8cfc999029455",
+    "user_id": "686d96fa97d7bd6ed70b03f4",
+    "email": "cornejoamaris@gmail.com",
+    "grade": 100,
+    "created": 1753364228.626509,
+    "submittedTimestamp": 1753364491.077756,
+    "modified": 1753364491.334961,
+    "learningUnit": {
+      "id": "6866dec5ba81ee8dcc098606",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68823154dacf335b21048a15",
+    "user_id": "686d96fa97d7bd6ed70b03f4",
+    "email": "cornejoamaris@gmail.com",
+    "grade": 80,
+    "created": 1753362772.174605,
+    "submittedTimestamp": 1753363526.06719,
+    "modified": 1753363526.395909,
+    "learningUnit": {
+      "id": "6866de39bd7e35a64b046186",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68819991bfe44f0b540e8775",
+    "user_id": "686bd477b9052e876a0c411f",
+    "email": "conyjiles02@gmail.com",
+    "grade": 60,
+    "created": 1753323921.802924,
+    "submittedTimestamp": 1753323950.219557,
+    "modified": 1753323950.439497,
+    "learningUnit": {
+      "id": "6866e38ce4ec66f62b055786",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68818695583172dcab0c5895",
+    "user_id": "686bd47fb9052e876a0c4212",
+    "email": "studystress15@gmail.com",
+    "grade": 80,
+    "created": 1753319061.456768,
+    "submittedTimestamp": 1753319294.517949,
+    "modified": 1753319294.717786,
+    "learningUnit": {
+      "id": "6868315af7715dd519004676",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688183ef6490a8a4d90880d5",
+    "user_id": "686bd477b9052e876a0c411f",
+    "email": "conyjiles02@gmail.com",
+    "grade": 40,
+    "created": 1753318383.743849,
+    "submittedTimestamp": 1753318412.96392,
+    "modified": 1753318413.074696,
+    "learningUnit": {
+      "id": "6866e334d97ab9c998042086",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6881839221cf3d1f6a08d906",
+    "user_id": "686bd476b9052e876a0c410d",
+    "email": "constanzaignaciafuentes@gmail.com",
+    "grade": 80,
+    "created": 1753318290.288326,
+    "submittedTimestamp": 1753319278.395286,
+    "modified": 1753319278.767735,
+    "learningUnit": {
+      "id": "6866e539335a3eb3350cccb7",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688166415f9820a049061985",
+    "user_id": "686bd480b9052e876a0c422d",
+    "email": "ycruzv.2006@gmail.com",
+    "grade": 80,
+    "created": 1753310785.486288,
+    "submittedTimestamp": 1753312416.609767,
+    "modified": 1753312417.060701,
+    "learningUnit": {
+      "id": "6866e28550f85caa1d0e2d66",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688162d3d8d1e7c5f502b749",
+    "user_id": "686bd476b9052e876a0c410d",
+    "email": "constanzaignaciafuentes@gmail.com",
+    "grade": 100,
+    "created": 1753309907.790244,
+    "submittedTimestamp": 1753310606.453343,
+    "modified": 1753310606.768847,
+    "learningUnit": {
+      "id": "6866e51151703933d80b28a6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68815411b01683e43205a6c5",
+    "user_id": "6881499991126edb480ada55",
+    "email": "cristianignaciovr@gmail.com",
+    "grade": 0,
+    "created": 1753306129.17611,
+    "submittedTimestamp": 1753306135.599356,
+    "modified": 1753306135.718973,
+    "learningUnit": {
+      "id": "6866dbc7ccd76d93960bc096",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688153bfa0ff0380ed06fda5",
+    "user_id": "6881499991126edb480ada55",
+    "email": "cristianignaciovr@gmail.com",
+    "grade": 20,
+    "created": 1753306047.727303,
+    "submittedTimestamp": 1753306074.356731,
+    "modified": 1753306074.468139,
+    "learningUnit": {
+      "id": "6866db4679133a1a31095ec6",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
     "id": "68812a502aec1a1149048958",
     "user_id": "686bd47fb9052e876a0c4212",
     "email": "studystress15@gmail.com",

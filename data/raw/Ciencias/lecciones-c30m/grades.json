@@ -1,1 +1,107 @@
-[]
+[
+  {
+    "id": "6883bd85edac5da0d1090e17",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753464197.609935,
+    "submittedTimestamp": 1753464202.783557,
+    "modified": 1753464202.919092,
+    "learningUnit": {
+      "id": "687fee9dfdf36310140d9161",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6883bbc20059ce2be30829f6",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753463746.616682,
+    "submittedTimestamp": 1753463751.571345,
+    "modified": 1753463751.705513,
+    "learningUnit": {
+      "id": "687fee9cfdf36310140d915d",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68839e1be7657686be0a21a9",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753456155.380833,
+    "submittedTimestamp": 1753456160.255485,
+    "modified": 1753456160.384858,
+    "learningUnit": {
+      "id": "687fee9afdf36310140d9145",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882a1d5984e5ad05f098e86",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753391573.259848,
+    "submittedTimestamp": 1753391577.193926,
+    "modified": 1753391577.322405,
+    "learningUnit": {
+      "id": "687fee97fdf36310140d912d",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "68829793fa12048b13056ec6",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753388947.241933,
+    "submittedTimestamp": 1753388951.281502,
+    "modified": 1753388951.403381,
+    "learningUnit": {
+      "id": "687fee93fdf36310140d9109",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "6882660f9b55debaad0c4f46",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753376271.636256,
+    "submittedTimestamp": 1753376275.40769,
+    "modified": 1753376275.523981,
+    "learningUnit": {
+      "id": "687fee8efdf36310140d90d5",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  },
+  {
+    "id": "688262eaf6481a1aad04abc6",
+    "user_id": "685aef7af6675ccea0eb2afa",
+    "email": "soporte@preum30m.com",
+    "grade": 0,
+    "created": 1753375466.149266,
+    "submittedTimestamp": 1753375469.971132,
+    "modified": 1753375470.096241,
+    "learningUnit": {
+      "id": "687fee8dfdf36310140d90c9",
+      "type": "assessmentV2",
+      "subtitle": "Exam",
+      "icon": "exam"
+    }
+  }
+]

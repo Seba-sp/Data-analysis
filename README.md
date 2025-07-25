@@ -100,8 +100,8 @@ responses/
 
 ### Environment Variables
 
-#### Locally or on GCP
-- `STORAGE_BACKEND` = local/gcp
+#### Locally or on GCP "local" or "gcp"
+- `STORAGE_BACKEND`
 
 #### LearnWorlds API Credentials
 - `CLIENT_ID`

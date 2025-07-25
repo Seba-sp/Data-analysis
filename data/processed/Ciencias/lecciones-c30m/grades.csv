@@ -1,1 +1,8 @@
-
+;id;user_id;email;grade;created;submittedTimestamp;modified;learningUnit;assessment_id
+0;6883bd85edac5da0d1090e17;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-25 17:23:17;2025-07-25 17:23:22;2025-07-25 17:23:22;{'id': '687fee9dfdf36310140d9161', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee9dfdf36310140d9161
+1;6883bbc20059ce2be30829f6;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-25 17:15:46;2025-07-25 17:15:51;2025-07-25 17:15:51;{'id': '687fee9cfdf36310140d915d', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee9cfdf36310140d915d
+2;68839e1be7657686be0a21a9;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-25 15:09:15;2025-07-25 15:09:20;2025-07-25 15:09:20;{'id': '687fee9afdf36310140d9145', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee9afdf36310140d9145
+3;6882a1d5984e5ad05f098e86;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-24 21:12:53;2025-07-24 21:12:57;2025-07-24 21:12:57;{'id': '687fee97fdf36310140d912d', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee97fdf36310140d912d
+4;68829793fa12048b13056ec6;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-24 20:29:07;2025-07-24 20:29:11;2025-07-24 20:29:11;{'id': '687fee93fdf36310140d9109', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee93fdf36310140d9109
+5;6882660f9b55debaad0c4f46;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-24 16:57:51;2025-07-24 16:57:55;2025-07-24 16:57:55;{'id': '687fee8efdf36310140d90d5', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee8efdf36310140d90d5
+6;688262eaf6481a1aad04abc6;685aef7af6675ccea0eb2afa;soporte@preum30m.com;0;2025-07-24 16:44:26;2025-07-24 16:44:29;2025-07-24 16:44:30;{'id': '687fee8dfdf36310140d90c9', 'type': 'assessmentV2', 'subtitle': 'Exam', 'icon': 'exam'};687fee8dfdf36310140d90c9

@@ -1,6 +1,7 @@
 application_default_credentials.json
 service-account-key.json
 data/
+data__
 .env
 .gcloudignore
 *.pdf
