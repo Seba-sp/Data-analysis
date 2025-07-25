@@ -37,15 +37,17 @@
   1. Download responses:
      ```sh
      python descarga_responses.py --course <course> --all
+     python descarga_responses.py --course <course> --assessment <assessment>
      ```
   2. Upload question file from LearnWorlds to the questions folder (locally or on GCP).
   3. Run analysis (conversion happens automatically if needed):
      ```sh
      python analisis_responses.py --course <course> --all
+     python analisis_responses.py --course <course> --assessment <assessment>
      ```
 
 - **Where are my reports?**
-  - Find them in `data/reports/<category>/<course>/` (local) or in your GCP bucket (cloud).
+  - Find them in `data/reports/<category>/<course>/` (local) or in your Google drive.
 
 - **Need help?**
   - See the rest of this README for details, troubleshooting, and advanced usage.
