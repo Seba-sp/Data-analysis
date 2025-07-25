@@ -6,3 +6,4 @@ Matemáticas,nivel-3-m30m
 Matemáticas,nivel-4-m30m
 SinCategoria,stuff
 Ciencias,lecciones-c30m
+Competencia lectora,cl-test

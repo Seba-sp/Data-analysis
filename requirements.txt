@@ -4,7 +4,6 @@ requests>=2.28.0
 python-dotenv>=0.19.0
 fpdf>=1.7.2
 PyYAML>=6.0
-pathlib2>=2.3.7; python_version < "3.4"
 # Google Cloud Platform dependencies
 google-cloud-storage>=2.10.0
 google-cloud-functions>=1.8.0
@@ -15,5 +14,4 @@ google-api-python-client>=2.95.0
 # Slack integration
 slack-sdk>=3.21.0
 # Additional utilities
-pytz>=2023.3
-openpyxl>=3.1.0 
+openpyxl>=3.1.0

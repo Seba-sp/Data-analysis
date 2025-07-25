@@ -96,7 +96,7 @@
     },
     "access": "paid",
     "created": 1751386597,
-    "modified": 1753134193
+    "modified": 1753301934
   },
   {
     "id": "nivel-2-m30m",
@@ -129,7 +129,7 @@
     },
     "access": "paid",
     "created": 1751386674,
-    "modified": 1753281715
+    "modified": 1753305970
   },
   {
     "id": "nivel-3-m30m",
@@ -162,7 +162,7 @@
     },
     "access": "paid",
     "created": 1751386704,
-    "modified": 1753286559
+    "modified": 1753364931
   },
   {
     "id": "nivel-4-m30m",
@@ -259,6 +259,39 @@
     },
     "access": "private",
     "created": 1753214598,
-    "modified": 1753286110
+    "modified": 1753392202
+  },
+  {
+    "id": "cl-test",
+    "title": "CL TEST",
+    "expires": null,
+    "expiresType": "weeks",
+    "afterPurchase": {
+      "type": "afterlogin",
+      "navigationType": "global",
+      "settings": {
+        "url": null,
+        "page": null
+      }
+    },
+    "categories": [
+      "Competencia lectora"
+    ],
+    "description": null,
+    "label": null,
+    "author": null,
+    "courseImage": null,
+    "original_price": 0,
+    "discount_price": 0,
+    "final_price": 0,
+    "dripFeed": "none",
+    "identifiers": {
+      "google_store_id": "cl_test",
+      "apple_store_id": "cl_test",
+      "slug": "cl-test"
+    },
+    "access": "private",
+    "created": 1753394649,
+    "modified": 1753394696
   }
 ]

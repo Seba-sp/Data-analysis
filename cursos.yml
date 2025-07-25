@@ -2,55 +2,35 @@ courses:
   Matemáticas:
     lecciones-m0m:
       name: Lecciones M30M
-      kpis:
+      kpis: &id001
       - attendance_rate
       - average_grade
       - completion_rate
       - response_rate
     test-de-diagnostico-m30m:
       name: Test de diagnóstico M30M
-      kpis:
-      - attendance_rate
-      - average_grade
-      - completion_rate
-      - response_rate
+      kpis: *id001
     nivel-1-m30m:
       name: Nivel 1 [M30M]
-      kpis: 
-      - attendance_rate
-      - average_grade
-      - completion_rate
-      - response_rate
+      kpis: *id001
     nivel-2-m30m:
       name: Nivel 2 [M30M]
-      kpis: 
-      - attendance_rate
-      - average_grade
-      - completion_rate
-      - response_rate
+      kpis: *id001
     nivel-3-m30m:
       name: Nivel 3 [M30M]
-      kpis: 
-      - attendance_rate
-      - average_grade
-      - completion_rate
-      - response_rate
+      kpis: *id001
     nivel-4-m30m:
       name: Nivel 4 [M30M]
-      kpis: 
-      - attendance_rate
-      - average_grade
-      - completion_rate
-      - response_rate
+      kpis: *id001
   SinCategoria:
     stuff:
       name: Stuff
-      kpis: 
+      kpis: *id001
   Ciencias:
     lecciones-c30m:
       name: Lecciones C30M
-      kpis: 
-      - attendance_rate
-      - average_grade
-      - completion_rate
-      - response_rate
+      kpis: *id001
+  Competencia lectora:
+    cl-test:
+      name: CL TEST
+      kpis: *id001

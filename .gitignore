@@ -1,7 +1,20 @@
 application_default_credentials.json
 service-account-key.json
+data/
 .env
+.gcloudignore
 *.pdf
 *.xlsx
+*.json
+*.csv
 __pycache__/
 .env.* 
+prompts cursor.txt
+
+# Test and utility scripts
+test_*
+setup_environment.py
+create_env_file.py
+encode_service_account.py
+test_slack_bot.py
+test_upload_functionality.py

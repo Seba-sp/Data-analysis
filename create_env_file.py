@@ -35,21 +35,33 @@ def create_env_file():
         return
     
     # Create .env file content
-    env_content = f"""# Google Cloud Configuration
-GCP_PROJECT_ID=data-analysis-465601
-GCP_BUCKET_NAME=course-analysis-data
+    env_content = f"""# Storage Backend (local or gcp)
+STORAGE_BACKEND=local
+
+# LearnWorlds API Credentials
+CLIENT_ID=your-client-id-here
+SCHOOL_DOMAIN=your-school-domain-here
+ACCESS_TOKEN=your-access-token-here
+
+# Set filter for abandoned assessments
+GRADE_ZERO_THRESHOLD=0
+TIME_MAX_THRESHOLD_MINUTES=100
+
+# Set x percentage of most responses wrong
+REPORT_TOP_PERCENT=20
+
+# Google Cloud Platform Configuration
+GCP_PROJECT_ID=project-id-here
+GCP_BUCKET_NAME=bucket-name-here
+REGION=us-central1
 
 # Slack Configuration
 SLACK_BOT_TOKEN=xoxb-your-slack-token-here
 SLACK_CHANNEL=#your-channel-here
 
 # Google Drive Configuration
+GOOGLE_SHARED_DRIVE_ID=your-shared-drive-id-here
 GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id-here
-
-# LearnWorlds API Configuration
-CLIENT_ID=your-client-id-here
-SCHOOL_DOMAIN=your-school-domain-here
-ACCESS_TOKEN=your-access-token-here
 
 # Ignored Users (comma-separated emails)
 IGNORED_USERS=user1@email.com,user2@email.com

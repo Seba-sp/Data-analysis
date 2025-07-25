@@ -1,5 +1,57 @@
 # Data Analysis Project
 
+## TL;DR
+
+- **What is this?**
+  - Download, process, and analyze course/assessment data. Generate reports. Integrate with Google Drive and Slack. Works locally or with Google Cloud Storage (GCP).
+
+- **Most users:**
+  1. **Update course configs:**
+     ```sh
+     python get_all_courses.py
+     ```
+  2. **Upload planification files (if using GCP):**
+     ```sh
+     python upload_folder_to_gcs.py --folder data/planification --gcs-folder data/planification
+     ```
+  3. **Batch process everything (download, analyze, upload):**
+     ```sh
+     python batch_process.py
+     # Or for a specific category/course:
+     python batch_process.py --category Matematicas
+     python batch_process.py --category Matematicas --course nivel-1-m30m
+     ```
+
+- **Advanced/manual:**
+  1. Download/process data:
+     ```sh
+     python descarga_procesa_datos.py --category <category> --course <course>
+     ```
+  2. Analyze and generate reports:
+     ```sh
+     python analisis.py --category <category> --course <course>
+     # Add --no-upload to skip Google Drive/Slack
+     ```
+
+- **Assessment responses:**
+  1. Download responses:
+     ```sh
+     python descarga_responses.py --course <course> --all
+     ```
+  2. Upload question file from LearnWorlds to the questions folder (locally or on GCP).
+  3. Run analysis (conversion happens automatically if needed):
+     ```sh
+     python analisis_responses.py --course <course> --all
+     ```
+
+- **Where are my reports?**
+  - Find them in `data/reports/<category>/<course>/` (local) or in your GCP bucket (cloud).
+
+- **Need help?**
+  - See the rest of this README for details, troubleshooting, and advanced usage.
+
+---
+
 ## 1. Project Overview
 
 This project provides a complete workflow for downloading, processing, and analyzing course and assessment data, generating actionable reports, and integrating with Google Drive and Slack for automated delivery and notifications. It supports both local and Google Cloud Storage (GCP) backends.
@@ -43,26 +95,78 @@ responses/
   ```sh
   pip install -r requirements.txt
   ```
-- Key environment variables:
-  - `CLIENT_ID`, `SCHOOL_DOMAIN`, `ACCESS_TOKEN` (API credentials)
-  - `GCP_PROJECT_ID`, `GCP_BUCKET_NAME`, `GOOGLE_DRIVE_FOLDER_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY` (Google Cloud/Drive)
-  - `SLACK_BOT_TOKEN`, `SLACK_CHANNEL` (Slack integration)
-  - `IGNORED_USERS` (comma-separated emails to ignore)
-  - `STORAGE_BACKEND` (`local` or `gcp`)
+
+### Environment Variables
+
+#### Locally or on GCP
+- `STORAGE_BACKEND` = local/gcp
+
+#### LearnWorlds API Credentials
+- `CLIENT_ID`
+- `SCHOOL_DOMAIN`
+- `ACCESS_TOKEN`
+
+#### Set filter for abandoned assessments
+- `GRADE_ZERO_THRESHOLD`
+- `TIME_MAX_THRESHOLD_MINUTES`
+
+#### Set x percentage of most responses wrong
+- `REPORT_TOP_PERCENT`
+
+#### Google Cloud Platform Configuration
+- `GCP_PROJECT_ID`
+- `GCP_BUCKET_NAME`
+- `REGION` (e.g., "us-central1")
+
+#### Slack Configuration
+- `SLACK_BOT_TOKEN`
+- `SLACK_CHANNEL`
+
+#### Google Drive Configuration
+- `GOOGLE_SHARED_DRIVE_ID`
+- `GOOGLE_DRIVE_FOLDER_ID`
+
+#### Ignored Users
+- `IGNORED_USERS` (comma-separated list)
+
+#### Service Account Key (base64 encoded)
+- `GOOGLE_SERVICE_ACCOUNT_KEY`
+
+#### Local Development
+- `GOOGLE_APPLICATION_CREDENTIALS`
 
 ---
 
 ## 4. Main Workflow
 
-1. **Set up your environment**
-2. **Download and process data**: Use `descarga_procesa_datos.py` for full course data (incremental by default).
-3. **Analyze and generate reports**: Use `analisis.py` for full course analysis (with up-to-date filtering and batch modes).
-4. **Batch process all courses**: Use `batch_process.py` for automation (supports download-only, analysis-only, upload-only, and combinations).
-5. **Test integrations**: Use the test scripts for Slack, Google Drive, and Cloud Function.
+- **Quick option:** You can execute `batch_process.py` to run the full workflow (download, process, analyze, upload) for all courses as defined in your configuration, skipping the need to run `descarga_procesa_datos.py` and `analisis.py` manually for each course.
+  ```sh
+  python batch_process.py
+  ```
+  You can also use options like `--download-only`, `--analysis-only`, or `--no-upload` for partial workflows. Additionally, you can use `--category <category>` and/or `--course <course>` to process only a specific category or course:
+  ```sh
+  python batch_process.py --category Matematicas
+  python batch_process.py --category Matematicas --course nivel-1-m30m
+  ```
+
+- **Step-by-step option:**
+  1. **Set up your environment**
+  2. **Download and process data**: Use `descarga_procesa_datos.py` for full course data (incremental by default).
+  3. **Analyze and generate reports**: Use `analisis.py` for full course analysis (with up-to-date filtering and batch modes).
+  4. **Batch process all courses**: Use `batch_process.py` for automation (supports download-only, analysis-only, upload-only, and combinations).
+  5. **Test integrations**: Use the test scripts for Slack and Google Drive.
 
 ---
 
 ## 5. Core Scripts
+
+### `get_all_courses.py`
+- **Purpose:** Downloads `courses_raw.json` from the API and updates `cursos.yml` and `cursos.txt` with the latest course information. Run this script to refresh your course configuration files from the API before downloading or analyzing courses.
+- **Note:** The rest of the scripts (for downloading, processing, and analyzing data) get the list of courses to operate on from `cursos.yml` and `cursos.txt`, which are updated by this script.
+- **Usage:**
+  ```sh
+  python get_all_courses.py
+  ```
 
 ### `descarga_procesa_datos.py`
 - **Purpose:** Download and process all raw data (users, grades, assessments) for a course.
@@ -76,10 +180,20 @@ responses/
 ### `analisis.py`
 - **Purpose:** Analyze course data (grades, users, assessments), generate metrics, completion times, and custom reports (PDF, Excel).
 - **Features:** Up-to-date student filtering, Google Drive & Slack integration, batch mode, robust file handling, PDF/Excel output.
+- **Important:** For the report to include the "up to date" section, you must upload the relevant planification CSV files to the `planification` folder. If your backend is GCP, these files must be uploaded to the correct location in your Cloud Storage bucket (e.g., `data/planification/<category>/<course>.csv`).
 - **Usage:**
   ```sh
   python analisis.py --category <category> --course <course>
   # Add --no-upload to skip Google Drive/Slack
+  ```
+
+### `upload_folder_to_gcs.py`
+- **Purpose:** Uploads the `planification` folder or files inside it (or any other local files/folders) to your GCP bucket. Ensures correct GCS path formatting and supports uploading single files or entire folders. Essential for making planification files available to the analysis pipeline when using the GCP backend.
+- **Usage:**
+  ```sh
+  python upload_folder_to_gcs.py --folder data/planification --gcs-folder data/planification
+  # Or upload a single file:
+  python upload_folder_to_gcs.py --file data/planification/<category>/<course>.csv --gcs-folder data/planification/<category>
   ```
 
 ### `batch_process.py`
@@ -103,14 +217,11 @@ responses/
 
 ## 6. Utilities and Supporting Scripts
 
-- **get_all_courses.py**: Loads `courses_raw.json` and updates `cursos.yml` and `cursos.txt` with the latest course information. Run this script to refresh your course configuration files from the raw data.
-- **upload_folder_to_gcs.py**: Uploads folders and files created locally to your GCP bucket, such as files inside `planification` and `base_courses.yml`. Supports uploading single files or entire folders, and ensures correct GCS path formatting.
 - **encode_service_account.py**: Encodes your `service-account-key.json` file to a base64 string so you can safely copy it into your `.env` file for use with GCP authentication.
 - **convert_questions_file.py**: Converts a raw question/correct answer file to the format needed for analysis.
 - **setup_environment.py**, **create_env_file.py**: Help set up and validate your environment variables and service account keys.
 - **test_slack_bot.py**: Test Slack bot integration and message sending.
 - **test_upload_functionality.py**: Test Google Drive and Slack integration, including file upload and notification.
-- **test_cloud_function.py**: Test script for running the Cloud Function locally or remotely (for GCP deployments).
 - **prompts cursor.txt**: Contains project planning notes and feature requests (not a script).
 
 ---
@@ -131,7 +242,7 @@ data/
         ...
     questions/
       <course>/
-        assessment1.csv                # Raw question/correct answer file (optional, see below)
+        assessment1.csv                # Raw question/correct answer file (from LearnWorlds)
         assessment1_questions.csv      # Processed question/correct answer file (used for analysis)
         ...
     reports/
@@ -140,6 +251,11 @@ data/
         assessment1_top_20pct.pdf
         ...
 ```
+
+### Workflow
+1. **Run** `descarga_responses.py` to download and process assessment responses.
+2. **Upload** the question file for the assessment (downloaded from LearnWorlds) to the `questions` folder for the relevant course (locally or on GCP, depending on your backend).
+3. **Run** `analisis_responses.py` to generate reports. If only the raw question file is present, the conversion to the required format will happen automatically during analysis.
 
 ### 1. Download and Process Responses
 **Script:** `descarga_responses.py`
@@ -157,9 +273,11 @@ python descarga_responses.py --course <course> --assessment assessment1 --assess
 
 ### 2. Prepare Question/Correct Answer Files
 **Script:** `convert_questions_file.py`
+- **Step 1:** Download the assessment question file from LearnWorlds and save it in the `questions` folder for the relevant course (either locally or on GCP, depending on your backend).
 - Converts a raw question/correct answer file (downloaded from your platform) to the format needed for analysis.
 - The input file should have columns like `Group`, `Type`, `Question`, `CorrectAns`, `Answer1`, `Answer2`, ...
 - The output file will have columns: `question`, `correct_answer` (the text of the correct alternative).
+- **Note:** If you run `analisis_responses.py` and only the raw file is present, the conversion will happen automatically.
 
 **Example usage:**
 ```sh

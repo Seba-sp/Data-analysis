@@ -12,6 +12,9 @@ from pathlib import Path
 import time
 from storage import StorageClient
 
+# Load environment variables
+load_dotenv()
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Download and/or process assessment responses for a course')
     parser.add_argument('--course', '-c', required=True, help='Course ID to process')
@@ -21,8 +24,7 @@ def parse_arguments():
     parser.add_argument('--process-only', action='store_true', help='Only process existing JSON to CSV, do not download')
     return parser.parse_args()
 
-# Load environment variables
-load_dotenv()
+
 
 client_id = os.getenv("CLIENT_ID")
 school_domain = os.getenv("SCHOOL_DOMAIN")
