@@ -20,8 +20,9 @@ if __name__ == "__main__":
 
     try:
         run_batch_pipeline(
+            config_path="cursos.yml",
             category=category,
-            course=course,
+            course_id=course,
             download_only=download_only,
             analysis_only=analysis_only,
             no_upload=no_upload

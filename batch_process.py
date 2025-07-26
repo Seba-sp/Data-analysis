@@ -17,13 +17,27 @@ from datetime import datetime
 
 def load_course_config(config_path: str = "cursos.yml"):
     """Load course configuration from YAML file"""
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    storage = StorageClient()
+    if storage.backend == 'gcp' and storage.exists(config_path):
+        # Try to load from GCS first
+        content = storage.read_bytes(config_path).decode('utf-8')
+        return yaml.safe_load(content)
+    else:
+        # Fall back to local file
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
 
 def load_base_courses(base_courses_path: str = "base_courses.yml"):
     """Load base course mapping from YAML file"""
-    with open(base_courses_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f).get('base_courses', {})
+    storage = StorageClient()
+    if storage.backend == 'gcp' and storage.exists(base_courses_path):
+        # Try to load from GCS first
+        content = storage.read_bytes(base_courses_path).decode('utf-8')
+        return yaml.safe_load(content).get('base_courses', {})
+    else:
+        # Fall back to local file
+        with open(base_courses_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f).get('base_courses', {})
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Batch process multiple courses')

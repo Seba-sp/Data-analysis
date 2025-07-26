@@ -20,4 +20,4 @@ COPY . .
 # ENV STORAGE_BACKEND=gcp
 
 # Set the default command to run your batch job
-CMD ["python", "batch_process.py"] 
+CMD ["python", "main.py"] 

@@ -47,18 +47,18 @@ def setup_output_dirs(course):
     return raw_dir, processed_dir, questions_dir, reports_dir
 
 def load_assessments(course):
-    assessments_path = Path(f"data/raw/{course}/assessments.json")
-    if not assessments_path.exists():
+    storage = StorageClient()
+    assessments_path = f"data/raw/{course}/assessments.json"
+    if not storage.exists(assessments_path):
         raise FileNotFoundError(f"Assessments file not found: {assessments_path}")
-    with open(assessments_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return storage.read_json(assessments_path)
 
 def get_latest_timestamp_from_json(json_file_path):
-    if not json_file_path.exists():
+    storage = StorageClient()
+    if not storage.exists(json_file_path):
         return None
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        data = storage.read_json(json_file_path)
         if not data:
             return None
         latest_record = data[0]

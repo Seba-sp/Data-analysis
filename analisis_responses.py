@@ -37,7 +37,8 @@ def load_correct_answers(csv_path):
             print(f"Missing question file: {raw_question_file}. Please upload it to {questions_dir} and rerun.")
             exit(1)
     try:
-        df = pd.read_csv(questions_file)
+        storage = StorageClient()
+        df = storage.read_csv(questions_file)
         # Expect columns: question, correct_answer
         return dict(zip(df['question'], df['correct_answer']))
     except Exception as e:

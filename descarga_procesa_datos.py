@@ -58,12 +58,12 @@ def get_assessments(course_id, school_domain, headers):
 
 def get_latest_timestamp_from_json(json_file_path):
     """Get the latest 'created' timestamp from an existing JSON file"""
-    if not json_file_path.exists():
+    storage = StorageClient()
+    if not storage.exists(json_file_path):
         return None
     
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        data = storage.read_json(json_file_path)
         
         if not data:
             return None
@@ -88,9 +88,9 @@ def get_course_grades_incremental(course_id, school_domain, headers, json_file_p
     
     # Load existing data
     existing_data = []
-    if json_file_path.exists():
-        with open(json_file_path, 'r', encoding='utf-8') as f:
-            existing_data = json.load(f)
+    storage = StorageClient()
+    if storage.exists(json_file_path):
+        existing_data = storage.read_json(json_file_path)
     
     new_data = []
     page = 1
@@ -165,9 +165,9 @@ def get_course_users_incremental(course_id, school_domain, headers, json_file_pa
     
     # Load existing data
     existing_data = []
-    if json_file_path.exists():
-        with open(json_file_path, 'r', encoding='utf-8') as f:
-            existing_data = json.load(f)
+    storage = StorageClient()
+    if storage.exists(json_file_path):
+        existing_data = storage.read_json(json_file_path)
     
     new_data = []
     page = 1
@@ -301,8 +301,15 @@ def run_full_pipeline(category: str, course_id: str):
     print(f"Processed data saved in: {processed_dir}")
 
 def load_course_config(config_path: str = "cursos.yml"):
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    storage = StorageClient()
+    if storage.backend == 'gcp' and storage.exists(config_path):
+        # Try to load from GCS first
+        content = storage.read_bytes(config_path).decode('utf-8')
+        return yaml.safe_load(content)
+    else:
+        # Fall back to local file
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
 
 def batch_download(category=None, course=None, reset_raw=False):
     config = load_course_config()

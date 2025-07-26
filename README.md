@@ -163,8 +163,8 @@ responses/
 ## 5. Core Scripts
 
 ### `get_all_courses.py`
-- **Purpose:** Downloads `courses_raw.json` from the API and updates `cursos.yml` and `cursos.txt` with the latest course information. Run this script to refresh your course configuration files from the API before downloading or analyzing courses.
-- **Note:** The rest of the scripts (for downloading, processing, and analyzing data) get the list of courses to operate on from `cursos.yml` and `cursos.txt`, which are updated by this script.
+- **Purpose:** Downloads `courses_raw.json` from the API and updates `cursos.yml` with the latest course information. Run this script to refresh your course configuration files from the API before downloading or analyzing courses.
+- **Note:** The rest of the scripts (for downloading, processing, and analyzing data) get the list of courses to operate on from `cursos.yml`, which is updated by this script.
 - **Usage:**
   ```sh
   python get_all_courses.py

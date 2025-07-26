@@ -14,7 +14,6 @@ HARDCODED_KPIS = [
 ]
 
 RAW_JSON_PATH = "courses_raw.json"
-TXT_PATH = "cursos.txt"
 YML_PATH = "cursos.yml"
 
 def fetch_courses_from_learnworlds():
@@ -50,16 +49,13 @@ def fetch_courses_from_learnworlds():
         page += 1
     return courses
 
-def build_cursos_txt_and_yml(courses):
-    txt_lines = []
+def build_cursos_yml(courses):
     yml_data = {"courses": {}}
     for course in courses:
         course_id = course.get("id")
         name = course.get("title") or course_id
         categories = course.get("categories") or []
         category = categories[0] if categories else "SinCategoria"
-        # TXT
-        txt_lines.append(f"{category},{course_id}")
         # YML
         if category not in yml_data["courses"]:
             yml_data["courses"][category] = {}
@@ -67,13 +63,10 @@ def build_cursos_txt_and_yml(courses):
             "name": name,
             "kpis": HARDCODED_KPIS
         }
-    return txt_lines, yml_data
+    return yml_data
 
-def write_files_with_storage(txt_lines, yml_data, raw_json, txt_path=TXT_PATH, yml_path=YML_PATH, raw_json_path=RAW_JSON_PATH):
+def write_files_with_storage(yml_data, raw_json, yml_path=YML_PATH, raw_json_path=RAW_JSON_PATH):
     storage = StorageClient()
-    # Write cursos.txt
-    storage.write_bytes(txt_path, ("\n".join(txt_lines) + "\n").encode("utf-8"), content_type="text/plain")
-    print(f"Wrote {txt_path} with {len(txt_lines)} lines.")
     # Write cursos.yml
     yml_str = yaml.dump(yml_data, allow_unicode=True, sort_keys=False)
     storage.write_bytes(yml_path, yml_str.encode("utf-8"), content_type="text/yaml")
@@ -88,9 +81,9 @@ def main():
     if courses is None:
         print("No courses fetched. Exiting.")
         return
-    txt_lines, yml_data = build_cursos_txt_and_yml(courses)
+    yml_data = build_cursos_yml(courses)
     print("Writing files with StorageClient...")
-    write_files_with_storage(txt_lines, yml_data, courses)
+    write_files_with_storage(yml_data, courses)
     print("Done.")
 
 if __name__ == "__main__":

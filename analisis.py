@@ -48,10 +48,17 @@ def parse_arguments():
 
 def load_course_config(config_path: str = "cursos.yml"):
     """Load course configuration from YAML file"""
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    storage = StorageClient()
+    if storage.backend == 'gcp' and storage.exists(config_path):
+        # Try to load from GCS first
+        content = storage.read_bytes(config_path).decode('utf-8')
+        return yaml.safe_load(content)
+    else:
+        # Fall back to local file
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
 
-def get_ignored_users(course_id: str, config_path: str = "cursos.yml"):
+def get_ignored_users(course_id: str):
     """Get ignored users from environment variable"""
     import os
     ignored_users_str = os.getenv('IGNORED_USERS', '')
@@ -310,10 +317,15 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
     drive_service = get_drive_service()
     parent_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
     drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
-    course_folder_id = find_or_create_folder(drive_service, parent_folder_id, course_id, drive_id)
+    
+    # Create nested folder structure: category/course
+    category_folder_id = find_or_create_folder(drive_service, parent_folder_id, category, drive_id)
+    course_folder_id = find_or_create_folder(drive_service, category_folder_id, course_id, drive_id)
+    
     today = datetime.now().date()
     report_links = []
     all_uploaded_files = []
+    
     # Upload report files (PDF and Excel) - included in Slack notification
     if reports_dir.exists():
         for file in reports_dir.glob("*"):
@@ -330,6 +342,7 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
                         print(f"✅ Reporte subido: {file.name}")
                 except Exception as e:
                     print(f"❌ Error subiendo reporte {file.name}: {e}")
+    
     # Upload processed CSV files - NOT included in Slack notification
     csv_count = 0
     if processed_dir.exists():
@@ -346,6 +359,7 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
                     print(f"📁 CSV subido: {file.name}")
             except Exception as e:
                 print(f"❌ Error subiendo CSV {file.name}: {e}")
+    
     # Send Slack notification only for report files
     if report_links:
         try:
@@ -354,11 +368,13 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
             print(f"❌ Error enviando notificación de Slack: {e}")
     else:
         print("⚠️  No se subieron reportes, omitiendo notificación de Slack")
+    
     # Print summary
     if csv_count > 0:
         print(f"📊 Resumen: {len(report_links)} reportes y {csv_count} archivos CSV subidos")
     else:
         print(f"📊 Resumen: {len(report_links)} reportes subidos")
+    
     return all_uploaded_files
 
 def load_planification_data(category: str, course_id: str) -> pd.DataFrame:
@@ -523,7 +539,7 @@ def run_analysis_pipeline(category: str, course_id: str, upload_reports: bool = 
 
     # --- Up-to-date section (debug: print heads of all relevant DataFrames, error handling) ---
     planification_path = Path("data/planification") / category / f"{course_id}.csv"
-    include_up_to_date = planification_path.exists()
+    include_up_to_date = storage.exists(planification_path)
     up_to_date_section = None
     if include_up_to_date:
         try:
@@ -547,20 +563,84 @@ def run_analysis_pipeline(category: str, course_id: str, upload_reports: bool = 
                 base_processed_dir = Path("data/processed") / category / base_course
                 base_user_response_path = base_processed_dir / "users.csv"
                 base_grades_path = base_processed_dir / "grades.csv"
-                if storage.exists(base_user_response_path) and storage.exists(base_grades_path):
-                    base_user_response_df = storage.read_csv(str(base_user_response_path), sep=sep)
-                    base_grades_df = storage.read_csv(str(base_grades_path), sep=sep)
-                    if 'id' in base_user_response_df.columns and 'user_id' in base_grades_df.columns:
-                        base_user_response_df = base_user_response_df.merge(base_grades_df, left_on="id", right_on="user_id", how="left")
-                    if 'assessment' in base_user_response_df.columns:
-                        base_user_response_df['assessment_normalized'] = base_user_response_df['assessment'].apply(normalize_str)
-                        actual_assessments_base = set(base_user_response_df['assessment_normalized'].unique())
-                        matching_assessments_base = set(due_assessments_normalized) & actual_assessments_base
-                        # Only filter base course if there are matching assessments
-                        if matching_assessments_base:
+                base_assessments_path = base_processed_dir / "assessments.csv"
+                
+                # Check if base course data exists using StorageClient
+                if (storage.exists(base_user_response_path) and 
+                    storage.exists(base_grades_path) and 
+                    storage.exists(base_assessments_path)):
+                    
+                    try:
+                        # Load base course data using StorageClient
+                        base_df_users = storage.read_csv(str(base_user_response_path), sep=sep)
+                        base_df_grades = storage.read_csv(str(base_grades_path), sep=sep)
+                        base_df_assessments = storage.read_csv(str(base_assessments_path), sep=sep)
+                        
+                        # Filter ignored users from base course
+                        base_ignored_users = base_df_users[base_df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])].copy()
+                        base_df_users = base_df_users[~base_df_users['email'].str.lower().isin([e.lower() for e in ignore_emails])]
+                        base_df_grades = base_df_grades[~base_df_grades['user_id'].isin(base_ignored_users['id'])]
+                        
+                        # Calculate completion time for base course
+                        base_df_grades['completion_time_minutes'] = base_df_grades.apply(
+                            lambda row: calculate_completion_time(row['created'], row['submittedTimestamp']), axis=1)
+                        base_df_grades = base_df_grades.merge(base_df_assessments, on="assessment_id", how="left")
+                        
+                        # Create user response summary for base course
+                        base_user_response_summary = []
+                        for assess_name in base_df_assessments['assessment_name']:
+                            for _, user in base_df_users.iterrows():
+                                user_id = user['id'] if 'id' in user else user['user_id']
+                                user_email = user['email'] if 'email' in user else user.get('email', None)
+                                username = user['username'] if 'username' in user else (user_email.split('@')[0] if user_email else None)
+                                grade_row = base_df_grades[(base_df_grades['user_id'] == user_id) & (base_df_grades['assessment_name'] == assess_name)]
+                                has_responded = not grade_row.empty
+                                grade = grade_row['grade'].iloc[0] if not grade_row.empty else None
+                                completion_time = grade_row['completion_time_minutes'].iloc[0] if not grade_row.empty else None
+                                created_timestamp = grade_row['created'].iloc[0] if not grade_row.empty else None
+                                submitted_timestamp = grade_row['submittedTimestamp'].iloc[0] if not grade_row.empty else None
+                                base_user_response_summary.append({
+                                    'user_id': user_id,
+                                    'email': user_email,
+                                    'username': username,
+                                    'assessment': assess_name,
+                                    'responded': has_responded,
+                                    'grade': grade,
+                                    'completion_time_minutes': completion_time,
+                                    'created_timestamp': created_timestamp,
+                                    'submitted_timestamp': submitted_timestamp
+                                })
+                        
+                        base_user_response_df = pd.DataFrame(base_user_response_summary)
+                        
+                        # Filter out users with grade 0 and time > threshold for base course
+                        if 'grade' in base_user_response_df.columns and 'completion_time_minutes' in base_user_response_df.columns:
+                            mask = ~((base_user_response_df['grade'] == GRADE_ZERO_THRESHOLD) & (base_user_response_df['completion_time_minutes'] > TIME_MAX_THRESHOLD_MINUTES))
+                            base_user_response_df = base_user_response_df[mask]
+                        
+                        # Normalize assessment names in base course
+                        if 'assessment' in base_user_response_df.columns:
+                            base_user_response_df['assessment_normalized'] = base_user_response_df['assessment'].apply(normalize_str)
+                        
+                        # Get base course assessments that match due assessments
+                        if 'assessment_normalized' in base_user_response_df.columns:
+                            actual_assessments_base = set(base_user_response_df['assessment_normalized'].unique())
+                            matching_assessments_base = set(due_assessments_normalized) & actual_assessments_base
+                            
+                            # Filter up-to-date students in base course
                             base_up_to_date_df = filter_up_to_date_students(base_user_response_df, list(matching_assessments_base))
+                            
+                            print(f"Base course '{base_course}' up-to-date students: {len(base_up_to_date_df['user_id'].unique())}")
                         else:
-                            print("[DEBUG] No matching assessments found in base course, skipping base course filtering")
+                            print(f"Warning: Could not process base course '{base_course}' - missing assessment data")
+                            base_up_to_date_df = None
+                            
+                    except Exception as e:
+                        print(f"Error processing base course '{base_course}': {e}")
+                        base_up_to_date_df = None
+                else:
+                    print(f"Base course '{base_course}' data not found in storage, skipping base course analysis")
+                    base_up_to_date_df = None
             # 3. Intersect both groups (by email, case-insensitive)
             if base_up_to_date_df is not None:
                 emails_target = set(up_to_date_df['email'].str.lower())
@@ -760,12 +840,22 @@ def run_analysis_pipeline(category: str, course_id: str, upload_reports: bool = 
             if not course_config:
                 course_config = courses.get(course_id, {})
             course_name = course_config.get('name', course_id)
+            
+            # Create nested folder structure: category/course
+            drive_service = get_drive_service()
+            parent_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+            drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
+            
+            # Create nested folder structure: category/course
+            category_folder_id = find_or_create_folder(drive_service, parent_folder_id, category, drive_id)
+            course_folder_id = find_or_create_folder(drive_service, category_folder_id, course_id, drive_id)
+            
             # Upload from the correct path (temp file for GCP, local file for local)
             drive_links = []
             from pathlib import Path as _Path
             for file_path, file_name in [(pdf_path, pdf_filename), (excel_path, excel_filename)]:
                 if file_path and _Path(file_path).exists():
-                    drive_link = upload_file_to_drive(file_path, file_name)
+                    drive_link = upload_file_to_drive(file_path, file_name, course_folder_id, drive_id)
                     if drive_link:
                         drive_links.append(drive_link)
             if drive_links:
