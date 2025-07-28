@@ -1,0 +1,118 @@
+Before answering i'll provide some context, learnworlds has autommations when submitting an assessment to send a webhook with a payload, i will use this for when a new users decides to buy a category, he gets assigned a diagnosis course, he completes the diagnosis assessment and gets assigned to a level course and the base course with the lectures, for most users this will happen in a single week with all of them taking the diagnosis assessment in that week, around 2000 per category and my program has 4 categories, and the rest of the year i'll get maybe 50 in a week, with the webhook, i want to implement sending the user an email with a pdf telling him his level and the lectures he failed so he has to complete in the base course right after he submitted the diagnosis assessment. 
+Critical Questions Before Implementation
+1. Webhook Authentication & Security
+How does LearnWorlds authenticate webhook requests?
+Do they send a secret token?
+Do they use API keys in headers?
+Do they sign the payload?
+R: i got this from their documentation.
+Webhook signatures
+Format
+With each incoming webhook from Learnworlds, a pre-shared Learnworlds-Webhook-Signature header is included, as shown in the following example: Learnworlds-Webhook-Signature: v1=e8fad5b079d0977f61bc2d21fc5f461719e6478df7de56
+You can find the webhook signature in Learnworlds platform under Settings>Developers>Webhooks.
+Compare the Learnworlds-Webhook-Signature, prefixed by v1=, to the expected signature. If they match, then you can trust that the event payload was issued by LearnWorlds.
+Mitigate MITM (Man-in-the-Middle) Attacks
+To prevent MITM attacks resulting the signature being compromised use HTTPS for all your webhook endpoints.
+
+What security measures do you need?
+IP whitelisting?
+Request validation?
+Rate limiting?
+I don't know, i'm also new to this.
+2. Webhook Payload Structure
+What exactly does the webhook payload contain?
+this is an example of the payload. to send this example payload. {
+    "user": {
+        "id": "{{user.id}}",
+        "username": "{{user.username}}",
+        "email": "{{user.email}}"
+    },
+    "assessment": {
+        "title": "{{assessment.title}}",
+        "url": "{{assessment.url}}"
+    },
+    "submission": {
+        "id": "{{submission.id}}",
+        "status": "{{submission.status}}",
+        "grading_status": "{{submission.grading_status}}",
+        "answers": "{{submission.answers}}",
+        "score": "{{submission.score}}"
+    },
+    "school": {
+        "name": "{{school.name}}",
+        "url": "{{school.url}}",
+        "description": "{{school.description}}",
+        "address": "{{school.address}}",
+        "company_name": "{{school.company_name}}",
+        "contact_email": "{{school.contact_email}}",
+        "support_email": "{{school.support_email}}",
+        "sales_email": "{{school.sales_email}}"
+    }
+}
+Are there different webhook types? only submission
+3. Question Bank Management
+How do you currently manage question banks? they are manually created and stored on the folder
+Are they uploaded manually to bancos_preguntas/?
+Do they follow a specific naming convention? assessment name
+Are they course-specific or assessment-specific? the name will be category specific but will probably repeat between categories
+How will this work with your storage abstraction? idk yet
+Should question banks be stored in GCS when using GCP backend? yes
+How do you want to handle question bank updates? idk yet
+4. Email Configuration
+What email service do you want to use? idk yet, i used the simplest to make the minimun viable version
+Gmail SMTP (current in Test-diagnostico-pdf)?
+GCP SendGrid?
+Other SMTP provider?
+Email templates:
+Do you want to customize email content? no, only customize the pdf per student based on their answers
+Should emails include course-specific information?
+Do you need different email templates for different assessment types?
+5. Report Storage & Management
+Where should individual webhook reports be stored? on google drive or locally on a separate folderSeparate data/webhook_reports/ 
+Report retention: idk yet
+How long should individual reports be kept?
+Should they be archived or deleted after a certain time?
+6. Error Handling & Monitoring idk yet my biggest fear is when a lot of students completes an assessment at the same time, the program should be able to handle them all or have a checking system for users who completed the assessment but did not get their email
+What happens if webhook processing fails?
+Retry mechanism?
+Dead letter queue?
+Manual reprocessing?
+Monitoring needs:
+Do you want Slack notifications for webhook failures?
+Logging requirements?
+Metrics collection?
+7. Course/Assessment Mapping
+How do webhook assessments map to your course structure? they could, maybe some diagnosis course are not present in cursos.yml, most of the time they will
+Do webhook assessments correspond to courses in cursos.yml?
+How do you identify which course an assessment belongs to? idk yet
+Are there assessments that don't fit your current course structure? No
+8. Deployment Strategy
+Do you want to deploy webhook service immediately? i want to test locally, deploy and test again
+Or test locally first?
+Should it be deployed to the same GCP project? idk yet
+Do you need different environments (dev/staging/prod)?
+9. Integration with Existing Workflow
+How should webhook processing integrate with batch processing?idk what's best
+Should webhook data be included in batch reports? no
+Should there be deduplication between webhook and batch processing?i don't know what this means
+Do you want to track which reports came from webhooks vs batch?no, they should be in separate folders
+10. Configuration Management idk any questions on this section
+How should webhook-specific settings be configured? 
+Add to existing .env template?
+Separate webhook configuration file?
+Environment variables in Cloud Run?
+Questions That Could Wait
+These can be addressed during implementation:
+Specific email template customization
+Advanced monitoring setup
+Report archiving policies
+Performance optimization
+Questions That Are Critical Now
+These affect the initial architecture:
+Webhook authentication method
+Payload structure
+Question bank storage strategy
+Basic email configuration
+Report storage location
+Which of these questions can you answer now? The webhook authentication and payload structure are probably the most critical to get right before we start coding, as they'll affect the core webhook endpoint design.
+Also, do you have access to the LearnWorlds webhook documentation or can you share an example of what the webhook payload looks like?

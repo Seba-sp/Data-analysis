@@ -8,7 +8,11 @@ class StorageClient:
     def __init__(self):
         self.backend = os.getenv('STORAGE_BACKEND', 'local')
         self.bucket_name = os.getenv('GCP_BUCKET_NAME')
+        
         if self.backend == 'gcp':
+            if not self.bucket_name:
+                raise ValueError("GCP_BUCKET_NAME environment variable is required when STORAGE_BACKEND=gcp")
+            
             from google.cloud import storage as gcs
             self.gcs_client = gcs.Client()
             self.bucket = self.gcs_client.bucket(self.bucket_name)
@@ -84,4 +88,12 @@ class StorageClient:
             else:
                 return []
         else:
-            return [b.name for b in self.bucket.list_blobs(prefix=self._gcs_path(prefix))] 
+            return [b.name for b in self.bucket.list_blobs(prefix=self._gcs_path(prefix))]
+    
+    def get_backend_info(self):
+        """Get information about the current storage backend configuration"""
+        info = {
+            'backend': self.backend,
+            'bucket_name': self.bucket_name if self.backend == 'gcp' else None
+        }
+        return info 

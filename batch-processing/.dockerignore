@@ -1,0 +1,19 @@
+# Documentation
+README.md
+
+# Configuration files (should be in GCS)
+*.yml
+*.yaml
+
+# Development files
+Dockerfile
+.dockerignore
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db 

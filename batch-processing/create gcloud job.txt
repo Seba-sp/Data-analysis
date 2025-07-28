@@ -1,0 +1,9 @@
+# Create GCP Cloud Run Job
+
+gcloud run jobs create data-analysis --image gcr.io/data-analysis-465905-t6/data-analysis --region us-central1 --task-timeout 3600 --set-env-vars="STORAGE_BACKEND=gcp" --set-env-vars=GRADE_ZERO_THRESHOLD=0 --set-env-vars=TIME_MAX_THRESHOLD_MINUTES=60 --set-env-vars=SLACK_CHANNEL=#reportes --set-secrets="CLIENT_ID=CLIENT_ID:latest" --set-secrets="ACCESS_TOKEN=ACCESS_TOKEN:latest" --set-secrets="SCHOOL_DOMAIN=SCHOOL_DOMAIN:latest" --set-secrets="GOOGLE_SHARED_DRIVE_ID=GOOGLE_SHARED_DRIVE_ID:latest" --set-secrets="GOOGLE_DRIVE_FOLDER_ID=GOOGLE_DRIVE_FOLDER_ID:latest" --set-secrets="SLACK_BOT_TOKEN=SLACK_BOT_TOKEN:latest" --set-secrets="GOOGLE_SERVICE_ACCOUNT_KEY=GOOGLE_SERVICE_ACCOUNT_KEY:latest"
+
+set-env-vars="IGNORED_USERS=renepuente9000@gmail.com,nicolas.valenzuelar@sansano.usm.cl,sebastian.san.martin.p@gmail.com,jairopera01@gmail.com,tetahac783@iridales.com,theflaviomc@gmail.com,soporte@preum30m.com,bacol45809@dxirl.com,jairopera02@gmail.com,jairopera03@gmail.com"
+
+gcloud builds submit --tag gcr.io/data-analysis-465905-t6/data-analysis-job
+
+gcloud run jobs update data-analysis-job --image gcr.io/data-analysis-465905-t6/data-analysis-job:latest --region=us-central1

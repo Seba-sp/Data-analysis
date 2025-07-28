@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Batch processing script for multiple courses
-Reads course configuration from cursos.yml and processes each course
-"""
-
 import yaml
 import argparse
 from pathlib import Path

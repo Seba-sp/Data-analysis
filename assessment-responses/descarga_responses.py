@@ -1,7 +1,3 @@
-# This script only downloads and processes responses into CSVs.
-# Analysis and reporting (including correct answer statistics) is handled in analisis_responses.py.
-# To include correct answers in reports, place a CSV named <assessment>_questions.csv in the same directory as the responses CSV, with columns: question, correct_answer.
-
 import os
 import json
 import pandas as pd

@@ -15,7 +15,3 @@ google-api-python-client>=2.95.0
 slack-sdk>=3.21.0
 # Additional utilities
 openpyxl>=3.1.0
-# Webhook service dependencies
-flask>=2.0.0
-python-docx>=0.8.11
-docx2pdf>=0.1.8

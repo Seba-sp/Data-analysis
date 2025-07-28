@@ -2,13 +2,9 @@ import os
 import argparse
 import pandas as pd
 from pathlib import Path
-from fpdf import FPDF
 from dotenv import load_dotenv
 import subprocess
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
 from storage import StorageClient
-import tempfile
 
 load_dotenv()
 
