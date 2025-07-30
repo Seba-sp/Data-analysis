@@ -90,12 +90,6 @@ class StorageClient:
         else:
             return [b.name for b in self.bucket.list_blobs(prefix=self._gcs_path(prefix))]
     
-    def ensure_directory(self, path):
-        """Ensure directory exists (for local storage only)"""
-        if self.backend == 'local':
-            Path(path).mkdir(parents=True, exist_ok=True)
-        # For GCS, directories are created automatically when files are uploaded
-    
     def get_backend_info(self):
         """Get information about the current storage backend configuration"""
         info = {

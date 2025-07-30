@@ -8,7 +8,6 @@ import os
 import logging
 import smtplib
 from email.message import EmailMessage
-from pathlib import Path
 from storage import StorageClient
 
 logger = logging.getLogger(__name__)
@@ -28,14 +27,16 @@ class EmailSender:
         if not all([self.email_from, self.email_pass]):
             raise ValueError("EMAIL_FROM and EMAIL_PASS environment variables are required")
     
-    def send_report_email(self, recipient_email: str, report_path: Path, username: str) -> bool:
+    def send_report_email(self, recipient_email: str, pdf_content: bytes, username: str, assessment_title: str, filename: str = None) -> bool:
         """
         Send assessment report via email
         
         Args:
             recipient_email: Recipient's email address
-            report_path: Path to PDF report
+            pdf_content: PDF report content as bytes
             username: Student's username for personalization
+            assessment_title: Assessment title for {test} variable
+            filename: Custom filename for PDF attachment (optional)
             
         Returns:
             True if email sent successfully, False otherwise
@@ -45,19 +46,20 @@ class EmailSender:
             
             # Create email message
             msg = EmailMessage()
-            msg["Subject"] = "Tu informe de resultados - Diagnóstico"
+            msg["Subject"] = f"Resultados de tu evaluación - {assessment_title}"
             msg["From"] = self.email_from
             msg["To"] = recipient_email
             
             # Email body
             body = f"""Hola {username},
 
-Has completado exitosamente tu evaluación de diagnóstico. Adjuntamos tu informe personalizado con los resultados.
+Has completado exitosamente tu evaluación de diagnóstico {assessment_title}. Adjuntamos tu informe personalizado con los resultados.
 
 En este informe encontrarás:
-- Tu nivel asignado
-- Áreas donde necesitas reforzar conocimientos
-- Recomendaciones para tu aprendizaje
+- Los resultados por lección (Aprobado/Reprobado)
+- Las lecciones que necesitas reforzar en el curso base
+
+Recuerda que para aprobar una lección debes responder correctamente todas las preguntas relacionadas con esa lección.
 
 Si tienes alguna pregunta sobre tus resultados, no dudes en contactarnos.
 
@@ -67,19 +69,19 @@ Tu equipo de aprendizaje
             
             msg.set_content(body)
             
-            # Attach PDF report
-            if self.storage.exists(str(report_path)):
-                pdf_content = self.storage.read_bytes(str(report_path))
-                msg.add_attachment(
-                    pdf_content,
-                    maintype="application",
-                    subtype="pdf",
-                    filename=report_path.name
-                )
-                logger.info(f"PDF attached: {report_path.name}")
+            # Attach PDF report with custom filename or default
+            if filename:
+                attachment_filename = filename
             else:
-                logger.error(f"Report file not found: {report_path}")
-                return False
+                attachment_filename = f"informe_{username}_{assessment_title}.pdf"
+                
+            msg.add_attachment(
+                pdf_content,
+                maintype="application",
+                subtype="pdf",
+                filename=attachment_filename
+            )
+            logger.info(f"PDF attached: {attachment_filename}")
             
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:

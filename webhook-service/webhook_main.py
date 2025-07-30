@@ -67,7 +67,6 @@ def root():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    debug = os.environ.get("DEBUG", "False").lower() == "true"
     
     logger.info(f"Starting webhook service on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=debug) 
+    app.run(host="0.0.0.0", port=port) 

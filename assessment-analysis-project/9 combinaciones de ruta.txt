@@ -1,0 +1,30 @@
+now inside Data-analysis create another project in another folder that will do the following,
+
+it has to download all the assessment present in a txt file containing [assessment_name, assessment_id] and from that download the responses of those assessments, (here you can use the same method used in the file descarga_responses.py in the folder assessment-responses) then i want to analyze those assessment, there will be 4, called "M1", "CL", "CIEN", "HYST". also there will be 4 csv with the same name of the assessment, with the questions from those assessments, all of them will have 3 columns [question_number, correct_alternative, lecture] and CIEN wtill have a 4th column called "Materia" then i want you to do the same analysis used in webhook-service\assessment_analyzer.py where i compare the csv to the answer of the student and the lecture, i will use this type of analysis for "M1", "HYST", "CIEN" and in the case of "CIEN" i also want to use the fourth column to know the lectures approved for every "Materia", finally in the case of "CL", i will have only two lectures, so i want to get the percentage of questions right over the total questions from that lecture.
+Later i want to get those results and create the same table results used in webhook-service/report_generator.py to generate a pdf with the results from these 4 assessments, it has to create the 4 tables and then put it into a pdf. this have to have multiple error handling in case the user doesn't respond the assessment so when filtering it doesn't find that user, in case the csv are not in place, etc. so when generating the pdf there won't be blank pages. finally it has to send the pdfs generated to the student, and have a variable to send the email to a fixed email address, also save the reports sended to drive in a folder called "planes de estudios" it should have the same name handling as webhook-service/email_sender.py
+
+
+i added a folder called templates and a file called plantilla_plan_de_estudio.html for you to use that template, also we have to include the following things for the second page of the html. i want it to say this. Hola <<Nombre>>,
+Te entrego tu plan de estudio personalizado, elaborado a partir de los niveles que se te asignaron tras rendir el test de diagnóstico.
+Te recomiendo seguir al pie de la letra las indicaciones que verás a continuación para que llegues con todo a la PAES regular 2025.
+¡VAMOS CON TODO!
+Estos son tus niveles asignados:
+• En M1: <<Nivel M1>>
+• En Competencia Lectora: <<Nivel CL>>
+• En Ciencias: <<Nivel Ciencias>>
+• En Historia y Cs. Sociales: <<Nivel Historia>>
+Según estos niveles, te sugiero el siguiente itinerario:
+•	Agosto: <<PlanAgosto>>
+•	Septiembre: <<PlanSeptiembre>>
+•	Octubre: <<PlanOctubre>>
+
+
+m1: nivel 1, cl: nivel 1 = agosto cl, septiembre m1, octubre m1
+m1: nivel 2, cl: nivel 1 = elije en base a tu carrera
+m1: nivel 1, cl: nivel 2 = agosto cl, septiembre m1, octubre m1
+m1: nivel 2, cl: nivel 2 = agosto cl, septiembre m1
+m1: nivel 3, cl: nivel 1 = agosto cl, septiembre electivo, octubre electivo
+m1: nivel 3, cl: nivel 2 = agosto cl, septiembre electivo, octubre electivo
+m1: nivel 1, cl: nivel 3 = agosto m1, septiembre m1
+m1: nivel 2, cl: nivel 3 = agosto m1, septiembre electivo, octubre electivo
+m1: nivel 3, cl: nivel 3 = electivo

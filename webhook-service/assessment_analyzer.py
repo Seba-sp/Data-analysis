@@ -6,7 +6,7 @@ Handles analysis logic for webhook-based individual reports
 
 import logging
 import pandas as pd
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +15,14 @@ class AssessmentAnalyzer:
         """Initialize assessment analyzer"""
         pass
     
-    def analyze_user_assessment(self, user_response: Dict[str, Any], question_bank: pd.DataFrame) -> Dict[str, Any]:
+    def analyze_user_assessment(self, user_response: Dict[str, Any], question_bank: pd.DataFrame, assessment_title: str = None) -> Dict[str, Any]:
         """
         Analyze individual user assessment results
         
         Args:
             user_response: User's assessment response from API
-            question_bank: Question bank DataFrame with correct answers and areas
+            question_bank: Question bank DataFrame with correct answers and lectures
+            assessment_title: Title of the assessment
             
         Returns:
             Dictionary with analysis results
@@ -31,7 +32,7 @@ class AssessmentAnalyzer:
             question_bank.columns = [col.strip().lower() for col in question_bank.columns]
             
             # Validate question bank structure
-            required_cols = {'question_number', 'correct_answer', 'area'}
+            required_cols = {'question_number', 'correct_alternative', 'lecture'}
             if not required_cols.issubset(set(question_bank.columns)):
                 missing = required_cols - set(question_bank.columns)
                 raise ValueError(f"Question bank missing required columns: {missing}")
@@ -39,84 +40,70 @@ class AssessmentAnalyzer:
             # Ensure question_number is integer
             question_bank["question_number"] = question_bank["question_number"].astype(int)
             
-            # Get unique areas
-            areas = question_bank["area"].unique().tolist()
+            # Get unique lectures
+            lectures = question_bank["lecture"].unique().tolist()
             
-            # Analyze by area
-            area_results = self._analyze_by_area(user_response, question_bank, areas)
+            # Analyze by lecture
+            lecture_results = self._analyze_by_lecture(user_response, question_bank, lectures)
             
             # Calculate overall statistics
             total_questions = len(user_response.get("answers", []))
-            correct_answers = sum(1 for area_result in area_results.values() 
-                                if area_result["status"] == "Aprobado")
-            overall_percentage = (correct_answers / len(areas) * 100) if areas else 0
+            passed_lectures = sum(1 for lecture_result in lecture_results.values() 
+                                if lecture_result["status"] == "Aprobado")
             
-            # Determine level
-            level = self._calculate_level(overall_percentage)
+            # Calculate total correct questions across all lectures
+            total_correct_questions = sum(lecture_result["correct_answers"] 
+                                        for lecture_result in lecture_results.values())
+            
+            overall_percentage = (passed_lectures / len(lectures) * 100) if lectures else 0
             
             return {
                 "user_id": user_response.get("user_id"),
+                "title": assessment_title,
                 "total_questions": total_questions,
-                "areas_analyzed": len(areas),
-                "areas_passed": correct_answers,
+                "correct_questions": total_correct_questions,
+                "lectures_analyzed": len(lectures),
+                "lectures_passed": passed_lectures,
                 "overall_percentage": overall_percentage,
-                "level": level,
-                "area_results": area_results,
-                "areas": areas
+                "lecture_results": lecture_results,
+                "lectures": lectures
             }
             
         except Exception as e:
             logger.error(f"Error analyzing user assessment: {str(e)}")
             raise
     
-    def _analyze_by_area(self, user_response: Dict[str, Any], question_bank: pd.DataFrame, areas: List[str]) -> Dict[str, Dict[str, Any]]:
-        """Analyze user performance by area"""
-        area_results = {}
+    def _analyze_by_lecture(self, user_response: Dict[str, Any], question_bank: pd.DataFrame, lectures: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Analyze user performance by lecture"""
+        lecture_results = {}
         
-        for area in areas:
-            # Get questions for this area
-            area_questions = question_bank[question_bank["area"] == area]
+        for lecture in lectures:
+            # Get questions for this lecture
+            lecture_questions = question_bank[question_bank["lecture"] == lecture]
             
-            total_questions = len(area_questions)
+            total_questions = len(lecture_questions)
             correct_answers = 0
             
             # Check each answer
-            for _, question_row in area_questions.iterrows():
+            for _, question_row in lecture_questions.iterrows():
                 question_num = question_row["question_number"]
-                correct_answer = question_row["correct_answer"]
+                correct_alternative = question_row["correct_alternative"]
                 
                 # Find user's answer for this question (1-based indexing)
                 if question_num <= len(user_response.get("answers", [])):
                     user_answer = user_response["answers"][question_num - 1].get("answer", "")
-                    if user_answer == correct_answer:
+                    if user_answer == correct_alternative:
                         correct_answers += 1
             
-            # Determine area status
+            # Determine lecture status: ALL questions must be correct to pass
             status = "Aprobado" if correct_answers == total_questions else "Reprobado"
             percentage = (correct_answers / total_questions * 100) if total_questions > 0 else 0
             
-            area_results[area] = {
+            lecture_results[lecture] = {
                 "total_questions": total_questions,
                 "correct_answers": correct_answers,
                 "percentage": percentage,
                 "status": status
             }
         
-        return area_results
-    
-    def _calculate_level(self, percentage: float) -> str:
-        """Calculate student level based on percentage"""
-        if percentage >= 55:
-            return "Nivel 3"
-        else:
-            return "Nivel 2"
-    
-    def get_failed_areas(self, area_results: Dict[str, Dict[str, Any]]) -> List[str]:
-        """Get list of areas where student failed"""
-        return [area for area, result in area_results.items() 
-                if result["status"] == "Reprobado"]
-    
-    def get_passed_areas(self, area_results: Dict[str, Dict[str, Any]]) -> List[str]:
-        """Get list of areas where student passed"""
-        return [area for area, result in area_results.items() 
-                if result["status"] == "Aprobado"] 
+        return lecture_results

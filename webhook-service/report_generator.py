@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """
 Report generator for individual student assessment reports
-Generates PDF reports using Word templates
+Generates PDF reports using HTML templates with variables
+Uses weasyprint for HTML-to-PDF conversion
 """
 
 import os
 import logging
-import tempfile
-from pathlib import Path
-from typing import Dict, Any
-from docx import Document
-from docx2pdf import convert
+from typing import Dict, Any, Tuple
+from weasyprint import HTML
 from storage import StorageClient
+from drive_service import DriveService
 
 logger = logging.getLogger(__name__)
 
@@ -19,136 +18,163 @@ class ReportGenerator:
     def __init__(self):
         """Initialize report generator"""
         self.storage = StorageClient()
-        self.template_path = "templates/plantilla_test_diagnostico.docx"
-    
-    def generate_individual_report(self, user: Dict[str, Any], assessment: Dict[str, Any], analysis_result: Dict[str, Any]) -> Path:
+        self.drive_service = DriveService()
+        self.html_template_path = "/app/templates/plantilla_test_diagnostico.html"
+
+    def generate_individual_report(self, user: Dict[str, Any], assessment: Dict[str, Any], analysis_result: Dict[str, Any]) -> Tuple[bytes, str]:
         """
-        Generate individual PDF report for student
-        
+        Generate individual PDF report for student using HTML template
+
         Args:
             user: User information from webhook
             assessment: Assessment information from webhook
             analysis_result: Analysis results from AssessmentAnalyzer
-            
+
         Returns:
-            Path to generated PDF report
+            Tuple of (PDF content as bytes, email filename)
         """
         try:
-            # Create temporary files for processing
-            with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_docx, \
-                 tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-                
-                temp_docx_path = temp_docx.name
-                temp_pdf_path = temp_pdf.name
-            
-            # Load template
-            template_doc = self._load_template()
-            
-            # Generate Word document
-            self._generate_word_document(
-                template_doc, 
-                user, 
-                assessment, 
-                analysis_result, 
-                temp_docx_path
-            )
-            
-            # Convert to PDF
-            convert(temp_docx_path, temp_pdf_path)
-            
-            # Save to storage
-            report_filename = f"informe_{user.get('username', user['email'])}_{assessment.get('title', 'assessment')}.pdf"
-            report_path = f"data/webhook_reports/{report_filename}"
-            
-            # Ensure directory exists
-            self.storage.ensure_directory("data/webhook_reports/")
-            
-            # Read PDF and save to storage
-            with open(temp_pdf_path, 'rb') as pdf_file:
-                pdf_content = pdf_file.read()
-                self.storage.write_bytes(report_path, pdf_content)
-            
-            # Clean up temporary files
-            os.unlink(temp_docx_path)
-            os.unlink(temp_pdf_path)
-            
-            logger.info(f"Generated report: {report_path}")
-            return Path(report_path)
-            
+            # Generate PDF using HTML template with weasyprint
+            pdf_content = self._generate_pdf_from_html_template(user, assessment, analysis_result)
+
+            # Generate filenames
+            assessment_title = analysis_result.get('title', 'Unknown Assessment')
+            username = user.get('username', user.get('email', 'Unknown User'))
+            user_id = user.get('id', 'unknown_id')
+
+            drive_filename = f"informe_{username}_{user_id}_{assessment_title}.pdf"
+            email_filename = f"informe_{username}_{assessment_title}.pdf"
+
+            # Save based on backend
+            self._save_pdf(pdf_content, drive_filename, assessment_title)
+
+            logger.info(f"Generated PDF report for {user.get('username', user['email'])}")
+            return pdf_content, email_filename
+
         except Exception as e:
             logger.error(f"Error generating report: {str(e)}")
             raise
-    
-    def _load_template(self) -> Document:
-        """Load Word template from storage"""
+
+    def _generate_pdf_from_html_template(self, user: Dict[str, Any], assessment: Dict[str, Any], analysis_result: Dict[str, Any]) -> bytes:
+        """Generate PDF from HTML template using weasyprint"""
         try:
-            if self.storage.exists(self.template_path):
-                template_bytes = self.storage.read_bytes(self.template_path)
-                
-                # Create temporary file for docx library
-                with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_file:
-                    temp_file.write(template_bytes)
-                    temp_file_path = temp_file.name
-                
-                # Load document
-                doc = Document(temp_file_path)
-                
-                # Clean up temporary file
-                os.unlink(temp_file_path)
-                
-                return doc
+            # Load HTML template from local file
+            if not os.path.exists(self.html_template_path):
+                logger.error(f"HTML template not found: {self.html_template_path}")
+                raise Exception("HTML template not found")
+
+            with open(self.html_template_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+
+            logger.info(f"Loaded HTML template, size: {len(html_content)} characters")
+
+            # Calculate variables
+            username = user.get('username', user.get('email', 'Estudiante'))
+            assessment_title = analysis_result.get('title', 'Diagnóstico')
+            total_questions = analysis_result.get('total_questions', 0)
+            correct_questions = analysis_result.get('correct_questions', 0)
+
+            if total_questions > 0:
+                percentage = (correct_questions / total_questions) * 100
             else:
-                raise FileNotFoundError(f"Template not found: {self.template_path}")
-                
+                percentage = 0
+
+            # Determine level based on percentage
+            if percentage >= 80:
+                level = "3"
+            elif percentage >= 60:
+                level = "2"
+            else:
+                level = "1"
+
+            # Replace variables in HTML
+            variables = {
+                '<<ALUMNO>>': username,
+                '<<Nombre>>': username,
+                '<<MATERIA>>': assessment_title,
+                '<<Prueba>>': assessment_title,
+                '<<PD%>>': f"{percentage:.1f}%",
+                '<<Nivel>>': level,
+            }
+
+            for var_name, var_value in variables.items():
+                html_content = html_content.replace(var_name, var_value)
+
+            logger.info("Variables replaced in HTML template")
+
+            # Add lecture results table to third page
+            lecture_results = analysis_result.get("lecture_results", {})
+            if lecture_results:
+                html_content = self._add_lecture_table_to_html(html_content, lecture_results)
+                logger.info(f"Added lecture table with {len(lecture_results)} lectures")
+
+            # Generate PDF using weasyprint
+            logger.info("Generating PDF with weasyprint...")
+            html_doc = HTML(string=html_content)
+            pdf_content = html_doc.write_pdf()
+            
+            logger.info("✅ PDF generated successfully")
+            return pdf_content
+
         except Exception as e:
-            logger.error(f"Error loading template: {str(e)}")
+            logger.error(f"Error generating PDF from HTML template: {e}")
             raise
-    
-    def _generate_word_document(self, doc: Document, user: Dict[str, Any], assessment: Dict[str, Any], analysis_result: Dict[str, Any], output_path: str):
-        """Generate Word document with student data"""
+
+    def _add_lecture_table_to_html(self, html_content: str, lecture_results: Dict[str, Dict[str, Any]]) -> str:
+        """Add lecture results table to HTML content"""
         try:
-            # Extract data
-            username = user.get("username", user["email"])
-            level = analysis_result.get("level", "Nivel 2")
-            percentage = analysis_result.get("overall_percentage", 0)
-            area_results = analysis_result.get("area_results", {})
-            
-            # Replace placeholders in paragraphs
-            for paragraph in doc.paragraphs:
-                self._replace_placeholders_in_paragraph(
-                    paragraph, username, level, percentage, area_results
-                )
-            
-            # Replace placeholders in tables
-            for table in doc.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        for paragraph in cell.paragraphs:
-                            self._replace_placeholders_in_paragraph(
-                                paragraph, username, level, percentage, area_results
-                            )
-            
-            # Save document
-            doc.save(output_path)
-            
+            # Create table HTML
+            table_rows = []
+            for lecture_name, result_details in lecture_results.items():
+                # Get the status string from inside the result_details dictionary
+                status_string = result_details.get("status", "Reprobado")
+                
+                # Use the new status_string variable for the logic
+                status_class = "status-aprobada" if status_string == "Aprobado" else "status-reprobada"
+                
+                row = f"""
+        <tr>
+          <td>{lecture_name}</td>
+          <td class="status-cell {status_class}">{status_string}</td>
+        </tr>"""
+                table_rows.append(row)
+
+            table_html = f"""
+<section class="page">
+  <div class="content">
+    <p class="TituloAlumno Negrita">Resultados por Lección</p>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>Lección</th>
+          <th style="text-align:center;">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(table_rows)}
+      </tbody>
+    </table>
+  </div>
+</section>"""
+
+            # Insert table before closing body tag
+            html_content = html_content.replace('</body>', f'{table_html}\n</body>')
+            logger.info("Added lecture table to HTML template")
+            return html_content
+
         except Exception as e:
-            logger.error(f"Error generating Word document: {str(e)}")
-            raise
-    
-    def _replace_placeholders_in_paragraph(self, paragraph, username: str, level: str, percentage: float, area_results: Dict[str, Any]):
-        """Replace placeholders in a paragraph"""
-        text = paragraph.text
-        
-        # Replace basic placeholders
-        text = text.replace("<<Nombre>>", username)
-        text = text.replace("<<Nivel>>", level)
-        text = text.replace("<<PD%>>", f"{percentage:.2f}%")
-        
-        # Replace area placeholders
-        areas = list(area_results.keys())
-        for i, area in enumerate(areas, 1):
-            area_status = area_results[area]["status"]
-            text = text.replace(f"<<T{i}>>", area_status)
-        
-        # Update paragraph text
-        paragraph.text = text 
+            logger.error(f"Error adding lecture table: {e}")
+            return html_content
+
+    def _save_pdf(self, pdf_content: bytes, filename: str, assessment_title: str) -> None:
+        """Save PDF to storage backend"""
+        try:
+            # Save to Google Drive
+            drive_link = self.drive_service.upload_pdf_to_drive(pdf_content, filename, assessment_title)
+            if drive_link:
+                logger.info(f"PDF saved to Google Drive: {drive_link}")
+            else:
+                logger.warning("Failed to save PDF to Google Drive")
+        except Exception as e:
+            logger.error(f"Error saving PDF to Google Drive: {e}")
+            raise 
