@@ -1,0 +1,138 @@
+create a new report generator, this generator will load an excel called "analisis de datos.xlsx" this excel has a sheet called "Reporte" that has these relevant columns [user_id, email, nombre_y_apellido, qué_tipo_de_estudiante_eres, ingresa_tu_correo, preparar_matemática_m2, Prepara M1, Prepara CL, Prepara CIEN, Prepara HYST, Segmento]
+
+and sheets called "M1", "CL", "CIEN", "HYST", each of these sheets has the level and the following relevant columns,  
+
+M1 the relevant columns are [level, passed_lectures, failed_lectures], 
+CL the relevant columns are [level, skill_{skill}_percentage] for skills [localizar, interpretar, evaluar],
+CIEN the relevant columns are [level, materia_{materia}_passed_lectures, materia_{materia}_failed_lectures, materia_{materia}_passed_lectures_count, materia_{materia}_failed_lectures_count], for materias [biología, química, física]
+HYST the relevant columns are [level, passed_lectures, failed_lectures],
+
+all the passed or failed lectures have multiples lectures separated by "|"
+
+for now you will load the relevant data and use the columns [nombre_y_apellido, qué_tipo_de_estudiante_eres, preparar_matemática_m2, Prepara y rindió M1, Prepara y rindió CL, Prepara y rindió CIEN, Prepara y rindió HYST, Rindió todas sus pruebas, Segmento] and use 2 templates, you will load the plantilla_plan_de_estudio.html and replace the <<ALUMNO>> with the nombre_y_apellido value, 
+
+then see the value of Segmento and load the template Segmentos.xlsx 
+
+Segmentos.xlsx has sheets named S4, S5, S6 and some sheets named like S1-S2-S13 with multiple S{n} for sheet name, for every value of Segmento there is a sheet named with that value, and those sheets have the following columns [Semana, Día, Hora, M1N1, M1N2, M1N3, CLN1, CLN2, CLN3, CIEN N1 Mañana, CIEN N2 Mañana, HYST N1 Mañana, HYST N2 Mañana, CIEN Tarde, HYST Tarde]
+
+So with the value of Segmento i have to go inside the sheet with that name and load it to a df or load all the df on the memory, and then create multiple tables like the one on the image based on the values of the sheet S{n}, for example, the first week of the sheet "S7-S8-S15" which contains 3 segmentos will get loaded in case Segmento says S7 or S8 or S15, 
+
+then if there is a 1 on the columns [Prepara y rindió M1, Prepara y rindió CL, Prepara y rindió CIEN, Prepara y rindió HYST] get the relevant columns of the sheets [M1, CL, CIEN, HYST] 
+
+then, with the level of M1 you will use the data of 1 of these 3 columns in the S{n} sheet [M1 N1, M1 N2, M1 N3]
+
+with the level of CL you will use the data of 1 of these 3 columns in the S{n} sheet [CL N1, CL N2, CL N3]
+
+with the level of CIEN you will use the data of 1 of these 3 columns in the S{n} sheet [CIEN N1 Mañana, CIEN N2 Mañana, CIEN Tarde], here you will use CIEN N1 Mañana or CIEN N2 Mañana depending the their level and create another report using CIEN Tarde
+
+with the level of HYST you will use the data of 1 of these 3 columns in the S{n} sheet [HYST N1 Mañana, HYST N2 Mañana, HYST Tarde], here you will use HYST N1 Mañana or HYST N2 Mañana depending the their level and create another report using HYST Tarde
+
+later you will load the other columns of the sheet S{n} [Semana, Día, Hora] 
+
+finally with those columns [Semana, Día, Hora] and the tests columns you will create the table of the image to add it to the html, you will create 1 table per value in the column "Semana" and will put only 2 tables per page, at the same time you create the table, you will fill it with the different values per "Día" and "Hora" 
+
+
+the logic needs the following adjustments, now you won't need the sheets M1, CL, CIEN, HYST, or the "Prepara y rindió X", you will get the levels from the columns called [Nivel M1, Nivel CL, Nivel CIEN, Nivel HYST] on the sheet Reporte, and the Segmento from the column Segmento on the sheet Reporte too, with this you will go to the Segmentos xlsx and load the S{n} sheets as before and follow the process
+
+
+now that all the rows all all users are with the 4 levels it's including planification that i did not want before
+
+so for 
+S1 only show M1 and CIEN
+S2 only show M1 and HYST
+S3 only show M1
+S4 only show CL and CIEN
+S5 only show CL and HYST
+S6 only show CL
+S7 only show M1, CL and CIEN
+S8 only show M1, CL and CIEN
+S9 only show M1 and CL
+S10 only show CIEN
+S11 only show HYST
+S12 only show M1
+S13 show M1 and a PDF with CIEN and a PDF with HYST, 4 pdf in total including mañana and tarde
+S14 show CL and a PDF with CIEN and a PDF with HYST, 4 pdf in total including mañana and tarde
+S15 show M1 and CL and a PDF with CIEN and a PDF with HYST, 4 pdf in total including mañana and tarde
+
+for the Segmentos S7, S8 and S15 you will have different columns on the sheet S7-S8-S15, you will have the normal columns [Semana, Día, Hora, M1 N1, M1 N2, M1 N3, CL N1, CL N2, CL N3, CIEN N1 M1 N3, CIEN N2  M1 N3, CIEN N2 CL N3, HYST N1 M1 N3, HYST N2 M1 N3, HYST N2 CL N3, CIEN Tarde, HYST Tarde] for M1 and CL you will use the same columns as before [M1 N1, M1 N2, M1 N3, CL N1, CL N2, CL N3] but for CIEN in the S7, for HYST on the S8 and both PDF on the S15 you will use these columns [CIEN N1 M1 N3, CIEN N1 M1 N3 CL N3, CIEN N2 M1 N3, CIEN N2 CL N3, HYST N1 M1 N3, HYST N2 M1 N3, HYST N2 CL N3, CIEN Tarde, HYST Tarde]
+
+On S7 in case the student got in "Nivel 3" in "M1" and level 2 or 1 on CL he will use these columns for CIEN: CIEN N1 M1 N3 or CIEN N2 M1 N3 depending on his level for the mañana variant and CIEN Tarde for the tarde variant
+
+in case the student got in "Nivel 3" in "CL" and level 2 or 1 on M1 he will use these columns for CIEN: CIEN N2 CL N3 if his level for CIEN is "nivel 2", for the mañana variant and CIEN Tarde for the tarde variant, in case he is "nivel 1" in CIEN only use the CIEN Tarde and there is no mañana variant
+
+On S7 in case the student got in "Nivel 3" in "M1" and "Nivel 3" in "CL" he will use these columns for CIEN: CIEN N1 M1 N3 CL N3 if his level for CIEN is "nivel 1", for the mañana variant and CIEN Tarde for the tarde variant, in case he is "nivel 2" in CIEN column CIEN N2 M1 N3 for the mañana variant and use the CIEN Tarde for the tarde variant
+
+for every other combination on nivel 1 or 2 on M1 and 1 or 2 in CL use CIEN Tarde
+
+on the S8 use the same logic but replacing the CIEN for HYST
+
+On S8 for the case of in case the student got in "Nivel 3" in "M1" and "Nivel 3" in "CL" he will use the same logic as CL nivel 1 or 2
+
+For S15 create 2 PDF 1 with CIEN and one with HYST
+_____________________________________________________________________________
+
+
+
+Now, in the case of the Egresado students, after the schedule tables i will have to load 4 files on the folder data/Checklist the files will be M1, CL, CIEN, HYST,
+
+for the students that have a 1 on [preparar_matemática_m1, preparar_competencia_lectora, preparar_ciencias, preparar_historia] i want to use that Checklist file,
+
+with the following conditions, 20 rows per page and then continue the table on the next page,
+
+if the students completed the test de diagnóstico they will have a 1 in the column [Rindió M1, Rindió CL, Rindió CIEN, Rindió HYST] if they did not complete it they will have a 0
+
+
+for M1,
+	 if the student is nivel 1 i want to create a table with the Sheet "N1 1", then another table with the sheet "N1 2" and a third table with the sheet "0"
+	if the student is nivel 2 i want to create a table with the Sheet "N2 1", then another table with the sheet "0". for the students that did the test then i want to fill the table column "Check" with "Aprobado" or "Reprobado" from sheet "N2 1" with their passed and failed lectures, which is on the sheet M1 on the analisis_de_datos.xlsx
+	if the student is nivel 3 i want to create a table with the Sheet N3, then another table with the sheet 0. for the students that did the test then i want to fill the table from sheet "N3" with their passed and failed lectures, which is on the sheet M1 on the analisis_de_datos.xlsx.
+for the students that did not complete the test or the students in nivel 1 i don't want to fill the tables
+
+In the case of Cuarto medio students i want to load the checklist and create a table from the sheet "Cuarto meio" if he has 1 on Rindió M1, i want to fill the table with his passed or failed lectures
+
+__________________________________________________________________
+Now the Checklist for M1 is ready, now continuing with CL,
+
+Use the same format adapted to the columns of CL,
+
+For Egresado students
+	if the student is nivel 1 i want to create a table with the sheet "N1", then another table with the sheet "N2", then another table with the sheet "N3"
+	if the student is nivel 2 i want to create a table with the sheet "N2", then another table with the sheet "N3"
+	if the student is nivel 3 i want to create a table with the sheet "N3"
+if the student is Cuarto medio don't show any table,
+
+then for every student that have a 1 on Rindió CL, i want to add a table with 2 columns [Habilidad, % Dominio] and the values put [Localizar, Interpretar, Evaluar] and for the % Dominio fill with the values of [skill_localizar_percentage, skill_interpretar_percentage, skill_evaluar_percentage]
+
+_____________________________________________________________
+now let´s continue with the HYST checklist,
+
+Use the same format adapted to the columns of HYST,
+
+Do this only for the students that Have prepara_historia = 1 or Rindió HYST = 1
+For Egresado students
+	if the student is Nivel General i want to create a table with the sheet "Nivel General", then another table with the sheet "Nivel Avanzado"
+	if the student is Nivel Avanzado i want to create a table with the sheet "Nivel Avanzado"
+
+For Cuarto medio students show the same tables
+____________________________________________________________
+
+
+now let´s continue with the CIEN checklist,
+
+This one is very similar to M1,
+
+Use the same format adapted to the columns of CIEN,
+
+for the Egresado students
+	 if the student is nivel 1 i want to create a table with the Sheet "N1 1", then another table with the sheet "N1 2" and a third table with the sheet "0"
+	if the student is nivel 2 i want to create a table with the Sheet "N2", then another table with the sheet "0".
+
+for the students that did the test then i want to fill the table column "Check" with "Aprobado" or "Reprobado" from sheet "N1 1" on nivel 1 or "N2 1" on nivel 2 with their passed and failed lectures, which is on the sheet CIEN on the analisis_de_datos.xlsx
+	
+for the students that did not complete the test i don't want to fill the tables
+
+For the Cuarto medio students create a table with the sheet "Cuarto medio" and if they did the test fill the table
+
+In the case of Cuarto medio students i want to load the checklist and create a table from the sheet "Cuarto meio" if he has 1 on Rindió M1, i want to fill the table with his passed or failed lectures
+
+ 

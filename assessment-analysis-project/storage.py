@@ -90,10 +90,4 @@ class StorageClient:
         else:
             return [b.name for b in self.bucket.list_blobs(prefix=self._gcs_path(prefix))]
     
-    def get_backend_info(self):
-        """Get information about the current storage backend configuration"""
-        info = {
-            'backend': self.backend,
-            'bucket_name': self.bucket_name if self.backend == 'gcp' else None
-        }
-        return info 
+ 

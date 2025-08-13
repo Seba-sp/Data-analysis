@@ -23,6 +23,55 @@
     border: none;
   }
   
+  /* Checklist table styles */
+  .checklist-section {
+    margin: 20px 0;
+    page-break-inside: avoid;
+  }
+  
+  .checklist-section h3 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+  }
+  
+  .checklist-section h4 {
+    color: #555;
+    font-size: 16px;
+    margin: 15px 0 10px 0;
+  }
+  
+  .checklist-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+  
+  .checklist-table th {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    text-align: left;
+    font-weight: bold;
+  }
+  
+  .checklist-table td {
+    border: 1px solid #dee2e6;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+  
+  .checklist-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+  }
+  
+  .checklist-table tr:hover {
+    background-color: #e9ecef;
+  }
+  
 /* === Reseteo básico ======================================== */
 html,body{margin:0;padding:0;}
 
@@ -154,27 +203,93 @@ html,body{margin:0;padding:0;}
 <section class="page">
   <div class="content">
 
-    <p>Hola <<Nombre>>,</p>
-    <p>Te entrego tu plan de estudio personalizado, elaborado a partir de los niveles que se te asignaron tras rendir los tests de diagnóstico.</p>
-    <p>Te recomiendo seguir al pie de la letra las indicaciones que verás a continuación para que llegues con todo a la PAES regular 2025.</p>
-    <p><strong>¡VAMOS CON TODO!</strong></p>
+    <p>Antes de comenzar esta aventura, quiero decirte algo importante: estás a punto de vivir un segundo semestre que puede cambiarlo todo.</p>
     
-    <p>Estos son tus niveles asignados:</p>
-    <ul>
-        <li>En M1: <<Nivel M1>></li>
-        <li>En Competencia Lectora: <<Nivel CL>></li>
-        <li>En Ciencias: <<Nivel Ciencias>></li>
-        <li>En Historia y Cs. Sociales: <<Nivel Historia>></li>
-    </ul>
+    <p>Este reporte que tienes en tus manos no es solo un calendario: es tu mapa de ruta para llegar a tu meta en la PAES. Cada día está diseñado para acercarte un paso más al resultado que quieres… y vamos a trabajar juntos para que ese resultado sea el mejor posible.</p>
     
-    <p>Según estos niveles, te sugiero el siguiente itinerario:</p>
-    <ul>
-        <li>Agosto: <<PlanAgosto>></li>
-        <li>Septiembre: <<PlanSeptiembre>></li>
-        <li>Octubre: <<PlanOctubre>></li>
-    </ul>
+    <p>Este es tu punto de partida. Lo que pase de aquí a fin de año dependerá de cada paso y cada decisión que tomes. No estarás siempre donde estás hoy: cada tarea es una pieza más de la persona en la que puedes convertirte.</p>
+    
+    <p>Y aunque tu camino es único, <strong>no vas solo ni sola</strong>. Formas parte de una comunidad que, aunque tenga metas diferentes, comparte un mismo objetivo: superarse y alcanzar su máximo potencial.</p>
+    
+    <p>Habrá obstáculos. Habrá días sin motivación. Habrá desafíos. Y ahí es donde entran en juego la disciplina y tu fortaleza: serán el puente entre quién eres hoy y quién puedes llegar a ser.</p>
+    
+    <p>¿Se trata solo de un mejor puntaje? No.</p>
+    
+    <p>Este viaje es sobre la disciplina que vas a desarrollar, sobre demostrarte cada día que eres capaz, sobre levantarte cuando te caes y seguir dando lo mejor de ti.</p>
+    
+    <p><strong>Esto es una aventura.</strong> Una que nos va a transformar y nos convertirá en quién podemos llegar a ser.</p>
+    
+    <p>¿Quién podrías llegar a ser? No hay límites. Cada día puedes ser un poco mejor… y muchos de esos días te convertirán en alguien imparable. Te propondrás algo… y lo lograrás.</p>
+    
+    <p>Para empezar este viaje, quiero dejarte algo claro, y ojalá lo recuerdes siempre:</p>
+    
+    <p><strong>ERES CAPAZ.</strong></p>
+    
+    <p style="text-align: right; margin-top: 40px; font-family: 'Times New Roman', Times, serif;">
+        <strong>Vamos a ir con todo,</strong><br>
+        Cristian VR<br>
+        Cofundador M30M
+    </p>
   </div>
 </section>
 
+<!-- =========== PÁGINA 3 - RESULTADOS ========== -->
+<section class="page">
+  <div class="content">
+    <h2>1. Tus Resultados</h2>
+    
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #000; font-family: 'Times New Roman', Times, serif; font-size: 15px;">
+        <thead>
+            <tr>
+                <th style="border: 1px solid #000; padding: 10px; text-align: center; background-color: #f0f0f0;">Prueba</th>
+                <th style="border: 1px solid #000; padding: 10px; text-align: center; background-color: #f0f0f0;">¿La preparas? (1)</th>
+                <th style="border: 1px solid #000; padding: 10px; text-align: center; background-color: #f0f0f0;">Nivel</th>
+                <th style="border: 1px solid #000; padding: 10px; text-align: center; background-color: #f0f0f0;">Porcentaje de dominio (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;">Matemática M1 (2)</td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<PREPARAR_M1>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<NIVEL_M1>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<DOMINIO_M1>></td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 10px; text-align: center;">Matemática M2</td>
+              <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<PREPARAR_M2>></td>
+              <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<NIVEL_M2>></td>
+              <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<DOMINIO_M2>></td>
+          </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;">Competencia Lectora</td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<PREPARAR_CL>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<NIVEL_CL>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<DOMINIO_CL>></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;">Ciencias</td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<PREPARAR_CIEN>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<NIVEL_CIEN>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<DOMINIO_CIEN>></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;">Historia</td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<PREPARAR_HYST>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<NIVEL_HYST>></td>
+                <td style="border: 1px solid #000; padding: 10px; text-align: center;"><<DOMINIO_HYST>></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 20px; font-size: 12px; font-family: 'Times New Roman', Times, serif;">
+        <p><strong>(1)</strong> Según la encuesta realizada en la plataforma</p>
+        <p><strong>(2)</strong> La preparación de la prueba de Matemática M2 se detalla en el PDF "Preparación M2", en el caso que hayas marcado que la rendirás., lo podrás encontrar en la plataforma.</p>
+    </div>
+  </div>
+</section>
+
+<<CALENDARIO_GENERAL_SECTION>>
+
+  
 </body>
 </html>

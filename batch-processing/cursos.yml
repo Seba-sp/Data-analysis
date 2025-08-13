@@ -22,15 +22,41 @@ courses:
     nivel-4-m30m:
       name: Nivel 4 [M30M]
       kpis: *id001
-  SinCategoria:
-    stuff:
-      name: Stuff
-      kpis: *id001
   Ciencias:
     lecciones-c30m:
       name: Lecciones C30M
       kpis: *id001
+    test-de-diagnostico-c30m:
+      name: Test de diagnóstico C30M
+      kpis: *id001
   Competencia lectora:
-    cl-test:
-      name: CL TEST
+    dl30m:
+      name: 'L30M '
+      kpis: *id001
+    test-de-diagnostico-l30m:
+      name: Test de diagnóstico L30M
+      kpis: *id001
+  SinCategoria:
+    prueba-test-de-diagnostico:
+      name: Prueba test de diagnostico
+      kpis: *id001
+    lecciones-l30m:
+      name: Lecciones L30M
+      kpis: *id001
+    ensayos-paes-2025:
+      name: Ensayos PAES 2025
+      kpis: *id001
+  Historia:
+    test-de-diagnostico-h30m:
+      name: Test de diagnóstico H30M
+      kpis: *id001
+    lecciones-h30m:
+      name: Lecciones H30M
+      kpis: *id001
+  Alumno:
+    tutorial-egresado:
+      name: Tutorial Egresado
+      kpis: *id001
+    tutorial-cuarto-medio:
+      name: Tutorial Cuarto Medio
       kpis: *id001
