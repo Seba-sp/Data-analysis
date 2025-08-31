@@ -5,8 +5,6 @@ from descarga_procesa_datos import run_full_pipeline as run_download_pipeline
 from analisis import run_analysis_pipeline as run_analysis_pipeline
 from storage import StorageClient
 import os
-import traceback
-from googleapiclient.http import MediaFileUpload
 from datetime import datetime
 
 def load_course_config(config_path: str = "cursos.yml"):
@@ -44,72 +42,8 @@ def parse_arguments():
     return parser.parse_args()
 
 # --- Google Drive upload logic ---
-def get_drive_service():
-    import os, base64, json
-    from googleapiclient.discovery import build
-    from google.oauth2 import service_account
-    service_account_key = os.environ.get('GOOGLE_SERVICE_ACCOUNT_KEY')
-    if not service_account_key:
-        raise ValueError("GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set")
-    try:
-        decoded_key = base64.b64decode(service_account_key).decode('utf-8')
-        key_data = json.loads(decoded_key)
-    except Exception:
-        key_data = json.loads(service_account_key)
-    credentials = service_account.Credentials.from_service_account_info(
-        key_data,
-        scopes=['https://www.googleapis.com/auth/drive']
-    )
-    return build('drive', 'v3', credentials=credentials)
-
-def find_or_create_folder(drive_service, parent_folder_id, folder_name, drive_id=None):
-    # Search for the folder by name under the parent
-    query = f"mimeType='application/vnd.google-apps.folder' and trashed=false and name='{folder_name}' and '{parent_folder_id}' in parents"
-    results = drive_service.files().list(
-        q=query,
-        fields="files(id, name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        corpora='drive' if drive_id else None,
-        driveId=drive_id
-    ).execute()
-    files = results.get('files', [])
-    if files:
-        return files[0]['id']
-    # Create the folder if not found
-    folder_metadata = {
-        'name': folder_name,
-        'mimeType': 'application/vnd.google-apps.folder',
-        'parents': [parent_folder_id]
-    }
-    create_args = dict(
-        body=folder_metadata,
-        fields='id, name',
-        supportsAllDrives=True
-    )
-    if drive_id:
-        create_args['driveId'] = drive_id
-    folder = drive_service.files().create(**create_args).execute()
-    print(f"[DEBUG] Carpeta creada en Drive: {folder['name']} (ID: {folder['id']})")
-    return folder['id']
-
+from drive_service import DriveService
 import datetime
-
-def find_file_in_folder(drive_service, folder_id, filename, drive_id=None):
-    # Search for a file by name in a specific folder
-    query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
-    results = drive_service.files().list(
-        q=query,
-        fields="files(id, name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        corpora='drive' if drive_id else None,
-        driveId=drive_id
-    ).execute()
-    files = results.get('files', [])
-    if files:
-        return files[0]['id']
-    return None
 
 def upload_files_for_course(category, course_id, folder_id=None, drive_id=None):
     """
@@ -127,9 +61,12 @@ def upload_files_for_course(category, course_id, folder_id=None, drive_id=None):
         drive_id = os.environ.get('GOOGLE_DRIVE_ID') if os.environ.get('GOOGLE_DRIVE_ID') else None
     print(f"[DEBUG] Subiendo archivos para el curso: {category}/{course_id}")
     print(f"[DEBUG] Usando carpeta de Drive con ID: {folder_id}")
-    drive_service = get_drive_service()
+    
+    # Initialize DriveService
+    drive_service = DriveService()
+    
     # Find or create subfolder for the course
-    course_folder_id = find_or_create_folder(drive_service, folder_id, f"{category}_{course_id}", drive_id)
+    course_folder_id = drive_service.find_or_create_folder(folder_id, f"{category}_{course_id}", drive_id)
     print(f"[DEBUG] Carpeta de curso en Drive: {course_folder_id}")
     results = {}
     today = datetime.now().date()
@@ -149,83 +86,38 @@ def upload_files_for_course(category, course_id, folder_id=None, drive_id=None):
                 try:
                     file_size = file_path.stat().st_size
                     print(f"[DEBUG] Subiendo archivo: {file_path.name} (tamaño: {file_size} bytes)")
-                    file_metadata = {
-                        'name': file_path.name,
-                        'parents': [course_folder_id]
-                    }
-                    file_bytes = storage.read_bytes(str(file_path))
-                    # Write to a temp file for MediaFileUpload
-                    import tempfile
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=file_path.suffix) as tmpf:
-                        tmpf.write(file_bytes)
-                        tmpf.flush()
-                        media = MediaFileUpload(tmpf.name, resumable=True)
-                        existing_file_id = find_file_in_folder(drive_service, course_folder_id, file_path.name, drive_id)
-                        if existing_file_id:
-                            print(f"[DEBUG] Archivo ya existe en Drive, actualizando: {file_path.name} (ID: {existing_file_id})")
-                            update_args = dict(
-                                fileId=existing_file_id,
-                                media_body=media,
-                                fields='id,webViewLink',
-                                supportsAllDrives=True
-                            )
-                            if drive_id:
-                                update_args['driveId'] = drive_id
-                            uploaded = drive_service.files().update(**update_args).execute()
-                        else:
-                            upload_args = dict(
-                                body=file_metadata,
-                                media_body=media,
-                                fields='id,webViewLink',
-                                supportsAllDrives=True
-                            )
-                            if drive_id:
-                                upload_args['driveId'] = drive_id
-                            uploaded = drive_service.files().create(**upload_args).execute()
-                        results[file_path.name] = uploaded.get('webViewLink')
-                        print(f"[DEBUG] Archivo subido: {file_path.name} → {uploaded.get('webViewLink')}")
+                    
+                    # Use DriveService to upload the file
+                    drive_link = drive_service.upload_file(str(file_path), file_path.name, course_folder_id, drive_id)
+                    if drive_link:
+                        results[file_path.name] = drive_link
+                        print(f"[DEBUG] Archivo subido: {file_path.name} → {drive_link}")
+                    else:
+                        print(f"[ERROR] Falló la subida de {file_path.name}")
+                        
                 except Exception as e:
                     print(f"[ERROR] Falló la subida de {file_path.name}: {e}")
+                    import traceback
                     traceback.print_exc()
     print(f"[DEBUG] Subida finalizada para el curso: {category}/{course_id}")
     return results
 
+from slack_service import SlackService
+
 def send_slack_notification_for_upload(category, course_id, course_config, uploaded_links):
     """Send a Slack notification listing uploaded files for a course, including the category."""
-    import os
-    slack_channel = os.environ.get('SLACK_CHANNEL')
-    if not slack_channel:
-        print("[DEBUG] SLACK_CHANNEL no configurado, omitiendo notificación Slack.")
+    slack_service = SlackService()
+    if not slack_service.is_available():
+        print("[DEBUG] Slack service no disponible, omitiendo notificación Slack.")
         return
-    slack_client = get_slack_client()
-    if not slack_client:
-        print("[DEBUG] Slack client no disponible, omitiendo notificación Slack.")
-        return
-    if not uploaded_links:
-        print("[DEBUG] No hay archivos subidos para notificar a Slack.")
-        return
+    
     course_name = course_config.get('name', course_id)
-    text = f"Se han subido los siguientes archivos para la categoría *{category}*, curso *{course_name}* ({course_id}):\n"
-    for fname, link in uploaded_links.items():
-        text += f"• <{link}|{fname}>\n"
-    try:
-        slack_client.chat_postMessage(
-            channel=slack_channel,
-            text=text
-        )
+    success = slack_service.send_file_upload_notification(category, course_id, course_name, uploaded_links)
+    
+    if success:
         print(f"[DEBUG] Notificación de Slack enviada para {category}/{course_id}")
-    except Exception as e:
-        print(f"[ERROR] Falló el envío de notificación Slack para {category}/{course_id}: {e}")
-
-def get_slack_client():
-    """Initialize Slack client"""
-    import os
-    from slack_sdk import WebClient
-    slack_token = os.environ.get('SLACK_BOT_TOKEN')
-    if not slack_token:
-        print("[DEBUG] SLACK_BOT_TOKEN no configurado")
-        return None
-    return WebClient(token=slack_token)
+    else:
+        print(f"[ERROR] Falló el envío de notificación Slack para {category}/{course_id}")
 
 def run_batch_pipeline(config_path: str, category: str = None, course_id: str = None, download_only: bool = False, analysis_only: bool = False, no_upload: bool = False):
     """Run pipeline for one or more courses/categories"""

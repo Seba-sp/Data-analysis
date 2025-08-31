@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Google Drive service for uploading PDF reports
-Handles uploading generated PDFs to Google Drive with organized folder structure
+Google Drive service for uploading files and managing folders
+Project-agnostic service that can be used across multiple projects
+Handles uploading files to Google Drive with organized folder structure
+Supports shared drives, multiple file types, and flexible folder hierarchies
 """
 
 import os
 import json
 import base64
 import logging
-from typing import Optional
+import tempfile
+from typing import Optional, List, Dict, Union
+from pathlib import Path
 
 # Try to import Google Drive libraries
 try:
@@ -23,10 +27,17 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class DriveService:
-    def __init__(self):
+    def __init__(self, base_folder_id: Optional[str] = None, drive_id: Optional[str] = None):
+        """
+        Initialize Google Drive service
+        
+        Args:
+            base_folder_id: Base folder ID for uploads (defaults to GOOGLE_DRIVE_FOLDER_ID env var)
+            drive_id: Shared drive ID (defaults to GOOGLE_DRIVE_ID env var)
+        """
         self.drive_service = None
-        self.base_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
-        self.drive_id = os.getenv('GOOGLE_SHARED_DRIVE_ID')
+        self.base_folder_id = base_folder_id or os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+        self.drive_id = drive_id or os.getenv('GOOGLE_DRIVE_ID')
         
         # Only try to initialize if we have the required environment variables
         if self.base_folder_id:
@@ -69,111 +80,207 @@ class DriveService:
             logger.error(f"Error parsing service account key: {e}")
             raise
     
-    def _find_or_create_folder(self, parent_folder_id: str, folder_name: str) -> str:
-        """Find or create a folder in Google Drive"""
+    def find_or_create_folder(self, parent_folder_id: str, folder_name: str, drive_id: Optional[str] = None) -> Optional[str]:
+        """
+        Find or create a folder in Google Drive
+        
+        Args:
+            parent_folder_id: ID of the parent folder
+            folder_name: Name of the folder to find or create
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            Folder ID if successful, None otherwise
+        """
         if not self.drive_service:
+            logger.warning("Google Drive service not available")
             return None
             
-        query = f"mimeType='application/vnd.google-apps.folder' and trashed=false and name='{folder_name}' and '{parent_folder_id}' in parents"
-        results = self.drive_service.files().list(
-            q=query,
-            fields="files(id, name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
-        ).execute()
-        
-        files = results.get('files', [])
-        if files:
-            return files[0]['id']
-        
-        folder_metadata = {
-            'name': folder_name,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [parent_folder_id]
-        }
-        
-        folder = self.drive_service.files().create(
-            body=folder_metadata,
-            fields='id, name',
-            supportsAllDrives=True
-        ).execute()
-        
-        logger.info(f"Created folder in Drive: {folder['name']} (ID: {folder['id']})")
-        return folder['id']
-    
-    def _find_file_in_folder(self, folder_id: str, filename: str) -> Optional[str]:
-        """Find a file in a Google Drive folder"""
-        if not self.drive_service:
-            return None
-            
-        query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
-        results = self.drive_service.files().list(
-            q=query,
-            fields="files(id, name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
-        ).execute()
-        
-        files = results.get('files', [])
-        if files:
-            return files[0]['id']
-        return None
-    
-    def upload_pdf_to_drive(self, pdf_content: bytes, filename: str, assessment_title: str) -> Optional[str]:
-        if not self.drive_service or not self.base_folder_id:
-            logger.info("Google Drive not available, skipping upload")
-            return None
         try:
-            # First, create or find the webhook_reports folder
-            webhook_reports_folder_id = self._find_or_create_folder(self.base_folder_id, "webhook_reports")
-            if not webhook_reports_folder_id:
-                logger.error("Failed to create/find webhook_reports folder")
-                return None
+            query = f"mimeType='application/vnd.google-apps.folder' and trashed=false and name='{folder_name}' and '{parent_folder_id}' in parents"
+            results = self.drive_service.files().list(
+                q=query,
+                fields="files(id, name)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                corpora='drive' if drive_id else None,
+                driveId=drive_id
+            ).execute()
             
-            # Then, create or find the assessment folder inside webhook_reports
-            assessment_folder_id = self._find_or_create_folder(webhook_reports_folder_id, assessment_title)
-            if not assessment_folder_id:
-                logger.error(f"Failed to create/find assessment folder: {assessment_title}")
-                return None
+            files = results.get('files', [])
+            if files:
+                logger.info(f"Found existing folder: {folder_name}")
+                return files[0]['id']
             
-            # Use a unique temporary file path to avoid conflicts
-            import tempfile
-            import os
+            # Create the folder if not found
+            folder_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [parent_folder_id]
+            }
+            
+            create_args = dict(
+                body=folder_metadata,
+                fields='id, name',
+                supportsAllDrives=True
+            )
+            if drive_id:
+                create_args['driveId'] = drive_id
+                
+            folder = self.drive_service.files().create(**create_args).execute()
+            logger.info(f"Created folder in Drive: {folder['name']} (ID: {folder['id']})")
+            return folder['id']
+            
+        except Exception as e:
+            logger.error(f"Error finding/creating folder '{folder_name}': {e}")
+            return None
+    
+    def find_file_in_folder(self, folder_id: str, filename: str, drive_id: Optional[str] = None) -> Optional[str]:
+        """
+        Find a file in a Google Drive folder
+        
+        Args:
+            folder_id: ID of the folder to search in
+            filename: Name of the file to find
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            File ID if found, None otherwise
+        """
+        if not self.drive_service:
+            return None
+            
+        try:
+            query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
+            results = self.drive_service.files().list(
+                q=query,
+                fields="files(id, name)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                corpora='drive' if drive_id else None,
+                driveId=drive_id
+            ).execute()
+            
+            files = results.get('files', [])
+            if files:
+                return files[0]['id']
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error finding file '{filename}' in folder: {e}")
+            return None
+    
+    def upload_file(self, file_path: Union[str, Path], filename: Optional[str] = None, 
+                   folder_id: Optional[str] = None, drive_id: Optional[str] = None) -> Optional[str]:
+        """
+        Upload a file to Google Drive
+        
+        Args:
+            file_path: Path to the file to upload
+            filename: Name for the file in Drive (defaults to original filename)
+            folder_id: Folder ID to upload to (defaults to base_folder_id)
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            Web view link if successful, None otherwise
+        """
+        if not self.drive_service:
+            logger.warning("Google Drive not available, skipping upload")
+            return None
+            
+        try:
+            file_path = Path(file_path)
+            if not file_path.exists():
+                logger.error(f"File not found: {file_path}")
+                return None
+                
+            filename = filename or file_path.name
+            folder_id = folder_id or self.base_folder_id
+            
+            if not folder_id:
+                raise ValueError("No folder ID specified for upload")
+            
+            file_metadata = {
+                'name': filename,
+                'parents': [folder_id]
+            }
+            
+            media = MediaFileUpload(str(file_path), resumable=True)
+            
+            # Check if file already exists
+            existing_file_id = self.find_file_in_folder(folder_id, filename, drive_id)
+            
+            if existing_file_id:
+                logger.info(f"File already exists in Drive, updating: {filename}")
+                update_args = dict(
+                    fileId=existing_file_id,
+                    media_body=media,
+                    fields='id,webViewLink',
+                    supportsAllDrives=True
+                )
+                if drive_id:
+                    update_args['driveId'] = drive_id
+                uploaded = self.drive_service.files().update(**update_args).execute()
+            else:
+                logger.info(f"Creating new file in Drive: {filename}")
+                upload_args = dict(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id,webViewLink',
+                    supportsAllDrives=True
+                )
+                if drive_id:
+                    upload_args['driveId'] = drive_id
+                uploaded = self.drive_service.files().create(**upload_args).execute()
+            
+            web_link = uploaded.get('webViewLink')
+            logger.info(f"Uploaded {filename} to Google Drive: {web_link}")
+            return web_link
+            
+        except Exception as e:
+            logger.error(f"Error uploading file {file_path}: {e}")
+            return None
+    
+    def upload_file_content(self, content: Union[bytes, str], filename: str, 
+                          folder_id: Optional[str] = None, drive_id: Optional[str] = None) -> Optional[str]:
+        """
+        Upload file content (bytes or string) to Google Drive
+        
+        Args:
+            content: File content as bytes or string
+            filename: Name for the file in Drive
+            folder_id: Folder ID to upload to (defaults to base_folder_id)
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            Web view link if successful, None otherwise
+        """
+        if not self.drive_service:
+            logger.warning("Google Drive not available, skipping upload")
+            return None
+            
+        try:
+            folder_id = folder_id or self.base_folder_id
+            
+            if not folder_id:
+                raise ValueError("No folder ID specified for upload")
+            
+            # Convert string content to bytes if needed
+            if isinstance(content, str):
+                content = content.encode('utf-8')
+            
+            # Create temporary file
             temp_file_path = None
-            
             try:
-                # Create temporary file with unique name
-                temp_fd, temp_file_path = tempfile.mkstemp(suffix='.pdf', prefix='drive_upload_')
-                os.close(temp_fd)  # Close the file descriptor
+                temp_fd, temp_file_path = tempfile.mkstemp(suffix=Path(filename).suffix, prefix='drive_upload_')
+                os.close(temp_fd)
                 
-                # Write PDF content to temporary file
+                # Write content to temporary file
                 with open(temp_file_path, 'wb') as temp_file:
-                    temp_file.write(pdf_content)
+                    temp_file.write(content)
                 
-                file_metadata = {'name': filename, 'parents': [assessment_folder_id]}
-                media = MediaFileUpload(temp_file_path, resumable=True)
-                
-                existing_file_id = self._find_file_in_folder(assessment_folder_id, filename)
-                if existing_file_id:
-                    logger.info(f"File already exists in Drive, updating: {filename}")
-                    uploaded = self.drive_service.files().update(
-                        fileId=existing_file_id,
-                        media_body=media,
-                        fields='id,webViewLink',
-                        supportsAllDrives=True
-                    ).execute()
-                else:
-                    logger.info(f"Creating new file in Drive: {filename}")
-                    uploaded = self.drive_service.files().create(
-                        body=file_metadata,
-                        media_body=media,
-                        fields='id,webViewLink',
-                        supportsAllDrives=True
-                    ).execute()
-                
-                web_link = uploaded.get('webViewLink')
-                logger.info(f"Uploaded {filename} to Google Drive: {web_link}")
-                return web_link
+                # Upload the temporary file
+                return self.upload_file(temp_file_path, filename, folder_id, drive_id)
                 
             finally:
                 # Clean up temporary file
@@ -184,5 +291,125 @@ class DriveService:
                         logger.warning(f"Failed to clean up temporary file {temp_file_path}: {cleanup_error}")
                         
         except Exception as e:
-            logger.error(f"Error uploading to Google Drive: {e}")
+            logger.error(f"Error uploading file content {filename}: {e}")
+            return None
+    
+    def create_nested_folder_structure(self, parent_id: str, folder_names: List[str], 
+                                     drive_id: Optional[str] = None) -> Optional[str]:
+        """
+        Create a nested folder structure
+        
+        Args:
+            parent_id: ID of the parent folder
+            folder_names: List of folder names to create (in order)
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            ID of the last created folder, None if failed
+        """
+        current_folder_id = parent_id
+        
+        for folder_name in folder_names:
+            current_folder_id = self.find_or_create_folder(current_folder_id, folder_name, drive_id)
+            if not current_folder_id:
+                logger.error(f"Failed to create folder structure at: {folder_name}")
+                return None
+                
+        return current_folder_id
+    
+    def list_files_in_folder(self, folder_id: str, drive_id: Optional[str] = None) -> List[Dict]:
+        """
+        List all files in a folder
+        
+        Args:
+            folder_id: ID of the folder to list
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            List of file dictionaries with 'id' and 'name' keys
+        """
+        if not self.drive_service:
+            return []
+            
+        try:
+            query = f"'{folder_id}' in parents and trashed=false"
+            results = self.drive_service.files().list(
+                q=query,
+                fields="files(id, name, mimeType)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                corpora='drive' if drive_id else None,
+                driveId=drive_id
+            ).execute()
+            
+            return results.get('files', [])
+            
+        except Exception as e:
+            logger.error(f"Error listing files in folder: {e}")
+            return []
+    
+    def delete_file(self, file_id: str, drive_id: Optional[str] = None) -> bool:
+        """
+        Delete a file from Google Drive
+        
+        Args:
+            file_id: ID of the file to delete
+            drive_id: Shared drive ID (optional)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.drive_service:
+            return False
+            
+        try:
+            delete_args = dict(
+                fileId=file_id,
+                supportsAllDrives=True
+            )
+            if drive_id:
+                delete_args['driveId'] = drive_id
+                
+            self.drive_service.files().delete(**delete_args).execute()
+            logger.info(f"Deleted file with ID: {file_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error deleting file {file_id}: {e}")
+            return False
+    
+    # Legacy method for backward compatibility
+    def upload_pdf_to_drive(self, pdf_content: bytes, filename: str, assessment_title: str) -> Optional[str]:
+        """
+        Legacy method for uploading PDFs (maintains backward compatibility)
+        
+        Args:
+            pdf_content: PDF content as bytes
+            filename: Name for the file in Drive
+            assessment_title: Assessment title for folder structure
+            
+        Returns:
+            Web view link if successful, None otherwise
+        """
+        if not self.drive_service or not self.base_folder_id:
+            logger.info("Google Drive not available, skipping upload")
+            return None
+            
+        try:
+            # Create nested folder structure: base_folder/webhook_reports/assessment_title
+            webhook_reports_folder_id = self.find_or_create_folder(self.base_folder_id, "webhook_reports")
+            if not webhook_reports_folder_id:
+                logger.error("Failed to create/find webhook_reports folder")
+                return None
+            
+            assessment_folder_id = self.find_or_create_folder(webhook_reports_folder_id, assessment_title)
+            if not assessment_folder_id:
+                logger.error(f"Failed to create/find assessment folder: {assessment_title}")
+                return None
+            
+            # Upload using the new method
+            return self.upload_file_content(pdf_content, filename, assessment_folder_id)
+            
+        except Exception as e:
+            logger.error(f"Error uploading PDF to Drive: {e}")
             return None

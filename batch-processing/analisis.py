@@ -7,7 +7,6 @@ import yaml
 import re
 from datetime import datetime, timedelta
 import json
-import base64
 from typing import List
 from dotenv import load_dotenv
 import unicodedata
@@ -16,23 +15,10 @@ import tempfile
 load_dotenv()
 
 # Google Drive imports
-try:
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaFileUpload
-    GOOGLE_DRIVE_AVAILABLE = True
-except ImportError:
-    GOOGLE_DRIVE_AVAILABLE = False
-    print("Warning: Google Drive libraries not available. Install with: pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client")
+from drive_service import DriveService
 
 # Slack imports
-try:
-    from slack_sdk import WebClient
-    from slack_sdk.errors import SlackApiError
-    SLACK_AVAILABLE = True
-except ImportError:
-    SLACK_AVAILABLE = False
-    print("Warning: Slack libraries not available. Install with: pip install slack-sdk")
+from slack_service import SlackService
 
 from storage import StorageClient
 
@@ -92,235 +78,22 @@ def calculate_completion_time(created, submitted):
     except:
         return None
 
-def get_drive_service():
-    """Initialize Google Drive service"""
-    if not GOOGLE_DRIVE_AVAILABLE:
-        raise ImportError("Google Drive libraries not available")
-    
-    # Get the service account key from environment variable
-    service_account_key = os.getenv('GOOGLE_SERVICE_ACCOUNT_KEY')
-    
-    if not service_account_key:
-        raise ValueError("GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set")
-    
-    try:
-        # Try to decode as base64 first
-        try:
-            decoded_key = base64.b64decode(service_account_key).decode('utf-8')
-            key_data = json.loads(decoded_key)
-        except:
-            # If base64 fails, try as raw JSON
-            key_data = json.loads(service_account_key)
-        
-        credentials = service_account.Credentials.from_service_account_info(
-            key_data,
-            scopes=['https://www.googleapis.com/auth/drive']
-        )
-        return build('drive', 'v3', credentials=credentials)
-    except Exception as e:
-        print(f"Error parsing service account key: {e}")
-        raise
+# Google Drive functions removed - now using DriveService class
 
-def find_or_create_folder(drive_service, parent_folder_id, folder_name, drive_id=None):
-    query = f"mimeType='application/vnd.google-apps.folder' and trashed=false and name='{folder_name}' and '{parent_folder_id}' in parents"
-    results = drive_service.files().list(
-        q=query,
-        fields="files(id, name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        corpora='drive' if drive_id else None,
-        driveId=drive_id
-    ).execute()
-    files = results.get('files', [])
-    if files:
-        return files[0]['id']
-    folder_metadata = {
-        'name': folder_name,
-        'mimeType': 'application/vnd.google-apps.folder',
-        'parents': [parent_folder_id]
-    }
-    create_args = dict(
-        body=folder_metadata,
-        fields='id, name',
-        supportsAllDrives=True
-    )
-    if drive_id:
-        create_args['driveId'] = drive_id
-    folder = drive_service.files().create(**create_args).execute()
-    print(f"[DEBUG] Carpeta creada en Drive: {folder['name']} (ID: {folder['id']})")
-    return folder['id']
-
-def find_file_in_folder(drive_service, folder_id, filename, drive_id=None):
-    query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
-    results = drive_service.files().list(
-        q=query,
-        fields="files(id, name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        corpora='drive' if drive_id else None,
-        driveId=drive_id
-    ).execute()
-    files = results.get('files', [])
-    if files:
-        return files[0]['id']
-    return None
-
-def upload_file_to_drive(file_path: str, filename: str, folder_id: str = None, drive_id: str = None) -> str:
-    """Upload or replace file in Google Drive and return the web view link"""
-    if not GOOGLE_DRIVE_AVAILABLE:
-        print("Warning: Google Drive not available, skipping upload")
-        return None
-    try:
-        drive_service = get_drive_service()
-        if not folder_id:
-            folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
-            if not folder_id:
-                raise ValueError("GOOGLE_DRIVE_FOLDER_ID environment variable not set")
-        if not drive_id:
-            drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
-        file_metadata = {
-            'name': filename,
-            'parents': [folder_id]
-        }
-        media = MediaFileUpload(file_path, resumable=True)
-        existing_file_id = find_file_in_folder(drive_service, folder_id, filename, drive_id)
-        if existing_file_id:
-            print(f"[DEBUG] Archivo ya existe en Drive, actualizando: {filename} (ID: {existing_file_id})")
-            update_args = dict(
-                fileId=existing_file_id,
-                media_body=media,
-                fields='id,webViewLink',
-                supportsAllDrives=True
-            )
-            if drive_id:
-                update_args['driveId'] = drive_id
-            uploaded = drive_service.files().update(**update_args).execute()
-        else:
-            upload_args = dict(
-                body=file_metadata,
-                media_body=media,
-                fields='id,webViewLink',
-                supportsAllDrives=True
-            )
-            if drive_id:
-                upload_args['driveId'] = drive_id
-            uploaded = drive_service.files().create(**upload_args).execute()
-        print(f"Uploaded {filename} to Google Drive: {uploaded.get('webViewLink')}")
-        return uploaded.get('webViewLink')
-    except Exception as e:
-        print(f"Error uploading to Google Drive: {e}")
-        return None
-
-def get_slack_client():
-    """Initialize Slack client"""
-    if not SLACK_AVAILABLE:
-        raise ImportError("Slack libraries not available")
-    
-    slack_token = os.getenv('SLACK_BOT_TOKEN')
-    if not slack_token:
-        raise ValueError("SLACK_BOT_TOKEN environment variable not set")
-    
-    return WebClient(token=slack_token)
-
-def send_slack_notification(category: str, course_id: str, course_name: str, drive_links: List[str], channel: str = None):
-    """Send Slack notification with report links, including file type."""
-    if not SLACK_AVAILABLE:
-        print("Warning: Slack not available, skipping notification")
-        return
-    
-    try:
-        slack_client = get_slack_client()
-        
-        # Use provided channel or get from environment
-        if not channel:
-            channel = os.getenv('SLACK_CHANNEL')
-            if not channel:
-                raise ValueError("SLACK_CHANNEL environment variable not set")
-        
-        # Create message blocks
-        blocks = [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": f"📊 Reporte de Análisis de Curso - {course_name} ({category})"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*Categoría:* {category}\n*Curso:* {course_name}\n*ID del Curso:* {course_id}\n*Análisis completado:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                }
-            }
-        ]
-        
-        # Add file links
-        if drive_links:
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "*📁 Archivos Generados:*"
-                }
-            })
-            
-            for link in drive_links:
-                # Determine file type from link or filename
-                file_type = "Archivo"
-                if "file" in link.lower():
-                    file_type = "PDF"
-                elif "spreadsheets" in link.lower():
-                    file_type = "Excel"
-                blocks.append({
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"• <{link}|Ver Archivo ({file_type})>"
-                    }
-                })
-        
-        # Add divider
-        blocks.append({"type": "divider"})
-        
-        # Add footer
-        blocks.append({
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "🤖 Automatizado por el Pipeline de Análisis de Cursos"
-                }
-            ]
-        })
-        fallback_text = f"📊 Reporte de Análisis de Curso - {course_name} ({category})\nCategoría: {category}\nCurso: {course_name}\nID del Curso: {course_id}\nAnálisis completado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        if drive_links:
-            fallback_text += f"\nArchivos generados: {len(drive_links)} archivos"
-        
-        # Send message
-        slack_client.chat_postMessage(
-            channel=channel,
-            text=fallback_text,  # Required for accessibility
-            blocks=blocks
-        )
-        
-        print(f"Notificación de Slack enviada a {channel}")
-        
-    except SlackApiError as e:
-        print(f"Error de API de Slack: {e.response['error']}")
-    except Exception as e:
-        print(f"Error enviando notificación de Slack: {e}")
+# Slack functions removed - now using SlackService class
 
 def upload_reports_and_notify(category: str, course_id: str, course_name: str, reports_dir: Path, processed_dir: Path):
     """Upload today's reports and CSV files to Google Drive (per-course folder), send Slack notification for reports only"""
     from datetime import datetime
-    drive_service = get_drive_service()
+    
+    # Initialize DriveService
+    drive_service = DriveService()
     parent_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
     drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
     
     # Create nested folder structure: category/course
-    category_folder_id = find_or_create_folder(drive_service, parent_folder_id, category, drive_id)
-    course_folder_id = find_or_create_folder(drive_service, category_folder_id, course_id, drive_id)
+    category_folder_id = drive_service.find_or_create_folder(parent_folder_id, category, drive_id)
+    course_folder_id = drive_service.find_or_create_folder(category_folder_id, course_id, drive_id)
     
     today = datetime.now().date()
     report_links = []
@@ -335,7 +108,7 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
                 if mtime != today and ctime != today:
                     continue
                 try:
-                    drive_link = upload_file_to_drive(str(file), file.name, course_folder_id, drive_id)
+                    drive_link = drive_service.upload_file(str(file), file.name, course_folder_id, drive_id)
                     if drive_link:
                         report_links.append(drive_link)
                         all_uploaded_files.append(drive_link)
@@ -352,7 +125,7 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
             if mtime != today and ctime != today:
                 continue
             try:
-                drive_link = upload_file_to_drive(str(file), file.name, course_folder_id, drive_id)
+                drive_link = drive_service.upload_file(str(file), file.name, course_folder_id, drive_id)
                 if drive_link:
                     all_uploaded_files.append(drive_link)
                     csv_count += 1
@@ -363,7 +136,12 @@ def upload_reports_and_notify(category: str, course_id: str, course_name: str, r
     # Send Slack notification only for report files
     if report_links:
         try:
-            send_slack_notification(category, course_id, course_name, report_links)
+            slack_service = SlackService()
+            success = slack_service.send_course_analysis_notification(category, course_id, course_name, report_links)
+            if success:
+                print(f"✅ Notificación de Slack enviada")
+            else:
+                print(f"❌ Error enviando notificación de Slack")
         except Exception as e:
             print(f"❌ Error enviando notificación de Slack: {e}")
     else:
@@ -842,26 +620,30 @@ def run_analysis_pipeline(category: str, course_id: str, upload_reports: bool = 
             course_name = course_config.get('name', course_id)
             
             # Create nested folder structure: category/course
-            drive_service = get_drive_service()
+            drive_service = DriveService()
             parent_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
             drive_id = os.getenv('GOOGLE_DRIVE_ID') if os.getenv('GOOGLE_DRIVE_ID') else None
             
             # Create nested folder structure: category/course
-            category_folder_id = find_or_create_folder(drive_service, parent_folder_id, category, drive_id)
-            course_folder_id = find_or_create_folder(drive_service, category_folder_id, course_id, drive_id)
+            category_folder_id = drive_service.find_or_create_folder(parent_folder_id, category, drive_id)
+            course_folder_id = drive_service.find_or_create_folder(category_folder_id, course_id, drive_id)
             
             # Upload from the correct path (temp file for GCP, local file for local)
             drive_links = []
             from pathlib import Path as _Path
             for file_path, file_name in [(pdf_path, pdf_filename), (excel_path, excel_filename)]:
                 if file_path and _Path(file_path).exists():
-                    drive_link = upload_file_to_drive(file_path, file_name, course_folder_id, drive_id)
+                    drive_link = drive_service.upload_file(file_path, file_name, course_folder_id, drive_id)
                     if drive_link:
                         drive_links.append(drive_link)
             if drive_links:
-                send_slack_notification(category, course_id, course_name, drive_links)
+                slack_service = SlackService()
+                success = slack_service.send_course_analysis_notification(category, course_id, course_name, drive_links)
                 print(f"✅ Se subieron {len(drive_links)} archivos a Google Drive")
-                print(f"✅ Notificación de Slack enviada con enlaces a reportes")
+                if success:
+                    print(f"✅ Notificación de Slack enviada con enlaces a reportes")
+                else:
+                    print(f"❌ Error enviando notificación de Slack")
             else:
                 print("⚠️  No se subieron archivos (verificar variables de entorno y permisos)")
         except Exception as e:

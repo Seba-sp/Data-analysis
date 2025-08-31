@@ -169,7 +169,7 @@ class ReportGenerator:
     def _save_pdf(self, pdf_content: bytes, filename: str, assessment_title: str) -> None:
         """Save PDF to storage backend"""
         try:
-            # Save to Google Drive
+            # Save to Google Drive using the enhanced DriveService
             drive_link = self.drive_service.upload_pdf_to_drive(pdf_content, filename, assessment_title)
             if drive_link:
                 logger.info(f"PDF saved to Google Drive: {drive_link}")

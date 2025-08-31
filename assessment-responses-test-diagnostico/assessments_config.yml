@@ -1,0 +1,29 @@
+# Configuration file for multiple assessments processing
+# This file defines which assessments to download and how to group them
+
+# Course configuration
+course:
+  id: "prueba-test-de-diagnostico"  # Course ID from LearnWorlds
+  name: "prueba-test-de-diagnostico"  # Human readable course name
+  # Assessments to download and process
+  assessments:
+    
+    # Grouped assessments that will be joined by user
+    grouped:
+      m1_td_series:
+        name: "M1 TD Series"
+        description: "M1 Test Diagnóstico Parts 1 and 2 combined"
+        assessments:
+          - name: "Test de diagnóstico Parte 1 M30M"
+            id: "68879b320a0008833903616e"  # Replace with actual assessment ID
+            description: "M1 Test Diagnóstico Part 1"
+          - name: "Test de diagnóstico Parte 2"
+            id: "68879b320a00088339036170"  # Replace with actual assessment ID
+            description: "M1 Test Diagnóstico Part 2"
+
+    # Individual assessments that will be processed separately
+    individual:
+      - name: "cl td"
+        id: "assessment_id_here"  # Replace with actual assessment ID
+        description: "CL Test Diagnóstico"
+      
