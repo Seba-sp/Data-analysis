@@ -655,7 +655,7 @@ def main():
     parser.add_argument("--check-reports", action="store_true", help="Check existing PDF reports in reports folder")
     parser.add_argument("--force-reports", action="store_true", help="Force generation of all reports (don't skip existing)")
     parser.add_argument("--assessment", choices=["M1", "CL", "CIEN", "HYST"], help="Process specific assessment type")
-    parser.add_argument("--incremental", action="store_true", help="Use incremental processing mode (process only new data)")
+    parser.add_argument("--incremental", action="store_true", help="Process only incremental data (for batch processing)")
     parser.add_argument("--full", action="store_true", help="Force full download (ignore incremental mode)")
     parser.add_argument("--cleanup", action="store_true", help="Clean up temporary files after processing")
     

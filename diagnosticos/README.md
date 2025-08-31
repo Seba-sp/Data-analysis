@@ -13,6 +13,7 @@ Este proyecto es una plataforma integral que maneja evaluaciones diagnósticas p
 - **Envío automático** de resultados por email
 - **API webhook** para procesamiento en tiempo real
 - **Almacenamiento flexible** (local o Google Cloud Storage)
+- **Arquitectura modular** con código optimizado y mantenible
 
 ## 📁 Estructura del Proyecto
 
@@ -29,7 +30,7 @@ diagnosticos/
 │   ├── CIEN.html                  # Plantilla para CIEN
 │   └── HYST.html                  # Plantilla para HYST
 ├── reports/                       # Reportes PDF generados
-├── main.py                        # Script principal con CLI
+├── main.py                        # Script principal con CLI (refactorizado)
 ├── assessment_downloader.py       # Descarga de evaluaciones
 ├── assessment_analyzer.py         # Análisis de resultados
 ├── report_generator.py            # Generación de reportes PDF
@@ -75,11 +76,13 @@ diagnosticos/
 - Respuestas JSON estructuradas
 - Manejo de errores robusto
 
-### 🔄 Procesamiento Incremental
+### 🔄 Procesamiento Incremental Optimizado
 - **Descarga incremental** de nuevos datos
 - **Procesamiento eficiente** solo de datos nuevos
+- **Flujo de datos en memoria** para máxima eficiencia
 - **Merging automático** de datos incrementales
 - **Limpieza automática** de archivos temporales
+- **Arquitectura modular** con métodos helper reutilizables
 
 ## 🛠️ Instalación y Configuración
 
@@ -136,6 +139,30 @@ MIN_DOWNLOAD_DATE=2024-01-01  # YYYY-MM-DD format
    cp .env.example .env
    # Editar .env con tus credenciales
    ```
+
+### Instalación en Google Cloud Functions
+
+1. **Configurar Google Cloud:**
+   ```bash
+   gcloud auth login
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+
+2. **Desplegar funciones:**
+   ```bash
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+
+3. **Configurar variables de entorno en Cloud Functions:**
+   - `GOOGLE_CLOUD_PROJECT`: Tu proyecto ID
+   - `TASK_LOCATION`: us-central1
+   - `TASK_QUEUE_ID`: batch-processing-queue
+   - `PROCESS_BATCH_URL`: URL de la función webhook
+   - `LEARNWORLDS_WEBHOOK_SECRET`: Secreto del webhook de LearnWorlds
+   - `M1_ASSESSMENT_ID`, `CL_ASSESSMENT_ID`, `CIEN_ASSESSMENT_ID`, `HYST_ASSESSMENT_ID`: IDs de evaluaciones
+   - `CLIENT_ID`, `SCHOOL_DOMAIN`, `ACCESS_TOKEN`: Credenciales de LearnWorlds
+   - `EMAIL_FROM`, `EMAIL_PASS`: Credenciales de email
 
 4. **Ejecutar setup inicial**
    ```bash
@@ -225,6 +252,74 @@ python main.py --check-reports
 python main.py --check-reports --assessment M1
 ```
 
+### Modo Webhook (Procesamiento Automático)
+
+El sistema webhook procesa automáticamente las evaluaciones completadas:
+
+#### Configuración del Webhook
+
+1. **Configurar webhook en LearnWorlds:**
+   - URL: `https://REGION-PROJECT.cloudfunctions.net/webhook-handler`
+   - Método: POST
+   - Payload: Formato estándar de LearnWorlds
+
+2. **Variables de entorno requeridas:**
+   ```bash
+   GOOGLE_CLOUD_PROJECT=your-project-id
+   TASK_LOCATION=us-central1
+   TASK_QUEUE_ID=batch-processing-queue
+   PROCESS_BATCH_URL=https://REGION-PROJECT.cloudfunctions.net/webhook-handler
+   M1_ASSESSMENT_ID=12345
+   CL_ASSESSMENT_ID=67890
+   CIEN_ASSESSMENT_ID=11111
+   HYST_ASSESSMENT_ID=22222
+   ```
+
+#### Flujo Automático
+
+1. **Recepción de webhook:**
+   - Estudiante completa evaluación → Webhook recibido
+   - Estudiante agregado a cola → Timer de 15 minutos iniciado
+   - Más estudiantes completan → Agregados a la misma cola
+
+2. **Procesamiento en lote:**
+   - 15 minutos después → Procesamiento automático
+   - Agrupación por tipo de evaluación (M1, CL, CIEN, HYST)
+   - Descarga incremental de datos
+   - Análisis y generación de reportes
+   - Envío automático de emails
+
+3. **Monitoreo del sistema:**
+   ```bash
+   # Verificar estado del sistema
+   curl https://REGION-PROJECT.cloudfunctions.net/status-handler
+   
+   # Limpiar cola manualmente (si es necesario)
+   curl -X POST https://REGION-PROJECT.cloudfunctions.net/cleanup-handler
+   ```
+
+4. **Testing local:**
+   ```bash
+   # Ejecutar servicio localmente
+   python webhook_service.py
+   
+   # Probar webhook
+   python test_webhook.py
+   ```
+
+#### Estructura de Datos
+
+- **Firestore Collections:**
+  - `counters`: Contadores por tipo de evaluación
+  - `queue`: Estudiantes en cola para procesamiento
+  - `state`: Estado del lote actual
+  - `locks`: Bloqueos para procesamiento concurrente
+
+- **Cloud Storage:**
+  - Datos de evaluaciones (JSON/CSV)
+  - Reportes generados
+  - Archivos temporales
+
 #### Limpieza de Archivos Temporales
 ```bash
 # Limpiar archivos temporales
@@ -239,8 +334,28 @@ python main.py --cleanup --assessment CL
 # Ejecutar todo el flujo (descarga, procesamiento, análisis, reportes)
 python main.py --download --process --analyze --reports
 
-# Flujo incremental completo
+# Flujo incremental completo (recomendado para uso diario)
 python main.py --download --process --analyze --reports --incremental
+```
+
+### 🆕 Nuevas Características del CLI
+
+#### Procesamiento Optimizado
+- **Flujo de datos en memoria**: Los datos fluyen entre operaciones sin crear archivos temporales innecesarios
+- **Procesamiento incremental inteligente**: Solo procesa datos nuevos cuando están disponibles
+- **Manejo de errores mejorado**: Mejor recuperación y logging de errores
+- **Logging estructurado**: Mensajes de log más informativos y consistentes
+
+#### Opciones Avanzadas
+```bash
+# Forzar descarga completa (ignorar modo incremental)
+python main.py --download --full
+
+# Combinar operaciones específicas
+python main.py --download --process --assessment M1 --incremental
+
+# Verificar estado sin procesar
+python main.py --check-reports --assessment CIEN
 ```
 
 ### API Webhook
@@ -433,7 +548,17 @@ Para soporte técnico o preguntas:
 
 ## 🔄 Actualizaciones
 
-### v2.0.0 (Actual)
+### v2.1.0 (Actual) - Refactoring y Optimización
+- **Código refactorizado** para mayor mantenibilidad
+- **Eliminación de código duplicado** con métodos helper
+- **Flujo de datos optimizado** en memoria para máxima eficiencia
+- **Arquitectura modular** con separación clara de responsabilidades
+- **Logging mejorado** con mensajes más informativos
+- **Manejo de errores robusto** con recuperación automática
+- **CLI optimizado** con mejor experiencia de usuario
+- **Procesamiento incremental inteligente** que evita archivos temporales innecesarios
+
+### v2.0.0
 - Sistema completo de análisis de evaluaciones
 - Procesamiento incremental para eficiencia
 - Generación de reportes PDF automática
@@ -448,3 +573,4 @@ Para soporte técnico o preguntas:
 - Reportes comparativos
 - Integración con más LMS
 - API REST completa
+- Métricas de rendimiento en tiempo real
