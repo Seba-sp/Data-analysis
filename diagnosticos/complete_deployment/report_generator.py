@@ -55,12 +55,14 @@ class ReportGenerator:
             template_file = f"{assessment_title}.html"
             template_path = os.path.join(self.templates_dir, template_file)
             
-            # Load HTML template using StorageClient
-            if not self.storage.exists(template_path):
-                logger.error(f"HTML template not found: {template_path}")
-                raise Exception(f"HTML template not found: {template_path}")
+            # Always load HTML template from local filesystem (container) regardless of storage backend
+            if not os.path.exists(template_path):
+                logger.error(f"HTML template not found in container: {template_path}")
+                raise Exception(f"HTML template not found in container: {template_path}")
 
-            html_content = self.storage.read_text(template_path)
+            # Read template directly from local filesystem with proper encoding
+            with open(template_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
 
             logger.info(f"Loaded HTML template: {template_path}, size: {len(html_content)} characters")
 

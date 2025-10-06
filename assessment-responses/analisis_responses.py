@@ -8,6 +8,53 @@ from storage import StorageClient
 
 load_dotenv()
 
+def detect_question_columns(df, file_path=""):
+    """
+    Detect question and answer columns in a DataFrame.
+    Supports both English and Spanish column names.
+    
+    Args:
+        df: pandas DataFrame to analyze
+        file_path: optional file path for error messages
+    
+    Returns:
+        tuple: (question_col, answer_col) or (None, None) if not found
+    """
+    # Check for English column names
+    if 'question' in df.columns and 'correct_answer' in df.columns:
+        return 'question', 'correct_answer'
+    elif 'Question' in df.columns and 'CorrectAns' in df.columns:
+        return 'Question', 'CorrectAns'
+    # Check for Spanish column names
+    elif 'Pregunta' in df.columns and 'Alternativa correcta' in df.columns:
+        return 'Pregunta', 'Alternativa correcta'
+    else:
+        # Try to find columns that might match
+        question_col = None
+        answer_col = None
+        
+        # Look for question column
+        for col in df.columns:
+            if 'question' in col.lower() or 'pregunta' in col.lower():
+                question_col = col
+                break
+        
+        # Look for answer column
+        for col in df.columns:
+            if 'correct' in col.lower() or 'answer' in col.lower() or 'alternativa' in col.lower():
+                answer_col = col
+                break
+        
+        if question_col and answer_col:
+            print(f"Using columns: {question_col} and {answer_col}")
+            return question_col, answer_col
+        else:
+            if file_path:
+                print(f"Could not find question/answer columns in {file_path}")
+                print(f"Available columns: {list(df.columns)}")
+                print("Expected either: question/correct_answer, Question/CorrectAns, or Pregunta/Alternativa correcta")
+            return None, None
+
 def load_correct_answers(csv_path):
     # Try to load <assessment>_questions.csv from the questions directory
     # The CSV path is in processed/<course>/, so we need to get the course name
@@ -34,9 +81,19 @@ def load_correct_answers(csv_path):
             exit(1)
     try:
         storage = StorageClient()
-        df = storage.read_csv(questions_file)
-        # Expect columns: question, correct_answer
-        return dict(zip(df['question'], df['correct_answer']))
+        # Try to read with semicolon separator first, then fall back to comma
+        try:
+            df = storage.read_csv(questions_file, sep=';')
+        except:
+            df = storage.read_csv(questions_file)
+        
+        question_col, answer_col = detect_question_columns(df, str(questions_file))
+        if question_col and answer_col:
+            correct_answers = dict(zip(df[question_col], df[answer_col]))
+            return correct_answers
+        else:
+            return {}
+                
     except Exception as e:
         print(f"Could not load correct answers from {questions_file}: {e}")
         return {}
@@ -53,7 +110,7 @@ def generate_question_alt_stats(df, question_cols, correct_answers, alt_map, all
         for ans in answers:
             if ans in alt_counts:
                 alt_counts[ans] += 1
-        alt_percents = {alt: (alt_counts[alt] / total * 100 if total > 0 else 0) for alt in all_alts}
+        alt_percents = {alt: (alt_counts[alt] / total if total > 0 else 0) for alt in all_alts}
         # Find the alternative with the highest percentage
         most_selected = max(alt_percents, key=alt_percents.get) if alt_percents else ''
         stats.append({
@@ -73,17 +130,21 @@ def generate_pdf_report(df_stats, output_path, top_percent, assessment_name):
         return
     # Collect all unique alternatives across all questions, sorted for consistency
     all_alts = df_stats[0]['alternatives'] if df_stats else []
-    headers = ["Pregunta", "Cantidad", "Respuesta Correcta"] + all_alts
+    headers = ["Pregunta", "Correcta", "% Aprobación"] + all_alts
     # Prepare table data
     table_data = []
     for s in df_stats:
+        # Calculate approval percentage (percentage who got the correct answer)
+        correct_answer = s['respuesta_correcta']
+        approval_percent = s['alt_percents'].get(correct_answer, 0) if correct_answer else 0
+        
         row = [
             str(s['question'])[:100],
-            str(s['cantidad']),
-            str(s['respuesta_correcta'])[:100]
+            str(s['respuesta_correcta'])[:100],
+            f"{approval_percent:.0%}"
         ]
         for alt in all_alts:
-            row.append(f"{s['alt_percents'].get(alt, 0):.1f}%")
+            row.append(f"{s['alt_percents'].get(alt, 0):.0%}")
         table_data.append(row)
     # Calculate correct answer percentage for sorting
     correct_col_idx = 2 + all_alts.index(df_stats[0]['respuesta_correcta']) if df_stats and df_stats[0]['respuesta_correcta'] in all_alts else None
@@ -141,17 +202,22 @@ def generate_pdf_report(df_stats, output_path, top_percent, assessment_name):
 def generate_xlsx_report(df_stats, output_path, assessment_name):
     import pandas as pd
     from openpyxl import load_workbook
-    from openpyxl.styles import PatternFill
+    from openpyxl.styles import PatternFill, NamedStyle
     # Build dynamic headers
     if not df_stats:
         return
     all_alts = df_stats[0]['alternatives'] if df_stats else []
-    headers = ["Pregunta", "Cantidad", "Respuesta Correcta"] + all_alts
+    headers = ["Pregunta", "Correcta", "% Aprobación"] + all_alts
     rows = []
     correct_percents = []
     for s in df_stats:
-        row = [s['question'], s['cantidad'], s['respuesta_correcta']]
+        # Calculate approval percentage (percentage who got the correct answer)
+        correct_answer = s['respuesta_correcta']
+        approval_percent = s['alt_percents'].get(correct_answer, 0) if correct_answer else 0
+        
+        row = [s['question'], s['respuesta_correcta'], approval_percent]
         for alt in all_alts:
+            # Store as decimal (0.01 for 1%)
             row.append(s['alt_percents'].get(alt, 0))
         rows.append(row)
         ca = s['respuesta_correcta']
@@ -166,6 +232,18 @@ def generate_xlsx_report(df_stats, output_path, assessment_name):
     wb = load_workbook(output_path)
     ws = wb.active
     correct_fill = PatternFill(start_color="FFF0C0C0", end_color="FFF0C0C0", fill_type="solid")
+    
+    # Apply percentage formatting to % Aprobación column (column 3)
+    for row in range(2, len(df_stats) + 2):  # Start from row 2 (skip header)
+        cell = ws.cell(row=row, column=3)  # % Aprobación column
+        cell.number_format = '0%'  # Format as percentage (0.01 displays as 1%)
+    
+    # Apply percentage formatting to alternative columns
+    for col_idx, alt in enumerate(all_alts, start=4):  # Start from column 4 (after Pregunta, Correcta, % Aprobación)
+        for row in range(2, len(df_stats) + 2):  # Start from row 2 (skip header)
+            cell = ws.cell(row=row, column=col_idx)
+            cell.number_format = '0%'  # Format as percentage (0.01 displays as 1%)
+    
     for i, s in enumerate(df_stats, start=2):
         if s['respuesta_correcta'] and s['respuesta_correcta'] != s['most_selected']:
             for col in range(1, len(headers)+1):
@@ -189,12 +267,22 @@ def process_csv(csv_path, top_percent):
     alt_map = {}
     all_alts = set()
     if questions_file.exists():
-        qdf = pd.read_csv(questions_file)
-        for _, row in qdf.iterrows():
-            q = row['question']
-            alts = [row[c] for c in qdf.columns if c.lower().startswith('answer') and pd.notnull(row[c])]
-            alt_map[q] = alts
-            all_alts.update(alts)
+        # Try to read with semicolon separator first, then fall back to comma
+        try:
+            qdf = pd.read_csv(questions_file, sep=';')
+        except:
+            qdf = pd.read_csv(questions_file)
+        
+        question_col, _ = detect_question_columns(qdf, str(questions_file))
+        if question_col:
+            for _, row in qdf.iterrows():
+                q = row[question_col]
+                alts = [row[c] for c in qdf.columns if c.lower().startswith('answer') and pd.notnull(row[c])]
+                alt_map[q] = alts
+                all_alts.update(alts)
+        else:
+            print(f"Could not find question column in {questions_file}")
+            print(f"Available columns: {list(qdf.columns)}")
     # Also scan all student answers for any alternatives not in the questions file
     for q in question_cols:
         answers = df[q].dropna().astype(str)
@@ -208,8 +296,8 @@ def process_csv(csv_path, top_percent):
     assessment_name = base
     # XLSX report
     import tempfile
-    xlsx_filename = f"{csv_path.stem}_report.xlsx"
-    pdf_filename = f"{csv_path.stem}_top_{top_percent}pct.pdf"
+    xlsx_filename = f"análisis_respuestas_{csv_path.stem}.xlsx"
+    pdf_filename = f"análisis_respuestas_{csv_path.stem}_{top_percent}%_más_falladas.pdf"
     if storage.backend == 'local':
         xlsx_path = reports_dir / xlsx_filename
         generate_xlsx_report(df_stats, xlsx_path, assessment_name)

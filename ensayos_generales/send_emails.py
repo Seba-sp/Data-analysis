@@ -34,7 +34,7 @@ class EmailSenderApp:
         self.storage = StorageClient()
         self.email_sender = EmailSender()
         self.drive_service = DriveService()
-        self.processed_file = "processed_emails.csv"
+        self.processed_file = "processed_users.csv"
         
         # Log drive service status
         if self.drive_service.drive_service:
@@ -45,7 +45,7 @@ class EmailSenderApp:
     def _extract_email_from_filename(self, filename: str) -> str:
         """
         Extract email address from filename
-        Filename format: informe_email_assessment.pdf
+        Filename format: resultados_email.pdf
         
         Args:
             filename: The filename to extract email from
@@ -54,12 +54,10 @@ class EmailSenderApp:
             Email address or empty string if not found
         """
         try:
-            if filename.startswith('informe_') and filename.endswith('.pdf'):
-                # Remove 'informe_' prefix and '.pdf' suffix
-                parts = filename.replace('informe_', '').replace('.pdf', '').split('_')
-                if len(parts) >= 2:
-                    # Everything except the last part (assessment type) is the email
-                    return '_'.join(parts[:-1])
+            if filename.startswith('resultados_') and filename.endswith('.pdf'):
+                # Remove 'resultados_' prefix and '.pdf' suffix
+                email = filename.replace('resultados_', '').replace('.pdf', '')
+                return email
         except Exception as e:
             logger.warning(f"Error extracting email from filename {filename}: {str(e)}")
         return ""
@@ -67,7 +65,7 @@ class EmailSenderApp:
     def _extract_username_from_filename(self, filename: str) -> str:
         """
         Extract username (email) from filename for personalization
-        Filename format: informe_email_assessment.pdf
+        Filename format: resultados_email.pdf
         
         Args:
             filename: The filename to extract username from
@@ -80,24 +78,21 @@ class EmailSenderApp:
     def _extract_assessment_type_from_filename(self, filename: str) -> str:
         """
         Extract assessment type from filename
-        Filename format: informe_email_assessment.pdf
+        Filename format: resultados_email.pdf
         
         Args:
             filename: The filename to extract assessment type from
             
         Returns:
-            Assessment type or empty string if not found
+            Assessment type (generic for new format)
         """
         try:
-            if filename.startswith('informe_') and filename.endswith('.pdf'):
-                # Remove 'informe_' prefix and '.pdf' suffix
-                parts = filename.replace('informe_', '').replace('.pdf', '').split('_')
-                if len(parts) >= 2:
-                    # Last part is the assessment type
-                    return parts[-1]
+            if filename.startswith('resultados_') and filename.endswith('.pdf'):
+                # New format has no assessment type in filename, return generic type
+                return "general"
         except Exception as e:
             logger.warning(f"Error extracting assessment type from filename {filename}: {str(e)}")
-        return ""
+        return "unknown"
     
     def _save_report_to_drive(self, pdf_content: bytes, filename: str, email: str) -> Optional[Dict[str, str]]:
         """
@@ -193,7 +188,7 @@ class EmailSenderApp:
             else:
                 df = pd.DataFrame([new_row])
             
-            # Save back to CSV using StorageClient
+            # Save back to CSV
             self.storage.write_csv(self.processed_file, df, index=False)
             logger.info(f"Saved processed email: {email}")
             
@@ -280,9 +275,9 @@ class EmailSenderApp:
                     # Use the full path directly since list_files returns full paths
                     pdf_content = self.storage.read_bytes(report_file)
                     
-                    # Extract username from filename (email part only)
+                    # Extract email for username lookup
                     filename = os.path.basename(report_file) if os.path.sep in report_file else report_file
-                    username = self._extract_username_from_filename(filename)
+                    email_for_lookup = self._extract_email_from_filename(filename)
                     
                     # Use test email if in test mode, otherwise use original email
                     recipient_email = test_email if test_mode else email
@@ -291,7 +286,7 @@ class EmailSenderApp:
                     attachment_filename = os.path.basename(report_file) if os.path.sep in report_file else report_file
                     
                     email_sent = self.email_sender.send_comprehensive_report_email(
-                        recipient_email, pdf_content, username, attachment_filename
+                        recipient_email, pdf_content, email_for_lookup, attachment_filename
                     )
                     
                     if email_sent:
@@ -310,7 +305,7 @@ class EmailSenderApp:
                         # Save to processed emails (only if not in test mode)
                         if not test_mode:
                             filename = os.path.basename(report_file) if os.path.sep in report_file else report_file
-                            assessment_type_from_file = filename.split('_')[-1].replace('.pdf', '')
+                            assessment_type_from_file = self._extract_assessment_type_from_filename(filename)
                             
                             # Get drive info for tracking
                             drive_file_id = drive_result.get('file_id') if drive_result else None
@@ -408,7 +403,7 @@ class EmailSenderApp:
                 reports_info.append({
                     "filename": f,
                     "email": email,
-                    "assessment": filename.split('_')[-1].replace('.pdf', '') if filename.endswith('.pdf') else ""
+                    "assessment": self._extract_assessment_type_from_filename(filename)
                 })
             
             return reports_info
@@ -423,7 +418,7 @@ class EmailSenderApp:
         """
         try:
             if self.storage.exists(self.processed_file):
-                os.remove(self.processed_file)
+                self.storage.delete(self.processed_file)
                 logger.info("Processed emails file reset")
             else:
                 logger.info("No processed emails file found to reset")
@@ -433,7 +428,7 @@ class EmailSenderApp:
 def main():
     """Main function"""
     parser = argparse.ArgumentParser(description="Email Sender - Send diagnostic reports via email")
-    parser.add_argument("--assessment", choices=["M1", "CL", "CIEN", "HYST"], help="Filter by assessment type")
+    parser.add_argument("--assessment", choices=["M1", "M2", "CL", "CIENB", "CIENF", "CIENQ", "CIENT", "HYST"], help="Filter by assessment type")
     parser.add_argument("--list-reports", action="store_true", help="List available reports and exit")
     parser.add_argument("--test-email", action="store_true", help="Send all emails to TEST_EMAIL environment variable (for testing)")
     parser.add_argument("--reset-processed", action="store_true", help="Reset processed emails tracking (for testing)")

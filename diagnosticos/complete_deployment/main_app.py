@@ -766,21 +766,25 @@ class DiagnosticosApp:
     
     def _load_processed_emails(self) -> set:
         """
-        Load list of already processed emails from CSV file
+        Load list of already processed email-assessment combinations from CSV file
         
         Returns:
-            Set of email addresses that have already been processed
+            Set of (email, assessment_type) tuples that have already been processed
         """
-        processed_emails = set()
+        processed_combinations = set()
         try:
             if self.storage.exists(self.processed_emails_file):
                 df = self.storage.read_csv(self.processed_emails_file)
-                if 'email' in df.columns:
-                    processed_emails = set(df['email'].str.lower())
-                logger.info(f"Loaded {len(processed_emails)} previously processed emails")
+                if 'email' in df.columns and 'assessment_type' in df.columns:
+                    # Create tuples of (email, assessment_type) for each processed combination
+                    for _, row in df.iterrows():
+                        email = row['email'].lower()
+                        assessment_type = row['assessment_type']
+                        processed_combinations.add((email, assessment_type))
+                logger.info(f"Loaded {len(processed_combinations)} previously processed email-assessment combinations")
         except Exception as e:
             logger.warning(f"Error loading processed emails: {str(e)}")
-        return processed_emails
+        return processed_combinations
     
     def _save_processed_email(self, email: str, filename: str, assessment_type: str, drive_file_id: str = None, drive_link: str = None):
         """
@@ -839,8 +843,8 @@ class DiagnosticosApp:
         }
         
         try:
-            # Load already processed emails
-            processed_emails = self._load_processed_emails()
+            # Load already processed email-assessment combinations
+            processed_combinations = self._load_processed_emails()
             
             # If test mode is enabled, use the test email from environment
             if test_mode:
@@ -861,15 +865,16 @@ class DiagnosticosApp:
             # Send emails
             for email, pdf_data in generated_pdfs.items():
                 try:
-                    # Check if email was already processed
-                    if email.lower() in processed_emails:
-                        logger.info(f"Skipping already processed email: {email}")
-                        results["emails_skipped"] += 1
-                        continue
-                    
                     pdf_content = pdf_data["pdf_content"]
                     filename = pdf_data["filename"]
                     assessment_type = pdf_data["assessment_type"]
+                    
+                    # Check if this specific email-assessment combination was already processed
+                    email_assessment_key = (email.lower(), assessment_type)
+                    if email_assessment_key in processed_combinations:
+                        logger.info(f"Skipping already processed email-assessment combination: {email} - {assessment_type}")
+                        results["emails_skipped"] += 1
+                        continue
                     
                     # Extract username from email
                     username = email

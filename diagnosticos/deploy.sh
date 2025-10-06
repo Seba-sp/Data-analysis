@@ -27,7 +27,7 @@ gcloud tasks queues create batch-processing-queue \
 # Deploy main webhook handler
 echo "🚀 Deploying webhook handler..."
 gcloud functions deploy webhook-handler \
-    --runtime=python39 \
+    --runtime=python311 \
     --trigger-http \
     --allow-unauthenticated \
     --entry-point=webhook_handler \
@@ -40,7 +40,7 @@ gcloud functions deploy webhook-handler \
 # Deploy status handler
 echo "📊 Deploying status handler..."
 gcloud functions deploy status-handler \
-    --runtime=python39 \
+    --runtime=python311 \
     --trigger-http \
     --allow-unauthenticated \
     --entry-point=status_handler \
@@ -52,7 +52,7 @@ gcloud functions deploy status-handler \
 # Deploy cleanup handler
 echo "🧹 Deploying cleanup handler..."
 gcloud functions deploy cleanup-handler \
-    --runtime=python39 \
+    --runtime=python311 \
     --trigger-http \
     --allow-unauthenticated \
     --entry-point=cleanup_handler \

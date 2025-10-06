@@ -32,20 +32,29 @@ class StorageClient:
 
     def read_csv(self, path, **kwargs):
         if self.backend == 'local':
-            return pd.read_csv(self._local_path(path), **kwargs)
+            return pd.read_csv(self._local_path(path), encoding='utf-8', **kwargs)
         else:
             blob = self.bucket.blob(self._gcs_path(path))
-            data = blob.download_as_text()
-            return pd.read_csv(StringIO(data), **kwargs)
+            data = blob.download_as_text(encoding='utf-8')
+            return pd.read_csv(StringIO(data), encoding='utf-8', **kwargs)
 
     def write_csv(self, path, df, **kwargs):
         if self.backend == 'local':
-            df.to_csv(self._local_path(path), **kwargs)
+            df.to_csv(self._local_path(path), encoding='utf-8-sig', **kwargs)
         else:
             blob = self.bucket.blob(self._gcs_path(path))
             csv_buffer = StringIO()
-            df.to_csv(csv_buffer, **kwargs)
-            blob.upload_from_string(csv_buffer.getvalue(), content_type='text/csv')
+            df.to_csv(csv_buffer, encoding='utf-8-sig', **kwargs)
+            blob.upload_from_string(csv_buffer.getvalue(), content_type='text/csv; charset=utf-8')
+
+    def read_text(self, path):
+        """Read text file from storage"""
+        if self.backend == 'local':
+            with open(self._local_path(path), 'r', encoding='utf-8') as f:
+                return f.read()
+        else:
+            blob = self.bucket.blob(self._gcs_path(path))
+            return blob.download_as_text(encoding='utf-8')
 
     def read_json(self, path):
         if self.backend == 'local':
@@ -63,14 +72,6 @@ class StorageClient:
         else:
             blob = self.bucket.blob(self._gcs_path(path))
             blob.upload_from_string(json.dumps(obj, ensure_ascii=False, indent=2), content_type='application/json')
-
-    def read_text(self, path):
-        if self.backend == 'local':
-            with open(self._local_path(path), 'r', encoding='utf-8') as f:
-                return f.read()
-        else:
-            blob = self.bucket.blob(self._gcs_path(path))
-            return blob.download_as_text()
 
     def read_bytes(self, path):
         if self.backend == 'local':

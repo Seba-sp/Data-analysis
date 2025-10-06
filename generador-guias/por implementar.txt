@@ -1,0 +1,15 @@
+OK lista desplegable en subtema
+OK ver las 3 ciencias al mismo tiempo
+OK agregar orden de preguntas
+OK mostrar ecuaciones en html, para visualizar preguntas de mate
+OK agregar números de preguntas al word
+
+OK ordenar preguntas directo arriba
+OK tener BBDD con códigos de nombres
+OK hacer lista desplegable para seleccionar nombre de esa guia
+OK guardar en BBDD preguntas que se usaron, con nombre de la guia y conteo de usos
+OK filtro de preguntas libres o usadas x veces
+OK casos de errores después de la generación, eliminar guía y borrar de BBDD usados
+
+cl hay texto asociado, revisar BBDD actual y ver estandarizacion
+primer uso, finales de octubre

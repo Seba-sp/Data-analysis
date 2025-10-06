@@ -72,6 +72,15 @@ class AssessmentDownloader:
         """Get the incremental JSON file path for an assessment (only new data)"""
         return self.raw_dir / f"incremental_{assessment_name}.json"
     
+    def get_temp_csv_file_path(self, assessment_name: str) -> Path:
+        """Get the temporary CSV file path for an assessment"""
+        return self.processed_dir / f"temp_{assessment_name}.csv"
+    
+    def get_temp_analysis_file_path(self, assessment_name: str) -> Path:
+        """Get the temporary analysis file path for an assessment"""
+        analysis_dir = self.data_dir / "analysis"
+        return analysis_dir / f"temp_{assessment_name}.csv"
+    
     def get_latest_timestamp_from_json(self, json_file_path: str) -> Optional[int]:
         """Get the latest 'submitted' timestamp from an existing JSON file"""
         if not self.storage.exists(json_file_path):
@@ -87,6 +96,24 @@ class AssessmentDownloader:
             # Get the first record (newest) since data is sorted by submitted timestamp
             latest_record = data[0]
             return latest_record.get('submittedTimestamp')
+        except (json.JSONDecodeError, IndexError, KeyError):
+            return None
+    
+    def get_latest_user_timestamp_from_json(self, json_file_path: str) -> Optional[int]:
+        """Get the latest 'created' timestamp from an existing users JSON file"""
+        if not self.storage.exists(json_file_path):
+            return None
+        
+        try:
+            data = self.storage.read_json(json_file_path)
+            
+            # Handle case where read_json returns None
+            if data is None or not data:
+                return None
+            
+            # Get the first record (newest) since data is sorted by created timestamp
+            latest_record = data[0]
+            return latest_record.get('created')
         except (json.JSONDecodeError, IndexError, KeyError):
             return None
     
@@ -442,6 +469,11 @@ class AssessmentDownloader:
         """
         return self._download_responses_full(assessment_id, assessment_name, "assessments")
 
+    def _download_form_responses_full(self, form_id: str, form_name: str) -> List[Dict[str, Any]]:
+        """
+        Download all form responses (full download)
+        """
+        return self._download_responses_full(form_id, form_name, "forms")
     def save_responses_to_json(self, responses: List[Dict[str, Any]], assessment_name: str) -> str:
         """
         Save responses to JSON file
@@ -489,6 +521,33 @@ class AssessmentDownloader:
         
         logger.info(f"Saved {len(responses)} incremental responses to {incremental_json_file_path}")
         return str(incremental_json_file_path)
+    
+    def save_temp_responses_to_csv(self, responses: List[Dict[str, Any]], assessment_name: str) -> str:
+        """
+        Save filtered responses to temporary CSV file
+        
+        Args:
+            responses: List of response dictionaries
+            assessment_name: The assessment name for file organization
+            
+        Returns:
+            Path to the saved temporary CSV file
+        """
+        # Filter responses
+        filtered_responses = self.filter_responses(responses)
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(filtered_responses)
+        
+        # Save to temporary CSV
+        temp_csv_file_path = self.get_temp_csv_file_path(assessment_name)
+        self.storage.write_csv(str(temp_csv_file_path), df, sep=';', index=False)
+        
+        # Add answer columns
+        self.add_answer_columns_to_csv(str(temp_csv_file_path), filtered_responses)
+        
+        logger.info(f"Saved {len(filtered_responses)} filtered responses to temporary {temp_csv_file_path}")
+        return str(temp_csv_file_path)
     
     def merge_incremental_to_main_json(self, assessment_name: str, incremental_df: pd.DataFrame = None) -> bool:
         """
@@ -556,9 +615,9 @@ class AssessmentDownloader:
             logger.error(f"Error merging incremental data for {assessment_name}: {e}")
             return False
     
-    def cleanup_incremental_files(self, assessment_name: str) -> bool:
+    def cleanup_temp_files(self, assessment_name: str) -> bool:
         """
-        Clean up incremental JSON files for an assessment
+        Clean up temporary files for an assessment
         
         Args:
             assessment_name: The assessment name
@@ -578,10 +637,26 @@ class AssessmentDownloader:
                 else:
                     errors.append("failed to delete incremental JSON")
             
+            # Clean up temporary CSV
+            temp_csv_path = self.get_temp_csv_file_path(assessment_name)
+            if self.storage.exists(str(temp_csv_path)):
+                if self.storage.delete(str(temp_csv_path)):
+                    deleted_files.append("temporary CSV")
+                else:
+                    errors.append("failed to delete temporary CSV")
+            
+            # Clean up temporary analysis files
+            temp_analysis_path = self.get_temp_analysis_file_path(assessment_name)
+            if self.storage.exists(str(temp_analysis_path)):
+                if self.storage.delete(str(temp_analysis_path)):
+                    deleted_files.append("temporary analysis")
+                else:
+                    errors.append("failed to delete temporary analysis")
+            
             if deleted_files:
                 logger.info(f"Cleaned up {', '.join(deleted_files)} files for {assessment_name}")
             else:
-                logger.debug(f"No incremental files found for assessment: {assessment_name}")
+                logger.debug(f"No temporary files found for assessment: {assessment_name}")
             
             if errors:
                 logger.warning(f"Some cleanup operations failed for {assessment_name}: {', '.join(errors)}")
@@ -589,7 +664,7 @@ class AssessmentDownloader:
             
             return True
         except Exception as e:
-            logger.error(f"Error cleaning up incremental files for {assessment_name}: {e}")
+            logger.error(f"Error cleaning up temp files for {assessment_name}: {e}")
             return False
     
     def load_responses_from_json(self, assessment_name: str) -> List[Dict[str, Any]]:
@@ -642,7 +717,7 @@ class AssessmentDownloader:
         #For each user, keep only the newest response
         user_latest = {}
         for r in responses_list:
-            user_id = r.get('userId') or r.get('user_id')
+            user_id = r.get('user_id')
             created = r.get('submittedTimestamp', 0)
             if user_id is not None:
                 if user_id not in user_latest or created > user_latest[user_id].get('submittedTimestamp', 0):
@@ -692,6 +767,9 @@ class AssessmentDownloader:
                 desc = ans.get("description")
                 answer_val = ans.get("answer")
                 if desc:
+                    # Replace empty or NaN answers with "No respondida"
+                    if pd.isna(answer_val) or answer_val == "" or answer_val is None:
+                        answer_val = "No respondida"
                     ans_dict[desc] = answer_val
                     all_questions.add(desc)
             answers_per_row.append(ans_dict)
@@ -716,7 +794,7 @@ class AssessmentDownloader:
         # Save updated CSV
         self.storage.write_csv(str(csv_path), df, sep=';', index=False)
     
-    def save_responses_to_csv(self, responses: List[Dict[str, Any]] | pd.DataFrame, assessment_name: str, return_df: bool = False) -> str | pd.DataFrame:
+    def save_responses_to_csv(self, responses: List[Dict[str, Any]] | pd.DataFrame, assessment_name: str, return_df: bool = False, include_usernames: bool = True) -> str | pd.DataFrame:
         """
         Save filtered responses to CSV file
         
@@ -724,6 +802,7 @@ class AssessmentDownloader:
             responses: List of response dictionaries or DataFrame
             assessment_name: The assessment name for file organization
             return_df: If True, return DataFrame instead of file path
+            include_usernames: If True, add username column by looking up user_id
             
         Returns:
             Path to the saved CSV file or DataFrame if return_df=True
@@ -736,6 +815,21 @@ class AssessmentDownloader:
             df = filtered_responses
         else:
             df = pd.DataFrame(filtered_responses)
+        
+        # Add usernames if requested
+        if include_usernames and 'user_id' in df.columns:
+            try:
+                users = self.load_users_from_json()
+                if users:
+                    # Add username column by looking up user_id
+                    df['username'] = df['user_id'].apply(lambda x: self.get_username_by_user_id(x, users))
+                    logger.info(f"Added usernames for {assessment_name} using {len(users)} users")
+                else:
+                    logger.warning(f"No users found to add usernames for {assessment_name}")
+            except Exception as e:
+                logger.error(f"Error adding usernames for {assessment_name}: {str(e)}")
+                # If username lookup fails, just use user_id as fallback
+                df['username'] = df['user_id']
         
         if return_df:
             # Add answer columns to DataFrame directly
@@ -752,6 +846,9 @@ class AssessmentDownloader:
                     desc = ans.get("description")
                     answer_val = ans.get("answer")
                     if desc:
+                        # Replace empty or NaN answers with "No respondida"
+                        if pd.isna(answer_val) or answer_val == "" or answer_val is None:
+                            answer_val = "No respondida"
                         ans_dict[desc] = answer_val
                         all_questions.add(desc)
                 answers_per_row.append(ans_dict)
@@ -850,9 +947,9 @@ class AssessmentDownloader:
             save_json_name: Name to use for saving JSON (form_name or assessment_name)
             download_only: If True, only download JSON, do not process to CSV
             process_only: If True, only process existing JSON to CSV, do not download
-        filter_func: Optional function to filter responses (for assessments)
-        save_csv_func: Optional function to save responses to CSV (for assessments)
-        incremental_mode: If True, use incremental processing with in-memory data
+            filter_func: Optional function to filter responses (for assessments)
+            save_csv_func: Optional function to save responses to CSV (for assessments)
+            incremental_mode: If True, use incremental processing with temporary files
 
         Returns:
             Dictionary with results
@@ -948,8 +1045,8 @@ class AssessmentDownloader:
                     logger.info(f"No incremental data to process for {object_name}")
                     return result
                 
-                # Process responses in memory for incremental mode
-                csv_path = None  # No CSV file in incremental mode - data stays in memory
+                # Use temporary CSV function
+                csv_path = self.save_temp_responses_to_csv(incremental_responses, object_name)
                 result['csv_path'] = csv_path
                 
                 # Count filtered responses
@@ -1005,7 +1102,7 @@ class AssessmentDownloader:
             reset_data: If True, delete existing data before downloading
             download_only: If True, only download JSON, do not process to CSV
             process_only: If True, only process existing JSON to CSV, do not download
-            incremental_mode: If True, use incremental processing with in-memory data
+            incremental_mode: If True, use incremental processing with temporary files
         
         Returns:
             Dictionary mapping assessment names to their results
@@ -1086,6 +1183,270 @@ class AssessmentDownloader:
         
         return info
 
+    def download_users(self, incremental: bool = False) -> List[Dict[str, Any]]:
+        """
+        Download users from LearnWorlds API
+        
+        Args:
+            incremental: If True, download only new users based on latest timestamp
+        
+        Returns:
+            List of user dictionaries
+        """
+        try:
+            users_file_path = self.raw_dir / "users.json"
+            
+            if incremental:
+                logger.info("Downloading users incrementally from LearnWorlds API...")
+                
+                # Get latest timestamp from existing users file
+                latest_timestamp = self.get_latest_user_timestamp_from_json(str(users_file_path))
+                
+                if latest_timestamp is None:
+                    logger.info("No existing users data found. Performing full download...")
+                    return self.download_users(incremental=False)
+                
+                logger.info(f"Latest user timestamp: {datetime.fromtimestamp(latest_timestamp)}")
+                logger.info("Downloading new users only...")
+                
+                # Load existing data
+                existing_users = []
+                if self.storage.exists(str(users_file_path)):
+                    existing_users = self.storage.read_json(str(users_file_path))
+                    if existing_users is None:
+                        existing_users = []
+                
+                new_users = []
+                page = 1
+                reached_existing = False
+                
+                while not reached_existing:
+                    url = f"https://{self.school_domain}/admin/api/v2/users?page={page}"
+                    
+                    try:
+                        response = requests.get(url, headers=self.headers, timeout=30)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            users = data.get('data', [])
+                            meta = data.get('meta', {})
+                            
+                            if not users:
+                                break
+                            
+                            # Check if we've reached existing data
+                            for user in users:
+                                user_timestamp = user.get('created')
+                                
+                                # Skip users older than or equal to latest timestamp
+                                if user_timestamp and user_timestamp <= latest_timestamp:
+                                    reached_existing = True
+                                    break
+                                new_users.append(user)
+                            
+                            logger.info(f"Downloaded page {page} - {len(users)} users")
+                            
+                            # Add delay to avoid rate limiting
+                            time.sleep(1)
+                            
+                            total_pages = meta.get('totalPages', 1)
+                            if page >= total_pages:
+                                break
+                            
+                        elif response.status_code == 401:
+                            logger.error("Authentication failed. Check your access token.")
+                            raise Exception("Authentication failed")
+                        elif response.status_code == 403:
+                            logger.error("Access forbidden. Check your permissions.")
+                            raise Exception("Access forbidden")
+                        elif response.status_code == 429:
+                            logger.warning("Rate limited. Waiting before retry...")
+                            time.sleep(5)
+                            continue
+                        else:
+                            logger.error(f"Failed to download users page {page}: {response.status_code}")
+                            break
+                            
+                    except requests.exceptions.RequestException as e:
+                        logger.error(f"Request error downloading users page {page}: {str(e)}")
+                        break
+                    
+                    page += 1
+                
+                if new_users:
+                    logger.info(f"Found {len(new_users)} new users")
+                    # Combine new users with existing users and sort by created timestamp (newest first)
+                    combined_users = new_users + existing_users
+                    combined_users.sort(key=lambda x: x.get('created', 0), reverse=True)
+                    
+                    # Save combined users to JSON file
+                    self.storage.write_json(str(users_file_path), combined_users)
+                    logger.info(f"Users saved to {users_file_path}")
+                    
+                    return combined_users
+                else:
+                    logger.info("No new users found")
+                    return existing_users
+            else:
+                # Full download
+                logger.info("Downloading all users from LearnWorlds API...")
+                
+                all_users = []
+                page = 1
+                
+                while True:
+                    url = f"https://{self.school_domain}/admin/api/v2/users?page={page}"
+                    
+                    try:
+                        response = requests.get(url, headers=self.headers, timeout=30)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            users = data.get('data', [])
+                            meta = data.get('meta', {})
+                            
+                            if not users:
+                                break
+                            
+                            all_users.extend(users)
+                            logger.info(f"Downloaded page {page} - {len(users)} users")
+                            
+                            # Add delay to avoid rate limiting
+                            time.sleep(1)
+                            
+                            total_pages = meta.get('totalPages', 1)
+                            if page >= total_pages:
+                                break
+                            
+                            page += 1
+                            
+                        elif response.status_code == 401:
+                            logger.error("Authentication failed. Check your access token.")
+                            raise Exception("Authentication failed")
+                        elif response.status_code == 403:
+                            logger.error("Access forbidden. Check your permissions.")
+                            raise Exception("Access forbidden")
+                        elif response.status_code == 429:
+                            logger.warning("Rate limited. Waiting before retry...")
+                            time.sleep(5)
+                            continue
+                        else:
+                            logger.error(f"Failed to download users page {page}: {response.status_code}")
+                            break
+                            
+                    except requests.exceptions.RequestException as e:
+                        logger.error(f"Request error downloading users page {page}: {str(e)}")
+                        break
+                
+                # Sort by created timestamp (newest first)
+                all_users.sort(key=lambda x: x.get('created', 0), reverse=True)
+                logger.info(f"Successfully downloaded {len(all_users)} users")
+                
+                # Save users to JSON file for later use
+                self.storage.write_json(str(users_file_path), all_users)
+                logger.info(f"Users saved to {users_file_path}")
+                
+                return all_users
+            
+        except Exception as e:
+            logger.error(f"Error downloading users: {str(e)}")
+            return []
+
+    def merge_incremental_users(self, new_users: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Merge new users with existing users, removing duplicates and sorting by created timestamp
+        
+        Args:
+            new_users: List of new user dictionaries
+            
+        Returns:
+            Combined list of users sorted by created timestamp (newest first)
+        """
+        try:
+            users_file_path = self.raw_dir / "users.json"
+            
+            # Load existing users
+            existing_users = []
+            if self.storage.exists(str(users_file_path)):
+                existing_users = self.storage.read_json(str(users_file_path))
+                if existing_users is None:
+                    existing_users = []
+            
+            # Combine new and existing users
+            combined_users = new_users + existing_users
+            
+            # Remove duplicates by user ID
+            seen = set()
+            unique_users = []
+            for user in combined_users:
+                user_id = user.get('id')
+                if user_id and user_id not in seen:
+                    seen.add(user_id)
+                    unique_users.append(user)
+                elif not user_id:
+                    unique_users.append(user)
+            
+            # Sort by created timestamp (newest first)
+            unique_users.sort(key=lambda x: x.get('created', 0), reverse=True)
+            
+            # Save merged users
+            self.storage.write_json(str(users_file_path), unique_users)
+            logger.info(f"Merged {len(new_users)} new users with {len(existing_users)} existing users. Total: {len(unique_users)} unique users")
+            
+            return unique_users
+            
+        except Exception as e:
+            logger.error(f"Error merging incremental users: {str(e)}")
+            return []
+
+    def load_users_from_json(self, incremental: bool = False) -> List[Dict[str, Any]]:
+        """
+        Load users from previously downloaded JSON file
+        
+        Args:
+            incremental: If True, try to download incrementally if file doesn't exist
+        
+        Returns:
+            List of user dictionaries or empty list if file doesn't exist
+        """
+        try:
+            users_file_path = self.raw_dir / "users.json"
+            
+            if not self.storage.exists(str(users_file_path)):
+                logger.info("No users file found. Downloading users first...")
+                return self.download_users(incremental=incremental)
+            
+            users = self.storage.read_json(str(users_file_path))
+            if users is None:
+                users = []
+            
+            logger.info(f"Loaded {len(users)} users from {users_file_path}")
+            return users
+            
+        except Exception as e:
+            logger.error(f"Error loading users: {str(e)}")
+            return []
+
+    def get_username_by_user_id(self, user_id: str, users: List[Dict[str, Any]]) -> str:
+        """
+        Get username from user ID by looking up in users list
+        
+        Args:
+            user_id: The user ID to look up
+            users: List of user dictionaries
+            
+        Returns:
+            Username or user_id if not found
+        """
+        for user in users:
+            if user.get('id') == user_id:
+                # Try different possible username fields
+                username = user.get('username') or user.get('email') or user.get('firstName', '') + ' ' + user.get('lastName', '')
+                return username.strip() if username else user_id
+        
+        # If not found, return the user_id as fallback
+        return user_id
+
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='Download and process assessment responses')
@@ -1097,6 +1458,7 @@ def parse_arguments():
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     parser.add_argument('--incremental', action='store_true', help='Use incremental processing mode (process only new data)')
     parser.add_argument('--full', action='store_true', help='Force full download (ignore incremental mode)')
+    parser.add_argument('--download-users', action='store_true', help='Download users from LearnWorlds API')
     return parser.parse_args()
 
 def load_assessment_list_from_env() -> List[Dict[str, str]]:
@@ -1106,19 +1468,30 @@ def load_assessment_list_from_env() -> List[Dict[str, str]]:
         
         # Load assessment IDs from environment variables
         m1_id = os.getenv("M1_ASSESSMENT_ID")
+        m2_id = os.getenv("M2_ASSESSMENT_ID")
         cl_id = os.getenv("CL_ASSESSMENT_ID")
-        cien_id = os.getenv("CIEN_ASSESSMENT_ID")
+        cienb_id = os.getenv("CIENB_ASSESSMENT_ID")
+        cienf_id = os.getenv("CIENF_ASSESSMENT_ID")
+        cienq_id = os.getenv("CIENQ_ASSESSMENT_ID")
+        cient_id = os.getenv("CIENT_ASSESSMENT_ID")
         hyst_id = os.getenv("HYST_ASSESSMENT_ID")
         
         if m1_id:
             assessments.append({'name': 'M1', 'assessment_id': m1_id})
+        if m2_id:
+            assessments.append({'name': 'M2', 'assessment_id': m2_id})
         if cl_id:
             assessments.append({'name': 'CL', 'assessment_id': cl_id})
-        if cien_id:
-            assessments.append({'name': 'CIEN', 'assessment_id': cien_id})
+        if cienb_id:
+            assessments.append({'name': 'CIENB', 'assessment_id': cienb_id})
+        if cienf_id:
+            assessments.append({'name': 'CIENF', 'assessment_id': cienf_id})
+        if cienq_id:
+            assessments.append({'name': 'CIENQ', 'assessment_id': cienq_id})
+        if cient_id:
+            assessments.append({'name': 'CIENT', 'assessment_id': cient_id})
         if hyst_id:
             assessments.append({'name': 'HYST', 'assessment_id': hyst_id})
-        
         logger.info(f"Loaded {len(assessments)} assessments from environment variables")
         return assessments
     except Exception as e:
@@ -1144,6 +1517,34 @@ def main():
     
     # Initialize downloader
     downloader = AssessmentDownloader()
+    
+    # Handle download-users command
+    if args.download_users:
+        try:
+            # Determine if we should use incremental mode for users
+            user_incremental = args.incremental and not args.full
+            
+            if user_incremental:
+                logger.info("Downloading users incrementally from LearnWorlds API...")
+                users = downloader.download_users(incremental=True)
+                if users:
+                    print(f"✅ Successfully downloaded users incrementally")
+                    print(f"📁 Users saved to: {downloader.raw_dir}/users.json")
+                else:
+                    print("❌ Failed to download users incrementally")
+            else:
+                logger.info("Downloading all users from LearnWorlds API...")
+                users = downloader.download_users(incremental=False)
+                if users:
+                    print(f"✅ Successfully downloaded {len(users)} users")
+                    print(f"📁 Users saved to: {downloader.raw_dir}/users.json")
+                else:
+                    print("❌ Failed to download users")
+            return
+        except Exception as e:
+            logger.error(f"Error downloading users: {e}")
+            print(f"❌ Failed to download users: {e}")
+            return
     
     # Handle info command
     if args.info:
@@ -1230,3 +1631,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

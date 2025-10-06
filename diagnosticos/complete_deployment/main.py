@@ -11,7 +11,9 @@ import hmac
 import os
 from flask import Request, jsonify
 from typing import Dict, Any
+from dotenv import load_dotenv
 
+load_dotenv()
 # Services will be initialized lazily to avoid import-time errors
 assessment_mapper = None
 firestore_service = None
@@ -27,18 +29,44 @@ def initialize_services():
         return True
     
     try:
-        from assessment_mapper import assessment_mapper as am
-        from firestore_service import firestore_service as fs
-        from task_service import task_service as ts
-        from batch_processor import batch_processor as bp
+        # Try to import and initialize each service individually
+        try:
+            from assessment_mapper import assessment_mapper as am
+            assessment_mapper = am
+            logger.info("Assessment mapper initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize assessment mapper: {e}")
+            assessment_mapper = None
         
-        assessment_mapper = am
-        firestore_service = fs
-        task_service = ts
-        batch_processor = bp
+        try:
+            from firestore_service import firestore_service as fs
+            firestore_service = fs
+            logger.info("Firestore service initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize firestore service: {e}")
+            firestore_service = None
+        
+        try:
+            from task_service import task_service as ts
+            task_service = ts
+            logger.info("Task service initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize task service: {e}")
+            task_service = None
+        
+        try:
+            from batch_processor import batch_processor as bp
+            batch_processor = bp
+            logger.info("Batch processor initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize batch processor: {e}")
+            batch_processor = None
+        
+        # Mark as available if at least one service is working
         SERVICES_AVAILABLE = True
-        logger.info("Services initialized successfully")
+        logger.info("Services initialization completed")
         return True
+        
     except Exception as e:
         logger.error(f"Failed to initialize services: {e}")
         SERVICES_AVAILABLE = False
@@ -59,6 +87,7 @@ if not WEBHOOK_SECRET:
 # Configuration for queue size limits
 MAX_QUEUE_SIZE = int(os.getenv('MAX_QUEUE_SIZE', '400'))  # Default 300 students
 MEMORY_SIZE_MB = int(os.getenv('MEMORY_SIZE_MB', '512'))  # Default 512MB
+BATCH_INTERVAL_MINUTES = int(os.getenv('BATCH_INTERVAL_MINUTES', '15'))  # Default 15 minutes
 
 # Calculate dynamic queue size based on memory
 def get_max_queue_size() -> int:
@@ -89,11 +118,11 @@ def webhook_handler(request: Request):
 def validate_signature(request: Request) -> bool:
     """
     Validate LearnWorlds webhook signature
-    
-    Args:
-        request: Flask request object
         
-    Returns:
+        Args:
+        request: Flask request object
+            
+        Returns:
         True if signature is valid, False otherwise
     """
     try:
@@ -134,21 +163,20 @@ def validate_signature(request: Request) -> bool:
     except Exception as e:
         logger.error(f"Error validating signature: {str(e)}")
         return False
-
+    
 def handle_webhook(request: Request):
     """
     Handle incoming webhook from LearnWorlds
-    
+        
     Args:
         request: Flask request object
-        
+            
     Returns:
         JSON response
     """
     try:
         # Initialize services if not already done
-        if not initialize_services():
-            return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
+        initialize_services()  # This will log warnings but not fail
         # Validate webhook signature
         if not validate_signature(request):
             return jsonify({'error': 'Invalid webhook signature'}), 401
@@ -166,6 +194,9 @@ def handle_webhook(request: Request):
             return jsonify({'error': 'No assessment URL in payload'}), 400
         
         # Extract assessment ID from URL
+        if not assessment_mapper:
+            return jsonify({'error': 'Assessment mapper not available'}), 500
+            
         assessment_id = assessment_mapper.extract_assessment_id(assessment_url)
         if not assessment_id:
             return jsonify({'error': 'Could not extract assessment ID from URL'}), 400
@@ -193,23 +224,31 @@ def handle_webhook(request: Request):
             'timestamp': time.time()
         }
         
-        # Queue student
-        if not firestore_service.queue_student(student_data):
-            return jsonify({'error': 'Failed to queue student'}), 500
-        
-        # Increment counter
-        if not firestore_service.increment_counter(assessment_type):
-            logger.warning(f"Failed to increment counter for {assessment_type}")
+        # Queue student (if firestore service is available)
+        if firestore_service:
+            if not firestore_service.queue_student(student_data):
+                return jsonify({'error': 'Failed to queue student'}), 500
+            
+            # Increment counter
+            if not firestore_service.increment_counter(assessment_type):
+                logger.warning(f"Failed to increment counter for {assessment_type}")
+        else:
+            logger.warning("Firestore service not available - student not queued")
+            return jsonify({'error': 'Firestore service not available'}), 500
         
         # Check queue size for early processing trigger
-        current_queue_size = firestore_service.get_queue_count()
-        max_queue_size = get_max_queue_size()
+        if firestore_service:
+            current_queue_size = firestore_service.get_queue_count()
+            max_queue_size = get_max_queue_size()
+        else:
+            current_queue_size = 0
+            max_queue_size = 1
         
         should_trigger_early = current_queue_size >= max_queue_size
         batch_created = False
         
         # Check if this is the first student in a new batch
-        if not firestore_service.is_batch_active():
+        if firestore_service and not firestore_service.is_batch_active():
             # Create new batch
             batch_id = str(uuid.uuid4())
             
@@ -218,8 +257,8 @@ def handle_webhook(request: Request):
                 deadline = int(time.time() + 30)  # 30 seconds from now for immediate processing
                 logger.info(f"Queue size ({current_queue_size}) reached limit ({max_queue_size}). Triggering immediate processing.")
             else:
-                # Normal 15-minute delay
-                deadline = int(time.time() + (15 * 60))  # 15 minutes from now
+                # Normal batch interval delay
+                deadline = int(time.time() + (BATCH_INTERVAL_MINUTES * 60))  # Use configured interval
             
             # Create batch state
             if not firestore_service.create_batch_state(batch_id, deadline):
@@ -227,13 +266,17 @@ def handle_webhook(request: Request):
                 return jsonify({'error': 'Failed to create batch state'}), 500
             
             # Create delayed task for batch processing
-            delay_seconds = 30 if should_trigger_early else (15 * 60)
-            if not task_service.create_delayed_task(delay_seconds, batch_id):
-                logger.error("Failed to create delayed task")
-                return jsonify({'error': 'Failed to create delayed task'}), 500
-            
+            if task_service:
+                delay_seconds = 30 if should_trigger_early else (BATCH_INTERVAL_MINUTES * 60)
+                if not task_service.create_delayed_task(delay_seconds, batch_id):
+                    logger.error("Failed to create delayed task")
+                    return jsonify({'error': 'Failed to create delayed task'}), 500
+            else:
+                logger.warning("Task service not available - batch processing will not be scheduled")
+                    
             batch_created = True
-            logger.info(f"Created new batch {batch_id} with deadline {deadline} ({'immediate' if should_trigger_early else 'normal'} processing)")
+            processing_type = 'immediate' if should_trigger_early else f'{BATCH_INTERVAL_MINUTES}min'
+            logger.info(f"Created new batch {batch_id} with deadline {deadline} ({processing_type} processing)")
         else:
             # Check if we should trigger early processing for existing batch
             if should_trigger_early:
@@ -254,7 +297,7 @@ def handle_webhook(request: Request):
                 'early_trigger': should_trigger_early
             }
         }), 200
-        
+            
     except Exception as e:
         logger.error(f"Error handling webhook: {str(e)}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
@@ -262,99 +305,61 @@ def handle_webhook(request: Request):
 def process_batch(request: Request):
     """
     Process batch of queued students
-    
+        
     Args:
         request: Flask request object
-        
+            
     Returns:
         JSON response
     """
     try:
         # Initialize services if not already done
-        if not initialize_services():
-            return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
+        initialize_services()  # This will log warnings but not fail
+        
         # Get batch ID from query parameters
         batch_id = request.args.get('batch_id')
         if not batch_id:
             return jsonify({'error': 'No batch_id provided'}), 400
         
-        logger.info(f"Processing batch: {batch_id}")
-        
-        # Process the batch
-        results = batch_processor.process_batch(batch_id)
-        
-        if results['success']:
-            return jsonify({
-                'status': 'success',
-                'message': 'Batch processing completed',
-                'results': results
-            }), 200
+        # Process the batch using batch processor
+        if batch_processor:
+            result = batch_processor.process_batch(batch_id)
+            if result:
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Batch {batch_id} processed successfully',
+                    'batch_id': batch_id
+                }), 200
+            else:
+                return jsonify({'error': f'Failed to process batch {batch_id}'}), 500
         else:
-            return jsonify({
-                'status': 'error',
-                'message': 'Batch processing failed',
-                'results': results
-            }), 500
+            return jsonify({'error': 'Batch processor not available'}), 500
             
     except Exception as e:
         logger.error(f"Error processing batch: {str(e)}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @functions_framework.http
-def status_handler(request: Request):
-    """
-    Status endpoint to check system health and current batch status
-    
-    Args:
-        request: Flask request object
-        
-    Returns:
-        JSON response with system status
-    """
-    try:
-        # Initialize services if not already done
-        if not initialize_services():
-            return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
-        # Get batch status
-        status = batch_processor.get_batch_status()
-        
-        # Get queue info
-        queue_info = task_service.get_queue_info()
-        
-        # Get assessment mapping info
-        mapping_info = assessment_mapper.get_mapping_info()
-        
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': time.time(),
-            'batch_status': status,
-            'queue_info': queue_info,
-            'assessment_mapping': mapping_info
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error getting status: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'timestamp': time.time()
-        }), 500
-
-@functions_framework.http
 def cleanup_handler(request: Request):
     """
     Cleanup endpoint to manually clear queue and reset state
-    
+        
     Args:
         request: Flask request object
-        
+            
     Returns:
         JSON response
     """
     try:
-        # Initialize services if not already done
-        if not initialize_services():
-            return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
+        # Only initialize Firestore service
+        try:
+            from firestore_service import firestore_service as fs
+            firestore_service = fs
+            logger.info("Firestore service initialized for cleanup")
+        except Exception as e:
+            logger.error(f"Failed to initialize firestore service: {e}")
+            return jsonify({'error': 'Firestore service not available'}), 500
+        
         # Clear queue
         queue_cleared = firestore_service.clear_queue()
         
@@ -364,20 +369,16 @@ def cleanup_handler(request: Request):
         # Clear batch state
         state_cleared = firestore_service.clear_batch_state()
         
-        # Purge task queue
-        queue_purged = task_service.purge_queue()
-        
         return jsonify({
             'status': 'success',
             'message': 'Cleanup completed',
             'results': {
                 'queue_cleared': queue_cleared,
                 'counters_reset': counters_reset,
-                'state_cleared': state_cleared,
-                'queue_purged': queue_purged
+                'state_cleared': state_cleared
             }
         }), 200
-        
+      
     except Exception as e:
         logger.error(f"Error during cleanup: {str(e)}")
         return jsonify({'error': f'Cleanup failed: {str(e)}'}), 500
@@ -396,9 +397,7 @@ if __name__ == "__main__":
     def local_process_batch():
         return process_batch(request)
     
-    @app.route('/status', methods=['GET'])
-    def local_status():
-        return status_handler(request)
+    # Status handler removed
     
     @app.route('/cleanup', methods=['POST'])
     def local_cleanup():

@@ -8,6 +8,7 @@ import time
 from typing import Dict, List, Optional, Any
 from google.cloud import firestore
 from google.cloud.firestore import Transaction
+from google.cloud.firestore_v1 import FieldFilter
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +122,9 @@ class FirestoreService:
             student_data['status'] = 'queued'
             
             # Add to queue with auto-generated ID
-            doc_ref = self.db.collection(self.queue_collection).add(student_data)
+            result = self.db.collection(self.queue_collection).add(student_data)
             
-            logger.info(f"Queued student: {doc_ref[1].id}")
+            logger.info(f"Queued student: {result[1].id}")
             return True
             
         except Exception as e:
@@ -139,7 +140,10 @@ class FirestoreService:
         """
         try:
             students = []
-            student_docs = self.db.collection(self.queue_collection).where('status', '==', 'queued').stream()
+            student_docs = (
+                self.db.collection(self.queue_collection).where(filter=FieldFilter('status', '==', 'queued')).stream()
+                )
+
             
             for doc in student_docs:
                 student_data = doc.to_dict()
@@ -162,7 +166,10 @@ class FirestoreService:
         """
         try:
             # Use aggregation query for efficient counting
-            query = self.db.collection(self.queue_collection).where('status', '==', 'queued')
+            query = (
+                self.db.collection(self.queue_collection).where(filter=FieldFilter('status', '==', 'queued'))
+                )
+
             count_query = query.count()
             count_result = count_query.get()
             
@@ -190,7 +197,10 @@ class FirestoreService:
             batch = self.db.batch()
             
             # Get all queued students
-            student_docs = self.db.collection(self.queue_collection).where('status', '==', 'queued').stream()
+            student_docs = (
+                self.db.collection(self.queue_collection).where(filter=FieldFilter('status', '==', 'queued')).stream()
+                )
+
             
             for doc in student_docs:
                 batch.delete(doc.reference)

@@ -1,0 +1,193 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados Ensayos Intensivo M30M</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+
+        .document-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .title::before {
+            content: "▶";
+            color: #333;
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .student-info {
+            margin-bottom: 25px;
+        }
+        
+        .student-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .student-input {
+            width: 100%;
+            height: 30px;
+            border: none;
+            border-bottom: 2px solid #333;
+            font-size: 16px;
+            padding: 5px 0;
+            background-color: transparent;
+        }
+        
+        .intro-text {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .intro-text .underlined {
+            text-decoration: underline;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto 25px auto;
+            border: 2px solid #333;
+        }
+        
+        .results-table th {
+            background-color: #f0f0f0;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            border: 1px solid #333;
+        }
+        
+        .results-table td {
+            padding: 12px 15px;
+            border: 1px solid #333;
+            color: #333;
+            text-align: center;
+        }
+        
+        .test-name {
+            font-weight: 500;
+        }
+        
+        .score-cell {
+            background-color: #f9f9f9;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .conclusion-text {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.5;
+        }
+        
+        .conclusion-text .underlined {
+            text-decoration: underline;
+        }
+        
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 20px;
+            }
+            
+            .document-container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="document-container">
+        <h1 class="title">Resultados Ensayos Intensivo M30M</h1>
+        
+        <div class="student-info">
+            <div class="student-label">Nombre del estudiante:</div>
+            <input type="text" class="student-input" placeholder="Ingrese el nombre del estudiante">
+        </div>
+        
+        <p class="intro-text">
+            A <span class="underlined">continuación</span> se detallan los resultados de tus ensayos:
+        </p>
+        
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Prueba</th>
+                    <th>Puntaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="test-name">Matemática M1</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Matemática M2</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Competencia Lectora</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Historia</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Ciencias mención biología</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Ciencias mención física</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Ciencias mención química</td>
+                    <td class="score-cell">-</td>
+                </tr>
+                <tr>
+                    <td class="test-name">Ciencias técnico profesional</td>
+                    <td class="score-cell">-</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p class="conclusion-text">
+            A <span class="underlined">continuación</span> te encontrarás el detalle por prueba.
+        </p>
+    </div>
+</body>
+</html>

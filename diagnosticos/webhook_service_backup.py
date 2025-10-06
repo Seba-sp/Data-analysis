@@ -12,37 +12,21 @@ import os
 from flask import Request, jsonify
 from typing import Dict, Any
 
-# Services will be initialized lazily to avoid import-time errors
-assessment_mapper = None
-firestore_service = None
-task_service = None
-batch_processor = None
-SERVICES_AVAILABLE = False
-
-def initialize_services():
-    """Initialize services lazily"""
-    global assessment_mapper, firestore_service, task_service, batch_processor, SERVICES_AVAILABLE
-    
-    if SERVICES_AVAILABLE:
-        return True
-    
-    try:
-        from assessment_mapper import assessment_mapper as am
-        from firestore_service import firestore_service as fs
-        from task_service import task_service as ts
-        from batch_processor import batch_processor as bp
-        
-        assessment_mapper = am
-        firestore_service = fs
-        task_service = ts
-        batch_processor = bp
-        SERVICES_AVAILABLE = True
-        logger.info("Services initialized successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to initialize services: {e}")
-        SERVICES_AVAILABLE = False
-        return False
+# Import services with error handling
+try:
+    from assessment_mapper import assessment_mapper
+    from firestore_service import firestore_service
+    from task_service import task_service
+    from batch_processor import batch_processor
+    SERVICES_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Some services not available during import: {e}")
+    SERVICES_AVAILABLE = False
+    # Create dummy objects to prevent import errors
+    assessment_mapper = None
+    firestore_service = None
+    task_service = None
+    batch_processor = None
 
 # Configure logging
 logging.basicConfig(
@@ -146,8 +130,8 @@ def handle_webhook(request: Request):
         JSON response
     """
     try:
-        # Initialize services if not already done
-        if not initialize_services():
+        # Check if services are available
+        if not SERVICES_AVAILABLE:
             return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
         # Validate webhook signature
         if not validate_signature(request):
@@ -270,8 +254,8 @@ def process_batch(request: Request):
         JSON response
     """
     try:
-        # Initialize services if not already done
-        if not initialize_services():
+        # Check if services are available
+        if not SERVICES_AVAILABLE:
             return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
         # Get batch ID from query parameters
         batch_id = request.args.get('batch_id')
@@ -312,8 +296,8 @@ def status_handler(request: Request):
         JSON response with system status
     """
     try:
-        # Initialize services if not already done
-        if not initialize_services():
+        # Check if services are available
+        if not SERVICES_AVAILABLE:
             return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
         # Get batch status
         status = batch_processor.get_batch_status()
@@ -352,8 +336,8 @@ def cleanup_handler(request: Request):
         JSON response
     """
     try:
-        # Initialize services if not already done
-        if not initialize_services():
+        # Check if services are available
+        if not SERVICES_AVAILABLE:
             return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
         # Clear queue
         queue_cleared = firestore_service.clear_queue()

@@ -6,9 +6,10 @@ Task Service - Handles Cloud Tasks operations for delayed batch processing
 import os
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Optional
 from google.cloud import tasks_v2
-from protobuf import timestamp_pb2
+from google.protobuf import timestamp_pb2
 
 logger = logging.getLogger(__name__)
 
@@ -58,20 +59,23 @@ class TaskService:
         try:
             # Calculate schedule time
             schedule_time = timestamp_pb2.Timestamp()
-            schedule_time.FromDatetime(
-                time.time() + delay_seconds
+            # Convert float timestamp to datetime object
+            schedule_datetime = datetime.fromtimestamp(
+                time.time() + delay_seconds, 
+                tz=timezone.utc
             )
+            schedule_time.FromDatetime(schedule_datetime)
             
             # Create task
             task = {
                 'http_request': {
                     'http_method': tasks_v2.HttpMethod.GET,
                     'url': f"{self.process_url}?batch_id={batch_id}",
-                    'schedule_time': schedule_time,
                     'headers': {
                         'Content-Type': 'application/json',
                     }
-                }
+                },
+                'schedule_time': schedule_time
             }
             
             # Create the task
@@ -101,6 +105,10 @@ class TaskService:
         Returns:
             True if successful, False otherwise
         """
+        if not self.client:
+            logger.warning("TaskService client not available - cannot delete task")
+            return False
+            
         try:
             self.client.delete_task(name=task_name)
             logger.info(f"Deleted task: {task_name}")
@@ -117,6 +125,10 @@ class TaskService:
         Returns:
             List of task names
         """
+        if not self.client or not self.queue_path:
+            logger.warning("TaskService not properly configured - cannot list tasks")
+            return []
+            
         try:
             tasks = []
             request = tasks_v2.ListTasksRequest(parent=self.queue_path)
@@ -138,6 +150,10 @@ class TaskService:
         Returns:
             True if successful, False otherwise
         """
+        if not self.client or not self.queue_path:
+            logger.warning("TaskService not properly configured - cannot purge queue")
+            return False
+            
         try:
             request = tasks_v2.PurgeQueueRequest(name=self.queue_path)
             self.client.purge_queue(request=request)
@@ -156,6 +172,10 @@ class TaskService:
         Returns:
             Dictionary with queue information
         """
+        if not self.client or not self.queue_path:
+            logger.warning("TaskService not properly configured - cannot get queue info")
+            return {}
+            
         try:
             request = tasks_v2.GetQueueRequest(name=self.queue_path)
             queue = self.client.get_queue(request=request)
@@ -184,6 +204,10 @@ class TaskService:
         Returns:
             True if successful, False otherwise
         """
+        if not self.client or not self.queue_path or not self.project_id:
+            logger.warning("TaskService not properly configured - cannot create queue")
+            return False
+            
         try:
             # Try to get the queue
             request = tasks_v2.GetQueueRequest(name=self.queue_path)

@@ -118,7 +118,7 @@ class BatchProcessor:
             
             # Build command - now includes email sending
             cmd = [
-                'python', 'main.py',
+                'python', 'main_app.py',
                 '--assessment', assessment_type,
                 '--download', '--process', '--analyze', '--reports', '--send-emails', '--incremental'
             ]
