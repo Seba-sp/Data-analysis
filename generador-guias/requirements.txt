@@ -1,4 +1,5 @@
 # Core dependencies for Generador de Guías Escolares - M30M
+# Tested and working versions
 
 # Data processing
 pandas==2.2.2
@@ -9,7 +10,6 @@ python-docx==1.2.0
 pillow==11.3.0
 matplotlib==3.9.2
 mammoth==1.11.0
-python-docx-template==0.1.0
 docx2txt==0.8
 
 # Text processing
