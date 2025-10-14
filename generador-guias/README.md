@@ -4,16 +4,52 @@ Sistema automatizado para la creación de guías escolares filtradas por tema, h
 
 ## 📋 Características
 
-- **Procesamiento de documentos Word**: Divide archivos Word con múltiples preguntas en archivos individuales
-- **Generación de IDs únicos**: Crea identificadores únicos para cada pregunta basados en metadatos
-- **Procesamiento de Excel**: Actualiza archivos Excel con rutas y metadatos de preguntas
-- **Consolidación**: Combina múltiples archivos Excel en archivos maestros por asignatura
-- **Aplicación web**: Interfaz Streamlit para generar guías personalizadas con filtros avanzados
-- **Seguimiento de uso**: Sistema de tracking para monitorear qué preguntas se han usado en cada guía
-- **Gestión de nombres**: Base de datos de nombres de guías permitidos por asignatura
-- **Asignaturas combinadas**: Soporte para "Ciencias" que combina Física, Química y Biología
-- **Filtros avanzados**: Filtrado por preguntas libres/usadas, orden personalizable, vista previa de contenido
-- **Exportación múltiple**: Generación de guías en formato Word con numeración automática
+### 🎯 Procesamiento de Documentos
+- **División de documentos Word**: Divide archivos Word con múltiples preguntas (1 por página) en archivos individuales
+- **Preservación total de formato**: Mantiene imágenes, tablas, ecuaciones y todo el formato original usando ZIP structure
+- **Validación automática**: Verifica coincidencia entre número de preguntas en Word y Excel
+- **Generación de IDs únicos**: Crea identificadores únicos con formato `{EJE}-{AREA}-{SUBTEMA}-{HABILIDAD}-{DIFICULTAD}-{CLAVE}-{RANDOM8}` (ej: `NUM-CON-OPE-RES-1-D-LX63VU56`)
+
+### 📊 Gestión de Excel
+- **Procesamiento de Excel**: Actualiza archivos Excel con rutas relativas y metadatos de preguntas
+- **Validación de estructura**: Detecta columnas faltantes, valores vacíos y valores inválidos
+- **Consolidación maestro**: Combina múltiples archivos Excel en archivos maestros por asignatura
+- **Consolidación incremental**: Opción de solo consolidar archivos nuevos (no procesados previamente)
+- **Auto-ajuste de columnas**: Formato automático con ancho óptimo de columnas
+
+### 🌐 Aplicación Web Streamlit
+- **Interfaz moderna**: Interfaz web completa con diseño responsivo y preservación de scroll
+- **Filtros avanzados**: Por área temática, subtema (dinámico), habilidad, dificultad y asignatura (para Ciencias)
+- **Vista previa**: Conversión de documentos Word a imágenes PNG usando LibreOffice para preview completo
+- **Selección múltiple**: Sistema de checkboxes con orden personalizable mediante drag-and-drop
+- **Reordenamiento**: Mover preguntas a posiciones específicas con preview visual
+- **Ordenamiento automático**: Por área temática o asignatura (para Ciencias)
+- **Gráficos resumen**: Pie charts con distribución por asignatura, área, habilidad, dificultad y subtema
+
+### 📝 Generación de Guías
+- **Exportación a Word**: Fusión perfecta de documentos Word preservando todo el formato
+- **Numeración automática**: Preguntas numeradas secuencialmente (1., 2., 3., etc.)
+- **Gestión de imágenes**: Sistema de mapeo y copia inteligente de imágenes con nombres únicos
+- **Relaciones preservadas**: Actualización automática de relationship IDs para imágenes
+- **Configuración A4**: Márgenes de 2.54 cm en todos los lados, tamaño A4 estándar
+
+### 📈 Seguimiento de Uso
+- **Tracking completo**: Monitorea qué preguntas se han usado en cada guía con timestamp
+- **Columnas dinámicas**: Crea nuevas columnas automáticamente para cada uso (`Nombre guía (uso 1)`, `Fecha descarga (uso 1)`, etc.)
+- **Estadísticas de uso**: Obtiene distribución de uso, preguntas no usadas y porcentaje de uso
+- **Gestión de guías**: Lista todas las guías creadas con detalles de preguntas y fechas
+- **Eliminación selectiva**: Elimina guías específicas y actualiza contadores de uso
+
+### 🎓 Asignaturas Combinadas
+- **Soporte para Ciencias**: Combina Física (F30M), Química (Q30M) y Biología (B30M) en una sola vista
+- **Identificación de origen**: Columna `Subject_Source` para identificar la asignatura original
+- **Filtrado por asignatura**: En Ciencias, permite filtrar por F30M, Q30M o B30M
+- **Consolidación cruzada**: Actualiza tracking en los tres archivos maestros simultáneamente
+
+### 💾 Almacenamiento Flexible
+- **Backend configurable**: Soporte para almacenamiento local o Google Cloud Storage (GCS)
+- **Abstracción completa**: API unificada para operaciones de lectura/escritura independiente del backend
+- **Gestión de directorios**: Creación automática de estructura de carpetas necesaria
 
 ## 🏗️ Arquitectura del Proyecto
 
@@ -47,61 +83,153 @@ generador-guias/
 
 ## 🚀 Instalación
 
+### Requisitos previos
+- Python 3.8 o superior
+- LibreOffice (para preview de documentos en la aplicación web)
+  - Windows: Descargar desde [libreoffice.org](https://www.libreoffice.org/download/download/)
+  - Linux: `sudo apt-get install libreoffice`
+  - macOS: `brew install --cask libreoffice`
+
+### Instalación
+
 1. **Clonar el repositorio**:
    ```bash
    git clone <repository-url>
    cd generador-guias
    ```
 
-2. **Instalar dependencias**:
+2. **Instalar dependencias** (versiones exactas probadas):
    ```bash
    pip install -r requirements.txt
    ```
+   
+   Dependencias principales:
+   - `pandas==2.2.2` - Procesamiento de datos
+   - `openpyxl==3.1.5` - Lectura/escritura de Excel
+   - `python-docx==1.2.0` - Procesamiento de documentos Word
+   - `pillow==11.3.0` - Procesamiento de imágenes
+   - `matplotlib==3.9.2` - Gráficos
+   - `streamlit==1.37.1` - Aplicación web
+   - `plotly==5.24.1` - Gráficos interactivos
+   - `unidecode==1.3.8` - Normalización de texto
+   - `mammoth==1.11.0` - Conversión de documentos
+   - `reportlab==4.4.3` - Generación de PDFs
+   - `google-cloud-storage==3.2.0` - Almacenamiento en nube (opcional)
 
 3. **Inicializar directorios**:
    ```bash
    python main.py init
    ```
 
+4. **Configurar variables de entorno** (opcional para Google Cloud Storage):
+   ```bash
+   export STORAGE_BACKEND=local  # o 'gcp' para Google Cloud Storage
+   export GCP_BUCKET_NAME=your-bucket-name  # solo si usas GCS
+   ```
+
 ## 📖 Uso
 
-### Procesamiento de un conjunto de archivos
+### 1️⃣ Procesamiento de archivos (CLI)
+
+Coloca tus archivos Word (.docx) y Excel (.xlsx) con el mismo nombre base en la carpeta `input/`:
 
 ```bash
-# Procesar archivos con el mismo nombre base
-python main.py process-set N1-GA10-Estandarizada --subject F30M
+# Procesar un conjunto de archivos (Word + Excel con mismo nombre)
+python main.py process-set "N1-GA10-Estandarizada" --subject F30M
 
-# Procesar archivos con nombres diferentes
-python main.py process-files input/documento.docx input/etiquetas.xlsx --subject M30M
+# El sistema:
+# 1. Lee el archivo Excel y genera PreguntaIDs únicos
+# 2. Valida la estructura del Excel (columnas, valores)
+# 3. Divide el Word en preguntas individuales (1 por página)
+# 4. Verifica que Word y Excel tengan el mismo número de preguntas
+# 5. Guarda las preguntas individuales en output/preguntas_divididas/{subject}/
+# 6. Actualiza el Excel con rutas relativas y lo guarda en output/excels_actualizados/{subject}/
+
+# Ejemplo con Matemática
+python main.py process-set "test base" --subject M30M
+
+# Ejemplo con Física
+python main.py process-set "Ensayo Agosto 2025 - Física" --subject F30M
 ```
 
-### Consolidación de archivos Excel
+**Validaciones automáticas:**
+- ❌ Si hay valores inválidos en `Clave` (debe ser A, B, C o D) o `Dificultad` (debe ser 1, 2 o 3): **DETIENE el procesamiento**
+- ⚠️ Si hay columnas faltantes o valores vacíos: **Muestra advertencias pero CONTINÚA**
+- ❌ Si el número de preguntas en Word y Excel no coincide: **DETIENE el procesamiento**
+
+### 2️⃣ Consolidación de archivos Excel
+
+Combina todos los archivos Excel procesados en un archivo maestro por asignatura:
 
 ```bash
 # Consolidar una asignatura específica
 python main.py consolidate --subject F30M
 
-# Consolidar todas las asignaturas
+# Consolidar todas las asignaturas a la vez
 python main.py consolidate --all-subjects
 
-# Consolidar solo Ciencias (F30M + Q30M + B30M)
-python main.py consolidate --subject Ciencias
+# El sistema:
+# 1. Lee todos los archivos Excel de output/excels_actualizados/{subject}/
+# 2. Combina las filas en un solo DataFrame
+# 3. Elimina duplicados basándose en PreguntaID
+# 4. Ordena por PreguntaID
+# 5. Guarda en output/excels_maestros/excel_maestro_{subject}.xlsx
+# 6. Agrega columna "Archivo origen" para rastrear procedencia
 ```
 
-### Aplicación web Streamlit
+**Consolidación incremental** (solo nuevos archivos):
+```bash
+# Consolida solo archivos que no están en el maestro actual
+python main.py consolidate --subject M30M --incremental
+
+# Útil para agregar nuevos conjuntos sin re-procesar todo
+```
+
+### 3️⃣ Aplicación web Streamlit
+
+Interfaz gráfica completa para generar guías personalizadas:
 
 ```bash
+# Opción 1: Launcher con selección de asignatura en terminal
+python streamlit_app/launch_app.py
+
+# Opción 2: Ejecutar directamente
 streamlit run streamlit_app/app.py
 ```
 
-### Inicialización del sistema
+**Flujo de trabajo en la aplicación:**
+
+1. **Cargar datos**: Selecciona una asignatura (M30M, L30M, H30M, B30M, Q30M, F30M, o Ciencias)
+2. **Filtrar preguntas**: Usa los filtros de área, subtema, habilidad, dificultad
+3. **Seleccionar preguntas**: Marca las preguntas que deseas incluir (con preview)
+4. **Reordenar**: Arrastra y suelta para cambiar el orden, o usa ordenamiento automático
+5. **Ver resumen**: Revisa los gráficos de distribución de preguntas seleccionadas
+6. **Generar guía**: Descarga el documento Word con numeración automática
+
+**Características especiales:**
+- 👁️ Vista previa de cada pregunta (conversión a imágenes PNG)
+- 📊 Gráficos interactivos de distribución
+- 🔄 Reordenamiento visual con selección de posición
+- 📈 Estadísticas en tiempo real
+- 💾 Guardado automático de posición de scroll
+
+### 4️⃣ Comandos adicionales
 
 ```bash
-# Crear directorios necesarios
+# Inicializar directorios del sistema
 python main.py init
 
-# Verificar configuración
+# Verificar configuración actual
 python config.py
+
+# Probar generación de IDs (modo desarrollo)
+python id_generator.py
+
+# Probar procesamiento de Excel (modo desarrollo)
+python excel_processor.py
+
+# Probar consolidación (modo desarrollo)
+python master_consolidator.py
 ```
 
 ## 📊 Formato de datos
@@ -122,9 +250,30 @@ Columnas requeridas:
 - `Fecha creación`: Fecha de creación
 
 ### PreguntaID generado
-Formato: `{EJE}-{AREA}-{SUBTEMA}-{HABILIDAD}-{DIFICULTAD}-{CLAVE}-{RANDOM}`
 
-Ejemplo: `FIS-OND-LONG-ANA-MED-C-A1B2`
+Formato: `{EJE}-{AREA}-{SUBTEMA}-{HABILIDAD}-{DIFICULTAD}-{CLAVE}-{RANDOM8}`
+
+**Componentes:**
+- **EJE**: Abreviación de 3 letras del Eje temático (ej: `NUM` para Números)
+- **AREA**: Abreviación de 3 letras del Área temática (ej: `CON` para Conjuntos)
+- **SUBTEMA**: Abreviación de 3 letras del Conocimiento/Subtema (ej: `OPE` para Operaciones)
+- **HABILIDAD**: Abreviación de 3 letras de la Habilidad (ej: `RES` para Resolver problemas)
+- **DIFICULTAD**: Abreviación de 3 letras de la Dificultad (ej: `1`, `2`, `3`)
+- **CLAVE**: Letra de respuesta correcta (A, B, C, o D)
+- **RANDOM8**: Sufijo aleatorio de 8 caracteres con patrón `LLNNLLNN` (ej: `LX63VU56`)
+  - L = Letra mayúscula (A-Z)
+  - N = Número (0-9)
+
+**Ejemplos reales:**
+- `NUM-CON-OPE-RES-1-D-LX63VU56` (Matemática - Números, Conjuntos, Operaciones, Resolver problemas, Dificultad 1, Clave D)
+- `NUM-CON-OPE-RES-1-C-ET72PM50` (Matemática - Números, Conjuntos, Operaciones, Resolver problemas, Dificultad 1, Clave C)
+- `FIS-OND-LONG-ANA-2-C-A1B2C3D4` (Física - Ondas, Longitud de onda, Análisis, Dificultad 2, Clave C)
+
+**Ventajas del formato:**
+- ✅ Único e irrepetible (sufijo aleatorio de 8 caracteres)
+- ✅ Descriptivo (contiene información de la pregunta)
+- ✅ Validable (patrón específico LLNNLLNN en el sufijo)
+- ✅ Compatible con nombres de archivo en todos los sistemas operativos
 
 ## 🔧 Configuración
 
@@ -149,77 +298,321 @@ El sistema incluye tracking automático de uso de preguntas:
 - **Fechas de descarga**: Timestamp de cada uso
 - **Filtros de uso**: Opción de filtrar por preguntas libres/usadas
 
-## 📱 Aplicación web
+## 📱 Aplicación web Streamlit
 
-La aplicación Streamlit incluye las siguientes funcionalidades:
+La aplicación web completa incluye las siguientes funcionalidades:
 
 ### 1. **Carga de datos**
-- Selección de asignatura (M30M, L30M, H30M, B30M, Q30M, F30M, Ciencias)
+- Selección de asignatura: M30M, L30M, H30M, B30M, Q30M, F30M, o Ciencias
 - Carga automática del archivo maestro consolidado
+- Para "Ciencias": combina automáticamente F30M + Q30M + B30M
 - Validación de datos y estructura
+- Métricas en tiempo real: total preguntas, áreas, dificultades, habilidades
 
-### 2. **Filtros avanzados**
+### 2. **Filtros avanzados y dinámicos**
+- **Asignatura** (solo para Ciencias): Filtrar por F30M, Q30M, B30M o todas
 - **Área temática**: Filtrado por áreas específicas de la asignatura
+- **Subtema**: Filtrado dinámico que se actualiza según área y asignatura seleccionadas
+- **Habilidad**: Tipos de habilidades cognitivas evaluadas
 - **Dificultad**: Niveles 1, 2, 3 (Baja, Media, Alta)
-- **Habilidad**: Tipos de habilidades cognitivas
-- **Subtema**: Filtrado por conocimiento específico
-- **Estado de uso**: Preguntas libres vs. usadas (con contador)
-- **Orden personalizable**: Ordenar por diferentes criterios
+- **Contador de resultados**: Muestra cuántas preguntas cumplen los filtros
 
 ### 3. **Vista previa y selección**
-- **Vista previa de contenido**: Visualización completa de preguntas con formato HTML
-- **Soporte para ecuaciones**: Renderizado de fórmulas matemáticas
-- **Selección múltiple**: Checkbox para elegir preguntas específicas
-- **Contador dinámico**: Número de preguntas seleccionadas en tiempo real
+- **Vista previa completa**: Conversión Word→PNG usando LibreOffice
+- **Preview inline**: Se muestra debajo de cada pregunta seleccionada
+- **Botón de cerrar**: Cierra la vista previa sin recargar la página
+- **Selección múltiple**: Sistema de checkboxes para elegir preguntas
+- **Información detallada**: Muestra PreguntaID, área, dificultad, habilidad y subtema
+- **Identificación de origen**: En Ciencias, muestra la asignatura origen [F30M], [Q30M] o [B30M]
 
-### 4. **Gestión de nombres**
-- **Base de datos de nombres**: Lista desplegable con nombres permitidos por asignatura
-- **Validación automática**: Solo permite nombres predefinidos
-- **Gestión centralizada**: Archivo Excel con nombres autorizados
+### 4. **Reordenamiento de preguntas**
+- **Sistema visual**: Selecciona pregunta y elige posición target
+- **Preview de posiciones**: Muestra "antes de {pregunta}" para cada posición
+- **Botones de ordenamiento**:
+  - 📚 Ordenar por asignatura (solo Ciencias): Agrupa por F30M, Q30M, B30M
+  - 📊 Ordenar por área: Agrupa por área temática
+- **Lista ordenada**: Muestra preguntas en el orden actual con numeración
+- **Botón de mover**: Aplica el reordenamiento con un clic
 
-### 5. **Generación de guías**
-- **Exportación a Word**: Generación de documentos .docx
-- **Numeración automática**: Preguntas numeradas secuencialmente
-- **Formato preservado**: Mantiene el formato original de las preguntas
-- **Seguimiento automático**: Actualiza el contador de uso de preguntas
+### 5. **Resumen de selección**
+- **Métricas**: Total seleccionadas, áreas, dificultades, habilidades
+- **Lista completa**: Todas las preguntas seleccionadas con su información
+- **Botones por pregunta**:
+  - 👁️ Ver preview de la pregunta
+  - ❌ Deseleccionar individualmente
+- **Gráficos interactivos** (Plotly):
+  - Distribución por asignatura (solo Ciencias)
+  - Distribución por área temática
+  - Distribución por habilidad
+  - Distribución por dificultad
+  - Distribución por subtema (top 10 + otros)
 
-### 6. **Características adicionales**
-- **Interfaz responsiva**: Diseño adaptativo para diferentes pantallas
-- **Preservación de scroll**: Mantiene posición al recargar
-- **Estadísticas visuales**: Gráficos de distribución de preguntas
-- **Manejo de errores**: Mensajes informativos y recuperación automática
+### 6. **Generación de guías Word**
+- **Exportación a Word**: Fusión perfecta de documentos individuales
+- **Numeración automática**: Preguntas numeradas secuencialmente (1., 2., 3., etc.)
+- **Preservación total**: Mantiene imágenes, tablas, ecuaciones y todo el formato
+- **Timestamp en nombre**: Archivo generado con fecha y hora
+- **Descarga inmediata**: Botón de descarga después de generar
+- **Resumen final**: Muestra número de preguntas y asignatura
+
+### 7. **Características técnicas**
+- **Interfaz responsiva**: Diseño adaptativo con layout wide
+- **Preservación de scroll**: JavaScript que mantiene posición al recargar
+- **Session state**: Mantiene selecciones y estado entre reruns
+- **Caching**: Conversiones PNG cacheadas por 2 horas (TTL=7200s)
+- **Manejo de errores**: Mensajes informativos con íconos y colores
+- **Performance optimizada**: Timeout de 30s para conversiones LibreOffice
+- **Limpieza automática**: Archivos temporales se eliminan después del uso
+
+### 8. **Controles de gestión**
+- **Botón "Limpiar Selección"**: Reinicia todas las selecciones
+- **Recarga de datos**: Cambia de asignatura y recarga desde cero
+- **Info contextual**: Tooltips en todos los botones importantes
+- **Feedback visual**: Success/error/warning messages con íconos
 
 ## 🛠️ Desarrollo
 
 ### Estructura de módulos
 
-- **`storage.py`**: Abstracción para operaciones de archivo (local/GCS)
-- **`config.py`**: Configuración centralizada del sistema
-- **`id_generator.py`**: Generación de IDs únicos con abreviaciones
-- **`question_processor.py`**: División de documentos Word en preguntas individuales
-- **`excel_processor.py`**: Operaciones con archivos Excel y actualización de metadatos
-- **`master_consolidator.py`**: Consolidación de archivos maestros por asignatura
-- **`usage_tracker.py`**: Seguimiento de uso de preguntas en guías generadas
-- **`main.py`**: Interfaz de línea de comandos
-- **`streamlit_app/app.py`**: Aplicación web con interfaz de usuario
+#### Core del sistema
+
+- **`main.py`** (288 líneas)
+  - Punto de entrada CLI con argparse
+  - Comandos: `process-set`, `consolidate`, `init`
+  - Validaciones críticas: coincidencia Word-Excel, valores inválidos
+  - Pipeline completo: Excel → Word → Validación → Archivos individuales → Excel actualizado
+
+- **`config.py`** (120 líneas)
+  - Configuración centralizada del sistema
+  - Mapeo de asignaturas: M30M, L30M, H30M, B30M, Q30M, F30M, Ciencias
+  - Configuración de columnas Excel y tracking de uso
+  - Función `get_usage_column_names()` para generar nombres de columnas dinámicas
+  - Función `ensure_directories()` para crear estructura de carpetas
+
+#### Procesamiento de documentos
+
+- **`question_processor.py`** (518 líneas)
+  - División de documentos Word por páginas usando ZIP structure
+  - Métodos de detección de límites: numeración o page breaks
+  - Preservación total de formato, imágenes y tablas
+  - Limpieza de elementos problemáticos (page breaks, section properties)
+  - Configuración A4: márgenes 2.54 cm, tamaño estándar
+
+- **`id_generator.py`** (232 líneas)
+  - Generación de PreguntaID con formato estructurado
+  - Abreviaciones de 3 caracteres con `unidecode` para quitar acentos
+  - Sufijo aleatorio de 8 caracteres con patrón LLNNLLNN
+  - Funciones de validación y parsing de IDs
+  - Sistema de limpieza de texto robusto
+
+#### Gestión de Excel
+
+- **`excel_processor.py`** (271 líneas)
+  - Lectura y escritura de archivos Excel con `openpyxl`
+  - Generación masiva de PreguntaIDs para DataFrames
+  - Validación de estructura: columnas requeridas, valores válidos
+  - Actualización de rutas relativas a archivos de preguntas
+  - Auto-ajuste de ancho de columnas (10-50 caracteres)
+
+- **`master_consolidator.py`** (519 líneas)
+  - Consolidación de múltiples archivos Excel en maestros
+  - Modo completo: procesa todos los archivos
+  - Modo incremental: solo archivos nuevos (optimizado)
+  - Eliminación automática de duplicados por PreguntaID
+  - Validación de datos consolidados y generación de estadísticas
+  - Método `consolidate_all_subjects()` para procesamiento batch
+
+#### Tracking y uso
+
+- **`usage_tracker.py`** (609 líneas)
+  - Sistema de tracking completo con columnas dinámicas
+  - Actualización automática de uso en archivos maestros
+  - Soporte para "Ciencias": actualiza F30M, Q30M y B30M simultáneamente
+  - Obtención de estadísticas: distribución de uso, preguntas no usadas
+  - Gestión de guías: lista, detalles y eliminación selectiva
+  - Método `delete_specific_guide_usage()` para eliminar guías precisas
+  - Método `_remove_specific_usage_from_question()` con reordenamiento de columnas
+
+#### Almacenamiento
+
+- **`storage.py`** (141 líneas)
+  - Abstracción completa para almacenamiento local o GCS
+  - API unificada: `read_csv()`, `write_csv()`, `read_json()`, `write_json()`, `read_bytes()`, `write_bytes()`
+  - Detección automática de backend por variable de entorno
+  - Métodos para listar archivos, crear directorios y eliminar
+  - Normalización de rutas (forward slashes para GCS)
+
+#### Aplicación web
+
+- **`streamlit_app/app.py`** (1700 líneas)
+  - Aplicación Streamlit completa con interfaz moderna
+  - Carga y combinación de datos (incluyendo Ciencias)
+  - Filtros dinámicos: subtema se actualiza según área seleccionada
+  - Vista previa: conversión Word→PNG usando LibreOffice con cache (2 horas TTL)
+  - Sistema de selección con checkboxes y orden personalizable
+  - Reordenamiento visual: selector de pregunta + posición target
+  - Generación de guías: fusión de documentos Word con ZIP structure
+  - Gráficos interactivos: pie charts con Plotly
+  - Preservación de scroll: JavaScript para mantener posición
+
+- **`streamlit_app/launch_app.py`** (82 líneas)
+  - Launcher con menú de terminal para selección de asignatura
+  - Pasa la asignatura como variable de entorno
+  - Ejecuta Streamlit con configuración específica
+
+### Tecnologías y patrones
+
+**Procesamiento de Word:**
+- ZIP structure manipulation para máxima preservación
+- XML parsing con `xml.etree.ElementTree`
+- Gestión de relaciones (relationships) para imágenes
+- Mapeo de IDs para evitar conflictos
+
+**Procesamiento de Excel:**
+- Pandas DataFrames para manipulación de datos
+- OpenPyXL para formato y escritura
+- Validación por etapas: estructura → valores → relaciones
+
+**Aplicación web:**
+- Streamlit con session state para persistencia
+- Caching estratégico (@st.cache_data, @st.cache_resource)
+- JavaScript inyectado para funcionalidades avanzadas
+- Conversión de documentos con subprocess + LibreOffice
+
+**Almacenamiento:**
+- Patrón Strategy para backends intercambiables
+- Path normalization para compatibilidad multiplataforma
+- Gestión de errores granular
+
+### Flujo de datos completo
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. ENTRADA (input/)                                        │
+│     - archivo.docx (Word con ~25 preguntas, 1 por página)  │
+│     - archivo.xlsx (Excel con metadatos)                    │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. PROCESAMIENTO (main.py process-set)                     │
+│     a) Leer Excel y validar estructura                      │
+│     b) Generar PreguntaIDs únicos                           │
+│     c) Dividir Word en archivos individuales                │
+│     d) Validar coincidencia Word-Excel                      │
+│     e) Actualizar Excel con rutas                           │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. SALIDA PROCESADA                                        │
+│     - output/preguntas_divididas/{subject}/{PreguntaID}.docx│
+│     - output/excels_actualizados/{subject}/archivo_actualizado.xlsx│
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  4. CONSOLIDACIÓN (main.py consolidate)                     │
+│     a) Leer todos los excels_actualizados de la asignatura │
+│     b) Combinar en un DataFrame                             │
+│     c) Eliminar duplicados por PreguntaID                   │
+│     d) Agregar columna "Archivo origen"                     │
+│     e) Guardar en archivo maestro                           │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  5. ARCHIVO MAESTRO                                         │
+│     - output/excels_maestros/excel_maestro_{subject}.xlsx   │
+│     - Contiene todas las preguntas consolidadas             │
+│     - Incluye columnas de tracking de uso                   │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  6. APLICACIÓN WEB (streamlit_app/app.py)                   │
+│     a) Cargar archivo maestro                               │
+│     b) Filtrar preguntas (área, subtema, habilidad, etc.)   │
+│     c) Vista previa de preguntas (Word→PNG)                 │
+│     d) Seleccionar y reordenar preguntas                    │
+│     e) Generar guía Word (fusión de documentos)             │
+│     f) Actualizar tracking de uso                           │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│  7. GUÍA GENERADA                                           │
+│     - guia_{subject}_{timestamp}.docx                       │
+│     - Preguntas numeradas secuencialmente                   │
+│     - Formato completo preservado                           │
+│     - Tracking actualizado en archivo maestro               │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### Agregar nuevas funcionalidades
 
-1. **Nuevos filtros**: Modificar `streamlit_app/app.py` en la sección de filtros
-2. **Nuevos formatos**: Extender `question_processor.py` para soportar otros formatos
-3. **Nuevas columnas**: Actualizar `config.py` y los procesadores correspondientes
-4. **Nuevos backends**: Extender `storage.py` para otros sistemas de almacenamiento
-5. **Nuevas asignaturas**: Agregar códigos en `config.py` y crear directorios
-6. **Nuevos tipos de seguimiento**: Extender `usage_tracker.py` con más métricas
+**1. Nuevos filtros en la aplicación web:**
+```python
+# En streamlit_app/app.py, sección de filtros
+nuevo_filtro = st.selectbox("Nuevo Filtro", opciones)
+filters['nuevo_campo'] = nuevo_filtro
 
-### Flujo de datos
+# En función filter_questions()
+if filters.get('nuevo_campo'):
+    filtered_df = filtered_df[filtered_df['Nuevo Campo'] == filters['nuevo_campo']]
+```
 
-1. **Entrada**: Archivos Word + Excel en `input/`
-2. **Procesamiento**: División de preguntas y generación de IDs
-3. **Actualización**: Excel actualizado con rutas y metadatos
-4. **Consolidación**: Archivos maestros por asignatura
-5. **Uso**: Aplicación web para generar guías personalizadas
-6. **Tracking**: Seguimiento automático de uso de preguntas
+**2. Nueva columna en Excel:**
+```python
+# En config.py
+EXCEL_COLUMNS = {
+    # ... existentes ...
+    "nuevo_campo": "Nuevo Campo"
+}
+
+# En excel_processor.py, método generate_pregunta_ids()
+# Agregar el nuevo campo al generate_pregunta_id() si es parte del ID
+
+# En question_processor.py, método process_word_document()
+# Usar el nuevo campo si es necesario
+```
+
+**3. Nueva asignatura:**
+```python
+# En config.py
+SUBJECT_FOLDERS = {
+    # ... existentes ...
+    "G30M": "G30M"  # Nueva asignatura
+}
+
+# Ejecutar
+python main.py init  # Crea los directorios automáticamente
+```
+
+**4. Nuevo backend de almacenamiento:**
+```python
+# En storage.py, extender StorageClient
+def __init__(self):
+    self.backend = os.getenv('STORAGE_BACKEND', 'local')
+    
+    if self.backend == 's3':  # Nuevo backend
+        import boto3
+        self.s3_client = boto3.client('s3')
+        self.bucket = os.getenv('S3_BUCKET_NAME')
+    
+# Implementar métodos read_*, write_*, etc. para el nuevo backend
+```
+
+### Mejores prácticas
+
+✅ **Usar config.py para valores configurables**: No hardcodear valores numéricos o strings
+✅ **Validar entrada temprano**: Detectar errores antes de procesamiento costoso
+✅ **Logs descriptivos**: print() con prefijos [ERROR], [WARNING], [INFO]
+✅ **Manejo de errores granular**: try-except específicos, no globales
+✅ **Funciones puras cuando sea posible**: Facilita testing y debugging
+✅ **Docstrings completos**: Args, Returns, Raises en todas las funciones públicas
+✅ **Session state en Streamlit**: Mantener estado entre reruns
+✅ **Caching estratégico**: @st.cache_data para conversiones costosas
 
 ## 🧪 Pruebas
 
@@ -237,32 +630,84 @@ python excel_processor.py
 python master_consolidator.py
 ```
 
-## 📝 Notas
+## 📝 Notas importantes
 
-- El sistema mantiene el formato original de las preguntas
-- Los archivos se organizan por asignatura en subdirectorios
-- Se eliminan duplicados automáticamente durante la consolidación
-- La aplicación web requiere archivos maestros consolidados
-- El seguimiento de uso se actualiza automáticamente al generar guías
-- Los nombres de guías deben estar predefinidos en la base de datos
+### ✅ Características técnicas
+- **Preservación de formato**: El sistema usa manipulación ZIP para mantener 100% del formato original
+- **Organización automática**: Los archivos se organizan por asignatura en subdirectorios
+- **Eliminación de duplicados**: Durante la consolidación se eliminan automáticamente por PreguntaID
+- **Archivos maestros requeridos**: La aplicación web requiere archivos maestros consolidados previamente
+- **Tracking automático**: El seguimiento de uso se actualiza automáticamente al generar guías
+- **Validación estricta**: Detiene el procesamiento si detecta errores críticos (valores inválidos, desajuste Word-Excel)
 
-## 🆕 Funcionalidades implementadas recientemente
+### 🎯 Limitaciones conocidas
+- **LibreOffice requerido**: La vista previa en la app web necesita LibreOffice instalado
+- **Formato Word**: Solo soporta .docx (no .doc antiguo)
+- **1 pregunta por página**: El Word de entrada debe tener exactamente 1 pregunta por página
+- **Nombres de archivo**: Los PreguntaIDs generados deben ser compatibles con el sistema de archivos
+- **Timeout de conversión**: La conversión Word→PNG tiene timeout de 30 segundos
 
-### ✅ Completadas
-- **Lista desplegable en subtema**: Filtrado mejorado por subtemas específicos
-- **Vista de 3 ciencias simultáneas**: Soporte para asignatura "Ciencias" combinada
-- **Orden de preguntas**: Funcionalidad para ordenar preguntas por diferentes criterios
-- **Renderizado de ecuaciones**: Soporte para visualizar fórmulas matemáticas en HTML
-- **Numeración automática**: Preguntas numeradas automáticamente en documentos Word
-- **Ordenamiento directo**: Opción de ordenar preguntas directamente en la interfaz
-- **Base de datos de nombres**: Sistema de gestión de nombres de guías permitidos
-- **Lista desplegable de nombres**: Selección de nombres desde base de datos centralizada
-- **Seguimiento de uso**: Sistema completo de tracking de preguntas usadas
-- **Filtros de uso**: Opción de filtrar por preguntas libres o usadas
+### 🔐 Seguridad y privacidad
+- **Almacenamiento local por defecto**: Los datos se guardan localmente a menos que configures GCS
+- **Sin telemetría**: El sistema no envía datos a servicios externos
+- **Archivos temporales**: Se limpian automáticamente después del procesamiento
 
-### 🔄 En desarrollo
-- **Manejo de errores**: Sistema para eliminar guías con errores y limpiar base de datos
-- **Estandarización de CL**: Revisión y estandarización de texto asociado en base de datos
+## 🆕 Estado actual del proyecto
+
+### ✅ Funcionalidades completadas
+
+#### Core del sistema
+- ✅ **Procesamiento completo de documentos Word**: División por páginas con preservación total
+- ✅ **Generación de IDs únicos**: Sistema robusto con patrón LLNNLLNN
+- ✅ **Validación de datos**: Validación de Excel en 3 niveles (estructura, vacíos, inválidos)
+- ✅ **Consolidación de archivos**: Modos completo e incremental
+- ✅ **Almacenamiento flexible**: Soporte para local y Google Cloud Storage
+
+#### Aplicación web
+- ✅ **Interfaz completa**: Diseño moderno con Streamlit
+- ✅ **Filtros dinámicos**: Subtema se actualiza según área seleccionada
+- ✅ **Vista previa avanzada**: Conversión Word→PNG con LibreOffice
+- ✅ **Reordenamiento visual**: Sistema drag-and-drop con preview de posiciones
+- ✅ **Gráficos interactivos**: Pie charts con Plotly para todas las dimensiones
+- ✅ **Generación de guías**: Fusión perfecta de documentos Word
+- ✅ **Numeración automática**: Preguntas numeradas secuencialmente
+- ✅ **Preservación de scroll**: JavaScript para mantener posición en la página
+
+#### Ciencias combinadas
+- ✅ **Soporte para Ciencias**: Combina F30M + Q30M + B30M en una sola vista
+- ✅ **Filtrado por asignatura**: Dentro de Ciencias, filtrar por F30M, Q30M o B30M
+- ✅ **Ordenamiento por asignatura**: Opción de ordenar por asignatura origen
+- ✅ **Tracking cruzado**: Actualiza los 3 archivos maestros simultáneamente
+
+#### Tracking de uso
+- ✅ **Columnas dinámicas**: Sistema que crea columnas automáticamente para cada uso
+- ✅ **Estadísticas completas**: Distribución de uso, preguntas sin usar, porcentajes
+- ✅ **Gestión de guías**: Listar todas las guías con detalles y fechas
+- ✅ **Eliminación selectiva**: Eliminar guías específicas con actualización de contadores
+- ✅ **Soporte para Ciencias**: Manejo especial para las 3 asignaturas combinadas
+
+### 🔄 Mejoras futuras potenciales
+
+#### Funcionalidades propuestas
+- 🔄 **Exportación a PDF**: Generar guías en formato PDF además de Word
+- 🔄 **Filtro por estado de uso**: Ver solo preguntas libres o usadas
+- 🔄 **Búsqueda por texto**: Buscar preguntas por contenido
+- 🔄 **Plantillas personalizadas**: Soportar diferentes formatos de guías
+- 🔄 **Estadísticas avanzadas**: Dashboard con análisis de uso por tiempo
+- 🔄 **Historial de cambios**: Tracking de modificaciones en preguntas
+- 🔄 **Importación masiva**: Procesar múltiples conjuntos a la vez
+- 🔄 **Validación de contenido**: Verificar coherencia entre pregunta y metadatos
+- 🔄 **Exportación de estadísticas**: Generar reportes en Excel/PDF
+- 🔄 **API REST**: Exponer funcionalidades vía API para integración
+
+#### Optimizaciones técnicas
+- 🔄 **Cache de preview**: Guardar conversiones PNG para evitar reconversiones
+- 🔄 **Procesamiento paralelo**: Usar multiprocessing para procesar múltiples archivos
+- 🔄 **Base de datos**: Migrar de Excel a SQLite/PostgreSQL para mejor rendimiento
+- 🔄 **Tests automatizados**: Suite completa de tests unitarios e integración
+- 🔄 **CI/CD**: Pipeline automático de testing y deployment
+- 🔄 **Docker**: Containerización para deployment simplificado
+- 🔄 **Logs estructurados**: Sistema de logging más robusto con niveles y rotación
 
 ## 🤝 Contribución
 
