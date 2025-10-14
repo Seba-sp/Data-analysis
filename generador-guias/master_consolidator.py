@@ -43,6 +43,62 @@ class MasterConsolidator:
             print(f"Error getting Excel files for {subject}: {e}")
             return []
     
+    def get_already_processed_files(self, subject: str) -> List[str]:
+        """
+        Get list of files that are already included in the master Excel.
+        
+        Args:
+            subject: Subject area
+            
+        Returns:
+            List of already processed file names
+        """
+        try:
+            # Check if master Excel exists
+            filename = f"excel_maestro_{subject.lower()}.xlsx"
+            master_path = EXCELES_MAESTROS_DIR / filename
+            
+            if not self.storage.exists(str(master_path)):
+                return []
+            
+            # Read master Excel and get unique source files
+            df = pd.read_excel(master_path)
+            if 'Archivo origen' in df.columns:
+                return df['Archivo origen'].unique().tolist()
+            else:
+                return []
+                
+        except Exception as e:
+            print(f"Error getting processed files for {subject}: {e}")
+            return []
+    
+    def get_new_excel_files(self, subject: str) -> List[str]:
+        """
+        Get list of new Excel files that haven't been processed yet.
+        
+        Args:
+            subject: Subject area
+            
+        Returns:
+            List of new file paths
+        """
+        try:
+            all_files = self.get_updated_excel_files(subject)
+            processed_files = self.get_already_processed_files(subject)
+            
+            # Filter out already processed files
+            new_files = []
+            for file_path in all_files:
+                file_name = Path(file_path).name
+                if file_name not in processed_files:
+                    new_files.append(file_path)
+            
+            return new_files
+            
+        except Exception as e:
+            print(f"Error getting new Excel files for {subject}: {e}")
+            return []
+    
     def read_excel_file(self, file_path: str) -> pd.DataFrame:
         """
         Read an Excel file and return as DataFrame.
@@ -116,6 +172,61 @@ class MasterConsolidator:
             print(f"Error consolidating Excel files for {subject}: {e}")
             return pd.DataFrame()
     
+    def consolidate_new_excels_only(self, subject: str) -> pd.DataFrame:
+        """
+        Consolidate only new Excel files that haven't been processed yet.
+        
+        Args:
+            subject: Subject area
+            
+        Returns:
+            DataFrame with only new data
+        """
+        try:
+            # Get only new Excel files
+            new_excel_files = self.get_new_excel_files(subject)
+            
+            if not new_excel_files:
+                print(f"No new Excel files found for subject: {subject}")
+                return pd.DataFrame()
+            
+            print(f"Found {len(new_excel_files)} new files to process for {subject}")
+            
+            # Read and combine only new Excel files
+            dataframes = []
+            
+            for file_path in new_excel_files:
+                print(f"Reading new file: {file_path}...")
+                df = self.read_excel_file(file_path)
+                
+                if not df.empty:
+                    # Add source file information
+                    df['Archivo origen'] = Path(file_path).name
+                    dataframes.append(df)
+                else:
+                    print(f"Warning: Empty or invalid file {file_path}")
+            
+            if not dataframes:
+                print(f"No valid new data found for subject: {subject}")
+                return pd.DataFrame()
+            
+            # Concatenate new DataFrames
+            new_data_df = pd.concat(dataframes, ignore_index=True, sort=False)
+            
+            # Remove duplicates based on PreguntaID
+            initial_count = len(new_data_df)
+            new_data_df = new_data_df.drop_duplicates(subset=['PreguntaID'], keep='first')
+            final_count = len(new_data_df)
+            
+            if initial_count != final_count:
+                print(f"Removed {initial_count - final_count} duplicate questions from new data")
+            
+            return new_data_df
+            
+        except Exception as e:
+            print(f"Error consolidating new Excel files for {subject}: {e}")
+            return pd.DataFrame()
+    
     def save_master_excel(self, df: pd.DataFrame, subject: str) -> str:
         """
         Save consolidated DataFrame as master Excel file.
@@ -145,6 +256,70 @@ class MasterConsolidator:
             print(f"Error saving master Excel for {subject}: {e}")
             return ""
     
+    def append_to_master_excel(self, new_df: pd.DataFrame, subject: str) -> str:
+        """
+        Append new data to existing master Excel file, preserving existing columns.
+        
+        Args:
+            new_df: New data to append
+            subject: Subject area
+            
+        Returns:
+            Path to the updated master file
+        """
+        try:
+            # Ensure output directory exists
+            self.storage.ensure_directory(str(EXCELES_MAESTROS_DIR))
+            
+            # Create filename
+            filename = f"excel_maestro_{subject.lower()}.xlsx"
+            output_path = EXCELES_MAESTROS_DIR / filename
+            
+            # Check if master file exists
+            if self.storage.exists(str(output_path)):
+                # Read existing master file
+                existing_df = pd.read_excel(output_path)
+                
+                # Ensure new data has same columns as existing data
+                # Add missing columns to new data with default values
+                for col in existing_df.columns:
+                    if col not in new_df.columns:
+                        new_df[col] = None  # or appropriate default value
+                
+                # Add missing columns to existing data
+                for col in new_df.columns:
+                    if col not in existing_df.columns:
+                        existing_df[col] = None
+                
+                # Combine dataframes
+                combined_df = pd.concat([existing_df, new_df], ignore_index=True, sort=False)
+                
+                # Remove duplicates based on PreguntaID (keep first occurrence)
+                initial_count = len(combined_df)
+                combined_df = combined_df.drop_duplicates(subset=['PreguntaID'], keep='first')
+                final_count = len(combined_df)
+                
+                if initial_count != final_count:
+                    print(f"Removed {initial_count - final_count} duplicate questions when appending")
+                
+                # Sort by PreguntaID for consistency
+                combined_df = combined_df.sort_values('PreguntaID').reset_index(drop=True)
+                
+                # Save updated master file
+                combined_df.to_excel(output_path, index=False)
+                print(f"Appended {len(new_df)} new questions to master Excel: {output_path}")
+                
+            else:
+                # No existing master file, save new data as master
+                new_df.to_excel(output_path, index=False)
+                print(f"Created new master Excel with {len(new_df)} questions: {output_path}")
+            
+            return str(output_path)
+            
+        except Exception as e:
+            print(f"Error appending to master Excel for {subject}: {e}")
+            return ""
+    
     def consolidate_and_save(self, subject: str) -> Tuple[pd.DataFrame, str]:
         """
         Complete consolidation pipeline for a subject.
@@ -165,6 +340,28 @@ class MasterConsolidator:
         output_path = self.save_master_excel(consolidated_df, subject)
         
         return consolidated_df, output_path
+    
+    def consolidate_and_append_new(self, subject: str) -> Tuple[pd.DataFrame, str]:
+        """
+        Incremental consolidation pipeline - only processes new files and appends to existing master.
+        
+        Args:
+            subject: Subject area
+            
+        Returns:
+            Tuple of (new data DataFrame, output file path)
+        """
+        # Get only new Excel files and consolidate them
+        new_data_df = self.consolidate_new_excels_only(subject)
+        
+        if new_data_df.empty:
+            print(f"No new data to process for {subject}")
+            return new_data_df, ""
+        
+        # Append new data to existing master Excel
+        output_path = self.append_to_master_excel(new_data_df, subject)
+        
+        return new_data_df, output_path
     
     def get_consolidation_summary(self, df: pd.DataFrame, subject: str) -> Dict[str, any]:
         """
@@ -256,6 +453,32 @@ class MasterConsolidator:
                 print(f"No data found for {subject}")
         
         return results
+    
+    def consolidate_all_subjects_incremental(self) -> Dict[str, Tuple[pd.DataFrame, str]]:
+        """
+        Incremental consolidation for all subjects - only processes new files.
+        
+        Returns:
+            Dictionary mapping subject names to (new_data_DataFrame, output_path) tuples
+        """
+        results = {}
+        
+        for subject in SUBJECT_FOLDERS.keys():
+            print(f"\nIncremental consolidation for {subject}...")
+            new_df, output_path = self.consolidate_and_append_new(subject)
+            
+            if not new_df.empty:
+                results[subject] = (new_df, output_path)
+                
+                # Print summary for new data
+                summary = self.get_consolidation_summary(new_df, subject)
+                print(f"New data summary for {subject}:")
+                print(f"  New questions added: {summary['total_questions']}")
+                print(f"  New source files: {len(summary.get('source_files', {}))}")
+            else:
+                print(f"No new data found for {subject}")
+        
+        return results
 
 # Test the consolidator
 if __name__ == "__main__":
@@ -264,20 +487,32 @@ if __name__ == "__main__":
     storage = StorageClient()
     consolidator = MasterConsolidator(storage)
     
-    # Test consolidation for a specific subject
+    # Test incremental consolidation for a specific subject
     test_subject = "Física"
+    
+    print("Testing incremental consolidation...")
+    new_df, output_path = consolidator.consolidate_and_append_new(test_subject)
+    
+    if not new_df.empty:
+        print(f"Added {len(new_df)} new questions for {test_subject}")
+        print(f"Output saved to: {output_path}")
+        
+        # Get summary for new data
+        summary = consolidator.get_consolidation_summary(new_df, test_subject)
+        print(f"New data summary: {summary}")
+        
+        # Validate new data
+        issues = consolidator.validate_consolidated_data(new_df)
+        print(f"Validation issues: {issues}")
+    else:
+        print(f"No new data to consolidate for {test_subject}")
+    
+    # Test full consolidation (original method)
+    print("\nTesting full consolidation...")
     df, output_path = consolidator.consolidate_and_save(test_subject)
     
     if not df.empty:
-        print(f"Consolidated {len(df)} questions for {test_subject}")
+        print(f"Consolidated {len(df)} total questions for {test_subject}")
         print(f"Output saved to: {output_path}")
-        
-        # Get summary
-        summary = consolidator.get_consolidation_summary(df, test_subject)
-        print(f"Summary: {summary}")
-        
-        # Validate data
-        issues = consolidator.validate_consolidated_data(df)
-        print(f"Validation issues: {issues}")
     else:
         print(f"No data to consolidate for {test_subject}")

@@ -16,7 +16,7 @@ import tempfile
 sys.path.append(str(Path(__file__).parent.parent))
 
 from storage import StorageClient
-from config import EXCELES_MAESTROS_DIR, SUBJECT_FOLDERS, STREAMLIT_CONFIG, CHART_COLORS, NOMBRES_GUIAS_PATH
+from config import EXCELES_MAESTROS_DIR, STREAMLIT_CONFIG, CHART_COLORS, NOMBRES_GUIAS_PATH
 from master_consolidator import MasterConsolidator
 from usage_tracker import UsageTracker
 
@@ -33,50 +33,40 @@ st.set_page_config(
 def get_storage_client():
     return StorageClient()
 
-def add_smooth_scrolling():
-    """Add simple smooth scrolling behavior for better UX."""
-    st.markdown("""
-    <style>
-    html {
-        scroll-behavior: smooth;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-def preserve_scroll_on_rerun():
-    """Add JavaScript to preserve scroll position only during reruns."""
+def preserve_scroll_with_events():
+    """Use proper event timing for scroll preservation."""
     st.markdown("""
     <script>
-    // Store scroll position before any rerun
+    // More reliable event-driven approach
+    let scrollPosition = 0;
+    let isRestoring = false;
+    
     function storeScrollPosition() {
-        sessionStorage.setItem('scrollPosition', window.pageYOffset);
+        if (!isRestoring) {
+            scrollPosition = window.pageYOffset;
+            localStorage.setItem('streamlit_scroll_pos', scrollPosition);
+        }
     }
     
-    // Restore scroll position after rerun
     function restoreScrollPosition() {
-        const scrollPosition = sessionStorage.getItem('scrollPosition');
-        if (scrollPosition && scrollPosition !== '0') {
-            setTimeout(function() {
-                window.scrollTo({
-                    top: parseInt(scrollPosition),
-                    behavior: 'instant'
-                });
-            }, 100);
+        isRestoring = true;
+        const savedPos = localStorage.getItem('streamlit_scroll_pos');
+        if (savedPos) {
+            window.scrollTo({
+                top: parseInt(savedPos),
+                behavior: 'instant'
+            });
         }
+        setTimeout(() => { isRestoring = false; }, 100);
     }
     
-    // Store position before any form interaction that might cause rerun
-    document.addEventListener('click', function(e) {
-        if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT' || e.target.type === 'button') {
-            storeScrollPosition();
-        }
-    });
-    
-    // Restore position after page load
-    window.addEventListener('load', restoreScrollPosition);
+    // Use more specific events
     document.addEventListener('DOMContentLoaded', restoreScrollPosition);
+    window.addEventListener('scroll', storeScrollPosition);
+    window.addEventListener('beforeunload', storeScrollPosition);
     </script>
     """, unsafe_allow_html=True)
+
 
 def load_allowed_guide_names() -> pd.DataFrame:
     """
@@ -447,9 +437,6 @@ def filter_questions(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     
     return filtered_df
 
-# Removed HTML conversion functions - using only LibreOffice direct conversion
-
-# Removed all HTML conversion functions - using only LibreOffice direct conversion
 
 def display_question_preview(pregunta_id: str, file_path: str):
     """
@@ -518,9 +505,6 @@ def convert_docx_to_images(docx_path: str) -> list:
         st.error(f"Error converting document to images: {e}")
         return []
 
-# Removed PIL conversion function - using only LibreOffice direct conversion
-
-# Removed all helper functions - using only LibreOffice direct conversion
 
 def convert_docx_to_images_via_libreoffice_direct(docx_path: str) -> list:
     """
@@ -596,50 +580,195 @@ def convert_docx_to_images_via_libreoffice_direct(docx_path: str) -> list:
         st.warning(f"LibreOffice direct conversion failed: {e}")
         return []
 
-# Removed PDF conversion function - using only LibreOffice direct conversion
-
-# Removed old LibreOffice function - using optimized version
-
-# Removed docx2pdf function as it uses Microsoft Word and causes performance issues
-
-def extract_text_from_docx(docx_path: str) -> str:
+def create_guide_package(word_buffer: BytesIO, excel_buffer: BytesIO, word_filename: str) -> BytesIO:
     """
-    Extract text content from Word document.
+    Create a ZIP package containing both the Word document and Excel file.
     
     Args:
-        docx_path: Path to the Word document
+        word_buffer: BytesIO buffer containing the Word document
+        excel_buffer: BytesIO buffer containing the Excel file
+        word_filename: Original filename for the Word document
         
     Returns:
-        Extracted text content
+        BytesIO object containing the ZIP file
     """
     try:
-        import xml.etree.ElementTree as ET
+        import zipfile
         
-        # Extract the document
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with zipfile.ZipFile(docx_path, 'r') as zip_ref:
-                zip_ref.extractall(temp_dir)
+        # Create ZIP buffer
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Add Word document
+            word_buffer.seek(0)
+            zip_file.writestr(word_filename, word_buffer.getvalue())
             
-            # Read document.xml
-            doc_xml_path = os.path.join(temp_dir, "word", "document.xml")
-            if not os.path.exists(doc_xml_path):
-                return ""
+            # Add Excel file
+            excel_filename = word_filename.replace('.docx', '_preguntas.xlsx')
+            excel_buffer.seek(0)
+            zip_file.writestr(excel_filename, excel_buffer.getvalue())
             
-            tree = ET.parse(doc_xml_path)
-            root = tree.getroot()
+            # Add a README file with instructions
+            readme_content = f"""GUÍA COMPLETA - {word_filename.replace('.docx', '')}
+===============================================
+
+Este archivo ZIP contiene:
+
+1. {word_filename}
+   - Guía completa con todas las preguntas
+   - Formato Word con imágenes y tablas preservadas
+   - Listo para imprimir o usar digitalmente
+
+2. {excel_filename}
+   - Hoja "Preguntas": IDs de preguntas y alternativas correctas
+   - Hoja "Resumen": Información general de la guía
+   - Útil para corrección rápida
+
+INSTRUCCIONES:
+- Extrae ambos archivos del ZIP
+- Usa el archivo Word para los estudiantes
+- Usa el archivo Excel para la corrección
+
+Generado el: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
+Asignatura: {st.session_state.get('subject', 'N/A')}
+"""
             
-            # Extract all text content
-            text_parts = []
-            
-            for elem in root.iter():
-                if elem.tag.endswith('t') and elem.text:
-                    text_parts.append(elem.text)
-            
-            return '\n'.join(text_parts)
+            zip_file.writestr("README.txt", readme_content)
+        
+        zip_buffer.seek(0)
+        return zip_buffer
         
     except Exception as e:
-        st.error(f"Error extracting text from document: {e}")
-        return ""
+        st.error(f"Error creating guide package: {e}")
+        return None
+
+def create_questions_excel(ordered_questions: list, questions_df: pd.DataFrame, guide_name: str) -> BytesIO:
+    """
+    Create an Excel file with question IDs, their position number, and their correct alternatives.
+    
+    Args:
+        ordered_questions: List of question IDs in the desired order
+        questions_df: DataFrame with all questions
+        guide_name: Name of the guide
+        
+    Returns:
+        BytesIO object containing the Excel file
+    """
+    try:
+        # Filter selected questions and preserve order
+        selected_df = questions_df[questions_df['PreguntaID'].isin(ordered_questions)]
+        
+        if selected_df.empty:
+            return None
+        
+        # Create a new DataFrame with the required columns: Número, PreguntaID, Clave
+        excel_data = []
+        
+        for idx, question_id in enumerate(ordered_questions, start=1):
+            # Find the row for this question
+            question_row = selected_df[selected_df['PreguntaID'] == question_id]
+            if not question_row.empty:
+                row = question_row.iloc[0]
+                
+                # Get the correct alternative
+                correct_alternative = row.get('Clave', 'N/A')
+                
+                excel_data.append({
+                    'PreguntaID': question_id,
+                    'Número': idx,
+                    'Clave': correct_alternative
+                })
+        
+        # Create DataFrame
+        excel_df = pd.DataFrame(excel_data, columns=['PreguntaID', 'Número', 'Clave'])
+        
+        # Create Excel buffer
+        excel_buffer = BytesIO()
+        
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            # Write the main data
+            excel_df.to_excel(writer, sheet_name='Preguntas', index=False)
+            
+            # Get the workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Preguntas']
+            
+            # Add some formatting
+            from openpyxl.styles import Font, PatternFill, Alignment
+            
+            # Header formatting
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_alignment = Alignment(horizontal="center", vertical="center")
+            
+            # Apply header formatting
+            for cell in worksheet[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+            
+            # Auto-adjust column widths
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+            
+            # Add a summary sheet
+            summary_data = {
+                'Información': [
+                    'Nombre de la Guía',
+                    'Total de Preguntas',
+                    'Fecha de Generación',
+                    'Asignatura'
+                ],
+                'Valor': [
+                    guide_name,
+                    len(excel_df),
+                    pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    st.session_state.get('subject', 'N/A')
+                ]
+            }
+            
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Resumen', index=False)
+            
+            # Format summary sheet
+            summary_worksheet = writer.sheets['Resumen']
+            for cell in summary_worksheet[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+            
+            # Auto-adjust summary column widths
+            for column in summary_worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                
+                adjusted_width = min(max_length + 2, 30)
+                summary_worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        excel_buffer.seek(0)
+        return excel_buffer
+        
+    except Exception as e:
+        st.error(f"Error creating questions Excel: {e}")
+        return None
 
 def create_word_document(ordered_questions: list, questions_df: pd.DataFrame, subject: str) -> BytesIO:
     """
@@ -921,6 +1050,7 @@ def add_question_number_to_first_text(paragraph, question_number: int):
         question_number: Current question number
     """
     try:
+        import xml.etree.ElementTree as ET
         # Find the first text element in the paragraph
         for elem in paragraph.iter():
             if elem.tag.endswith('t') and elem.text:
@@ -1329,12 +1459,36 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
     except Exception as e:
         st.error(f"Error creating summary charts: {e}")
 
+def load_subject_data(selected_subject):
+    """Load data for the selected subject."""
+    with st.spinner(f"Cargando preguntas de {selected_subject}..."):
+        df = load_master_excel(selected_subject)
+        
+        if not df.empty:
+            st.session_state['questions_df'] = df
+            st.session_state['subject'] = selected_subject
+            
+            # Clear all selections when loading
+            st.session_state['selected_questions'] = set()
+            st.session_state['selected_questions_ordered'] = []
+            st.session_state['question_positions'] = {}
+            st.session_state['preview_question'] = None
+            st.session_state['preview_file_path'] = None
+            # Clear guide name selection
+            if 'guide_name_select' in st.session_state:
+                del st.session_state['guide_name_select']
+            
+            st.success(f"✅ Cargadas {len(df)} preguntas de {selected_subject}")
+            return True
+        else:
+            st.error(f"No se pudieron cargar preguntas para {selected_subject}")
+            return False
+
 def main():
     """Main Streamlit application."""
     
-    # Add smooth scrolling and scroll preservation for better UX
-    add_smooth_scrolling()
-    preserve_scroll_on_rerun()
+    # Add scroll preservation for better UX
+    preserve_scroll_with_events()
     
     # Check if we need to force refresh after download tracking or guide deletion
     if st.session_state.get('force_refresh', False):
@@ -1349,228 +1503,345 @@ def main():
                         st.session_state['questions_df'] = df
         st.rerun()
     
+    # Check if subject data is loaded, if not load it
+    if 'subject' not in st.session_state or 'questions_df' not in st.session_state:
+        # Get the selected subject from environment variable (set by launcher)
+        selected_subject = os.getenv('STREAMLIT_SELECTED_SUBJECT')
+        if not selected_subject:
+            st.error("❌ No se ha seleccionado una asignatura. Por favor usa el script de lanzamiento.")
+            st.info("💡 Ejecuta: `python launch_app.py` para seleccionar una asignatura.")
+            return
+        
+        if not load_subject_data(selected_subject):
+            st.error("❌ No se pudo cargar la asignatura seleccionada.")
+            return
+    
     # Header
-    st.title("🧠 Generador de Guías M30M")
+    current_subject = st.session_state['subject']
+    st.title(f"🧠 Generador de Guías {current_subject}")
     st.markdown("---")
     
-    # Sidebar for filters
-    st.sidebar.header("🔍 Filtros de Búsqueda")
+    # Show current subject (read-only)
+    st.subheader(f"📚 Asignatura: {current_subject}")
+    st.markdown("---")
     
-    # Subject selection
-    subject = st.sidebar.selectbox(
-        "Seleccionar Asignatura",
-        options=list(SUBJECT_FOLDERS.keys()),
-        help="Selecciona la asignatura para cargar las preguntas"
-    )
+    # Usage statistics and guide management section
+    st.subheader("📊 Estadísticas y Gestión")
     
-    # Load data button
-    if st.sidebar.button("Cargar Preguntas", type="primary"):
-        with st.spinner(f"Cargando preguntas de {subject}..."):
-            df = load_master_excel(subject)
-            
-            if not df.empty:
-                st.session_state['questions_df'] = df
-                st.session_state['subject'] = subject
+    # Create columns for statistics and guide management
+    col_stats, col_guides = st.columns(2)
+    
+    with col_stats:
+        st.markdown("**📈 Estadísticas de Uso**")
+        if st.button("Ver Estadísticas", help="Mostrar estadísticas de uso de preguntas"):
+            with st.spinner("Cargando estadísticas..."):
+                storage = get_storage_client()
+                usage_tracker = UsageTracker(storage)
                 
-                # Clear all selections when loading a new subject
-                st.session_state['selected_questions'] = set()
-                st.session_state['selected_questions_ordered'] = []
-                st.session_state['question_positions'] = {}
-                st.session_state['preview_question'] = None
-                st.session_state['preview_file_path'] = None
-                # Clear guide name selection when subject changes
-                if 'guide_name_select' in st.session_state:
-                    del st.session_state['guide_name_select']
-                
-                st.success(f"✅ Cargadas {len(df)} preguntas de {subject}")
-                st.info("🔄 Selecciones anteriores limpiadas al cambiar de asignatura")
-            else:
-                st.error(f"No se pudieron cargar preguntas para {subject}")
-    
-    # Usage statistics section
-    st.sidebar.markdown("---")
-    st.sidebar.header("📊 Estadísticas de Uso")
-    
-    if st.sidebar.button("Ver Estadísticas", help="Mostrar estadísticas de uso de preguntas"):
-        with st.spinner("Cargando estadísticas..."):
-            storage = get_storage_client()
-            usage_tracker = UsageTracker(storage)
-            
-            if subject == "Ciencias":
-                # Show stats for all three subjects
-                for subj in ["F30M", "Q30M", "B30M"]:
-                    stats = usage_tracker.get_question_usage_stats(subj)
-                    if "error" not in stats:
-                        st.sidebar.write(f"**{subj}:**")
-                        st.sidebar.write(f"• Total: {stats['total_questions']}")
-                        st.sidebar.write(f"• Usadas: {stats['used_questions']}")
-                        st.sidebar.write(f"• Sin usar: {stats['unused_questions']}")
-                        st.sidebar.write(f"• % Uso: {stats['usage_percentage']:.1f}%")
-                        st.sidebar.write("")
-            else:
-                stats = usage_tracker.get_question_usage_stats(subject)
-                if "error" not in stats:
-                    st.sidebar.write(f"**{subject}:**")
-                    st.sidebar.write(f"• Total: {stats['total_questions']}")
-                    st.sidebar.write(f"• Usadas: {stats['used_questions']}")
-                    st.sidebar.write(f"• Sin usar: {stats['unused_questions']}")
-                    st.sidebar.write(f"• % Uso: {stats['usage_percentage']:.1f}%")
-                    
-                    # Show usage distribution
-                    if stats['usage_distribution']:
-                        st.sidebar.write("**Distribución:**")
-                        for usage_count, count in stats['usage_distribution'].items():
-                            if not pd.isna(usage_count):
-                                st.sidebar.write(f"• {int(usage_count)} uso(s): {count} preguntas")
+                if current_subject == "Ciencias":
+                    # Show stats for all three subjects
+                    for subj in ["F30M", "Q30M", "B30M"]:
+                        stats = usage_tracker.get_question_usage_stats(subj)
+                        if "error" not in stats:
+                            st.markdown(f"### 📚 {subj}")
+                            
+                            # Create metrics for each subject
+                            col_total, col_used, col_unused, col_percent = st.columns(4)
+                            
+                            with col_total:
+                                st.metric(
+                                    label="📊 Total",
+                                    value=stats['total_questions'],
+                                    help="Total de preguntas disponibles"
+                                )
+                            
+                            with col_used:
+                                st.metric(
+                                    label="✅ Usadas",
+                                    value=stats['used_questions'],
+                                    help="Preguntas que han sido utilizadas"
+                                )
+                            
+                            with col_unused:
+                                st.metric(
+                                    label="🆕 Sin usar",
+                                    value=stats['unused_questions'],
+                                    help="Preguntas que no han sido utilizadas"
+                                )
+                            
+                            with col_percent:
+                                st.metric(
+                                    label="📈 % Uso",
+                                    value=f"{stats['usage_percentage']:.1f}%",
+                                    help="Porcentaje de uso de preguntas"
+                                )
+                            
+                            # Show usage distribution for each subject in Ciencias
+                            if stats['usage_distribution']:
+                                st.markdown("#### 📊 Distribución de Uso")
+                                
+                                # Create a container for the distribution
+                                with st.container():
+                                    for usage_count, count in stats['usage_distribution'].items():
+                                        if not pd.isna(usage_count):
+                                            usage_count_int = int(usage_count)
+                                            
+                                            # Create a progress bar for visual representation
+                                            if usage_count_int == 0:
+                                                label = "🆕 Sin usar"
+                                            elif usage_count_int == 1:
+                                                label = "1️⃣ Usada 1 vez"
+                                            elif usage_count_int == 2:
+                                                label = "2️⃣ Usada 2 veces"
+                                            elif usage_count_int == 3:
+                                                label = "3️⃣ Usada 3 veces"
+                                            else:
+                                                label = f"🔥 Usada {usage_count_int}+ veces"
+                                            
+                                            # Calculate percentage for progress bar - use the actual count from distribution
+                                            total_questions = stats['total_questions']
+                                            percentage = (count / total_questions) if total_questions > 0 else 0
+                                            
+                                            # Display with progress bar
+                                            st.markdown(f"**{label}:** {count} preguntas")
+                                            st.progress(percentage)
+                            
+                            st.markdown("---")
                 else:
-                    st.sidebar.error(stats['error'])
-    
-    # Guide deletion section
-    st.sidebar.markdown("---")
-    st.sidebar.header("🗑️ Eliminar Guías")
-    
-    # Initialize guide deletion state
-    if 'show_guide_deletion' not in st.session_state:
-        st.session_state['show_guide_deletion'] = False
-    if 'available_guides' not in st.session_state:
-        st.session_state['available_guides'] = []
-    if 'selected_guide_for_deletion' not in st.session_state:
-        st.session_state['selected_guide_for_deletion'] = None
-    
-    if st.sidebar.button("Ver Guías Creadas", help="Mostrar guías creadas para eliminar"):
-        with st.spinner("Cargando guías creadas..."):
-            storage = get_storage_client()
-            usage_tracker = UsageTracker(storage)
-            
-            guides = usage_tracker.get_all_guides_for_subject(subject)
-            st.session_state['available_guides'] = guides
-            st.session_state['show_guide_deletion'] = True
-            st.session_state['selected_guide_for_deletion'] = None  # Reset selection
-    
-    # Show guide deletion interface if guides are loaded
-    if st.session_state['show_guide_deletion'] and st.session_state['available_guides']:
-        guides = st.session_state['available_guides']
-        st.sidebar.write(f"**Guías encontradas para {subject}:**")
-        
-        # Create a selectbox for guide selection
-        guide_options = []
-        for i, guide in enumerate(guides):
-            date_str = guide['date'] if guide['date'] else 'Sin fecha'
-            if subject == "Ciencias" and 'subject_sources' in guide:
-                # Show all subject sources for Ciencias guides
-                subjects_str = ', '.join(guide['subject_sources'])
-                option_text = f"{guide['guide_name']} ({subjects_str}) - {date_str} - {guide['question_count']} preguntas"
-            else:
-                option_text = f"{guide['guide_name']} - {date_str} - {guide['question_count']} preguntas"
-            guide_options.append((option_text, i))
-        
-        if guide_options:
-            # Add empty option at the beginning
-            options_with_empty = [""] + [opt[0] for opt in guide_options]
-            
-            # Get current selection from session state
-            current_selection = st.session_state.get('selected_guide_for_deletion', "")
-            if current_selection not in options_with_empty:
-                current_selection = ""
-            
-            selected_option = st.sidebar.selectbox(
-                "Seleccionar guía a eliminar:",
-                options=options_with_empty,
-                index=options_with_empty.index(current_selection) if current_selection in options_with_empty else 0,
-                help="Selecciona la guía que quieres eliminar",
-                key="guide_deletion_selectbox"
-            )
-            
-            # Update session state with selection
-            st.session_state['selected_guide_for_deletion'] = selected_option
-            
-            if selected_option and selected_option != "":
-                # Find the selected guide
-                selected_index = next(i for i, (opt, _) in enumerate(guide_options) if opt == selected_option)
-                selected_guide = guides[selected_index]
-                
-                # Show guide details
-                st.sidebar.write("**Detalles de la guía:**")
-                st.sidebar.write(f"• Nombre: {selected_guide['guide_name']}")
-                st.sidebar.write(f"• Fecha: {selected_guide['date'] if selected_guide['date'] else 'Sin fecha'}")
-                st.sidebar.write(f"• Preguntas: {selected_guide['question_count']}")
-                if subject == "Ciencias" and 'subject_sources' in selected_guide:
-                    subjects_str = ', '.join(selected_guide['subject_sources'])
-                    st.sidebar.write(f"• Asignaturas: {subjects_str}")
-                
-                # Confirmation and deletion
-                st.sidebar.write("**⚠️ ADVERTENCIA:** Esta acción eliminará el registro de uso de esta guía de todas las preguntas afectadas.")
-                
-                if st.sidebar.button("🗑️ ELIMINAR GUÍA", type="secondary", help="Eliminar esta guía y descontar su uso"):
-                    with st.spinner("Eliminando guía..."):
-                        storage = get_storage_client()
-                        usage_tracker = UsageTracker(storage)
+                    stats = usage_tracker.get_question_usage_stats(current_subject)
+                    if "error" not in stats:
+                        st.markdown(f"### 📚 {current_subject}")
                         
-                        result = usage_tracker.delete_guide_usage(
-                            subject, 
-                            selected_guide['guide_name'], 
-                            selected_guide['date']
-                        )
+                        # Create metrics for the subject
+                        col_total, col_used, col_unused, col_percent = st.columns(4)
                         
-                        if result['success']:
-                            st.sidebar.success(f"✅ {result['message']}")
+                        with col_total:
+                            st.metric(
+                                label="📊 Total",
+                                value=stats['total_questions'],
+                                help="Total de preguntas disponibles"
+                            )
+                        
+                        with col_used:
+                            st.metric(
+                                label="✅ Usadas",
+                                value=stats['used_questions'],
+                                help="Preguntas que han sido utilizadas"
+                            )
+                        
+                        with col_unused:
+                            st.metric(
+                                label="🆕 Sin usar",
+                                value=stats['unused_questions'],
+                                help="Preguntas que no han sido utilizadas"
+                            )
+                        
+                        with col_percent:
+                            st.metric(
+                                label="📈 % Uso",
+                                value=f"{stats['usage_percentage']:.1f}%",
+                                help="Porcentaje de uso de preguntas"
+                            )
+                        
+                        # Show usage distribution in a prettier format
+                        if stats['usage_distribution']:
+                            st.markdown("#### 📊 Distribución de Uso")
                             
-                            # Show detailed results for Ciencias
-                            if subject == "Ciencias" and 'subject_results' in result:
-                                st.sidebar.write("**Resultados por asignatura:**")
-                                for subj, subj_result in result['subject_results'].items():
-                                    if subj_result['success']:
-                                        st.sidebar.write(f"• {subj}: {subj_result['questions_deleted']} preguntas")
-                                    else:
-                                        st.sidebar.write(f"• {subj}: Error - {subj_result.get('error', 'Desconocido')}")
-                            
-                            # Reset the guide deletion state
-                            st.session_state['show_guide_deletion'] = False
-                            st.session_state['available_guides'] = []
-                            st.session_state['selected_guide_for_deletion'] = None
-                            
-                            # Force refresh to update the main view
-                            st.session_state['force_refresh'] = True
-                            
-                            # Immediately refresh the page to close the interface and update data
-                            st.rerun()
-                        else:
-                            st.sidebar.error(f"❌ Error: {result.get('error', 'Error desconocido')}")
-            else:
-                st.sidebar.info("Selecciona una guía para ver sus detalles y eliminarla.")
+                            # Create a container for the distribution
+                            with st.container():
+                                for usage_count, count in stats['usage_distribution'].items():
+                                    if not pd.isna(usage_count):
+                                        usage_count_int = int(usage_count)
+                                        
+                                        # Create a progress bar for visual representation
+                                        if usage_count_int == 0:
+                                            label = "🆕 Sin usar"
+                                        elif usage_count_int == 1:
+                                            label = "1️⃣ Usada 1 vez"
+                                        elif usage_count_int == 2:
+                                            label = "2️⃣ Usada 2 veces"
+                                        elif usage_count_int == 3:
+                                            label = "3️⃣ Usada 3 veces"
+                                        else:
+                                            label = f"🔥 Usada {usage_count_int}+ veces"
+                                        
+                                        # Calculate percentage for progress bar - use the actual count from distribution
+                                        total_questions = stats['total_questions']
+                                        percentage = (count / total_questions) if total_questions > 0 else 0
+                                        
+                                        # Display with progress bar
+                                        st.markdown(f"**{label}:** {count} preguntas")
+                                        st.progress(percentage)
+                    else:
+                        st.error(f"❌ {stats['error']}")
+    
+    with col_guides:
+        st.markdown("**🗑️ Eliminar Guías**")
         
-        # Add a button to close the guide deletion interface
-        if st.sidebar.button("❌ Cerrar", help="Cerrar la interfaz de eliminación de guías"):
+        # Initialize guide deletion state
+        if 'show_guide_deletion' not in st.session_state:
             st.session_state['show_guide_deletion'] = False
+        if 'available_guides' not in st.session_state:
             st.session_state['available_guides'] = []
+        if 'selected_guide_for_deletion' not in st.session_state:
             st.session_state['selected_guide_for_deletion'] = None
-            st.rerun()
-    
-    # Check if data is loaded
-    if 'questions_df' not in st.session_state:
-        st.info("👈 Selecciona una asignatura y haz clic en 'Cargar Preguntas' para comenzar")
-        return
+        
+        if st.button("Ver Guías Creadas", help="Mostrar guías creadas para esta asignatura"):
+            with st.spinner("Cargando guías creadas..."):
+                storage = get_storage_client()
+                usage_tracker = UsageTracker(storage)
+                
+                # Only get guides for the current subject
+                guides = usage_tracker.get_all_guides_for_subject(current_subject)
+                st.session_state['available_guides'] = guides
+                st.session_state['show_guide_deletion'] = True
+                st.session_state['selected_guide_for_deletion'] = None  # Reset selection
+        
+        # Show guide deletion interface if guides are loaded
+        if st.session_state['show_guide_deletion'] and st.session_state['available_guides']:
+            guides = st.session_state['available_guides']
+            st.write(f"**Guías encontradas para {current_subject}:**")
+            
+            # Create a selectbox for guide selection
+            guide_options = []
+            for i, guide in enumerate(guides):
+                date_str = guide['date'] if guide['date'] else 'Sin fecha'
+                
+                # Create a more detailed option text that helps distinguish between guides with same name
+                if current_subject == "Ciencias" and 'subject_sources' in guide:
+                    # Show all subject sources for Ciencias guides
+                    subjects_str = ', '.join(guide['subject_sources'])
+                    # Use creation order for numbering
+                    creation_order = guide.get('creation_order', i+1)
+                    option_text = f"{guide['guide_name']} ({subjects_str}) - {date_str} - {guide['question_count']} preguntas [#{creation_order}]"
+                else:
+                    # Use creation order for numbering
+                    creation_order = guide.get('creation_order', i+1)
+                    option_text = f"{guide['guide_name']} - {date_str} - {guide['question_count']} preguntas [#{creation_order}]"
+                guide_options.append((option_text, i))
+            
+            if guide_options:
+                # Add empty option at the beginning
+                options_with_empty = [""] + [opt[0] for opt in guide_options]
+                
+                # Get current selection from session state
+                current_selection = st.session_state.get('selected_guide_for_deletion', "")
+                if current_selection not in options_with_empty:
+                    current_selection = ""
+                
+                selected_option = st.selectbox(
+                    "Seleccionar guía a eliminar:",
+                    options=options_with_empty,
+                    index=options_with_empty.index(current_selection) if current_selection in options_with_empty else 0,
+                    help="Selecciona la guía que quieres eliminar",
+                    key="guide_deletion_selectbox"
+                )
+                
+                # Update session state with selection
+                st.session_state['selected_guide_for_deletion'] = selected_option
+                
+                if selected_option and selected_option != "":
+                    # Find the selected guide
+                    selected_index = next(i for i, (opt, _) in enumerate(guide_options) if opt == selected_option)
+                    selected_guide = guides[selected_index]
+                    
+                    # Show guide details
+                    st.write("**Detalles de la guía:**")
+                    st.write(f"• Nombre: {selected_guide['guide_name']}")
+                    st.write(f"• Fecha: {selected_guide['date'] if selected_guide['date'] else 'Sin fecha'}")
+                    st.write(f"• Preguntas: {selected_guide['question_count']}")
+                    if current_subject == "Ciencias" and 'subject_sources' in selected_guide:
+                        subjects_str = ', '.join(selected_guide['subject_sources'])
+                        st.write(f"• Asignaturas: {subjects_str}")
+                    
+                    # Confirmation and deletion
+                    st.write("**⚠️ ADVERTENCIA:** Esta acción eliminará el registro de uso de esta guía de todas las preguntas afectadas.")
+                    
+                    if st.button("🗑️ ELIMINAR GUÍA", type="secondary", help="Eliminar esta guía y descontar su uso"):
+                        with st.spinner("Eliminando guía..."):
+                            storage = get_storage_client()
+                            usage_tracker = UsageTracker(storage)
+                            
+                            # Use the specific deletion method to ensure we delete only the exact guide selected
+                            result = usage_tracker.delete_specific_guide_usage(
+                                current_subject, 
+                                selected_guide['guide_name'], 
+                                selected_guide['date'],
+                                selected_guide.get('questions', None),
+                                selected_guide.get('subject_sources', None)
+                            )
+                            
+                            if result['success']:
+                                st.success(f"✅ {result['message']}")
+                                
+                                # Show detailed results for Ciencias
+                                if current_subject == "Ciencias" and 'subject_results' in result:
+                                    st.write("**Resultados por asignatura:**")
+                                    for subj, subj_result in result['subject_results'].items():
+                                        if subj_result['success']:
+                                            st.write(f"• {subj}: {subj_result['questions_deleted']} preguntas")
+                                        else:
+                                            st.write(f"• {subj}: Error - {subj_result.get('error', 'Desconocido')}")
+                                
+                                # Reset the guide deletion state
+                                st.session_state['show_guide_deletion'] = False
+                                st.session_state['available_guides'] = []
+                                st.session_state['selected_guide_for_deletion'] = None
+                                
+                                # Force refresh to update the main view
+                                st.session_state['force_refresh'] = True
+                                
+                                # Immediately refresh the page to close the interface and update data
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Error: {result.get('error', 'Error desconocido')}")
+                else:
+                    st.info("Selecciona una guía para ver sus detalles y eliminarla.")
+            
+            # Add a button to close the guide deletion interface
+            if st.button("❌ Cerrar", help="Cerrar la interfaz de eliminación de guías"):
+                st.session_state['show_guide_deletion'] = False
+                st.session_state['available_guides'] = []
+                st.session_state['selected_guide_for_deletion'] = None
+                st.rerun()
     
     df = st.session_state['questions_df']
-    current_subject = st.session_state['subject']
     
-    # Display data summary
+    # Display data summary with prettier metrics
+    st.markdown("### 📊 Resumen de Datos")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Total Preguntas", len(df))
+        st.metric(
+            label="📚 Total Preguntas",
+            value=len(df),
+            help="Número total de preguntas disponibles"
+        )
     
     with col2:
         areas = df['Área temática'].nunique() if 'Área temática' in df.columns else 0
-        st.metric("Áreas Temáticas", areas)
+        st.metric(
+            label="🎯 Áreas Temáticas",
+            value=areas,
+            help="Número de áreas temáticas diferentes"
+        )
     
     with col3:
         difficulties = df['Dificultad'].nunique() if 'Dificultad' in df.columns else 0
-        st.metric("Niveles Dificultad", difficulties)
+        st.metric(
+            label="📈 Niveles Dificultad",
+            value=difficulties,
+            help="Número de niveles de dificultad disponibles"
+        )
     
     with col4:
         skills = df['Habilidad'].nunique() if 'Habilidad' in df.columns else 0
-        st.metric("Habilidades", skills)
+        st.metric(
+            label="🧠 Habilidades",
+            value=skills,
+            help="Número de habilidades diferentes"
+        )
     
     st.markdown("---")
     
@@ -1710,6 +1981,15 @@ def main():
     if current_subject == "Ciencias":
         filters['subject'] = subject_filter if 'subject_filter' in locals() else None
     
+    # Clear any open previews when filters change (this will be triggered by any filter interaction)
+    if any([area_filter, difficulty_filter, skill_filter, subtema_filter, usage_filter, 
+            ('subject_filter' in locals() and subject_filter)]):
+        # Only clear if we're not in the initial load
+        if 'preview_question' in st.session_state or 'show_usage_history' in st.session_state:
+            st.session_state['preview_question'] = None
+            st.session_state['preview_file_path'] = None
+            st.session_state['show_usage_history'] = None
+    
     filtered_df = filter_questions(df, filters)
     
     # Sort questions by the specified criteria
@@ -1759,6 +2039,11 @@ def main():
                         # Remove position and renumber
                         remove_question_and_renumber(pregunta_id)
                     
+                    # Clear any open previews when selection changes
+                    st.session_state['preview_question'] = None
+                    st.session_state['preview_file_path'] = None
+                    st.session_state['show_usage_history'] = None
+                    
                     # Rerun to immediately show/hide position selector
                     st.rerun()
             
@@ -1785,6 +2070,10 @@ def main():
                     # Update position if changed
                     if new_position != current_position:
                         update_question_position(pregunta_id, new_position)
+                        # Clear any open previews when position changes
+                        st.session_state['preview_question'] = None
+                        st.session_state['preview_file_path'] = None
+                        st.session_state['show_usage_history'] = None
                         # Rerun to immediately update all position selectors
                         st.rerun()
                 else:
@@ -1821,13 +2110,19 @@ def main():
                         # Store the question to preview in session state
                         st.session_state['preview_question'] = pregunta_id
                         st.session_state['preview_file_path'] = row.get('Ruta relativa', '')
-                        # Don't rerun here - let the preview show below
+                        # Clear any other preview states
+                        st.session_state['show_usage_history'] = None
+                        st.rerun()
                 
                 with col_history:
                     # Show usage history button if question has been used
                     if 'Número de usos' in row and not pd.isna(row['Número de usos']) and row['Número de usos'] > 0:
                         if st.button("📊", key=f"history_{pregunta_id}", help="Ver historial de uso"):
                             st.session_state['show_usage_history'] = pregunta_id
+                            # Clear any other preview states
+                            st.session_state['preview_question'] = None
+                            st.session_state['preview_file_path'] = None
+                            st.rerun()
             
             # Show usage history below this question if it's the one being viewed
             if st.session_state.get('show_usage_history') == pregunta_id:
@@ -1880,7 +2175,7 @@ def main():
                 with st.container():
                     col_title, col_close = st.columns([4, 1])
                     with col_title:
-                        st.subheader(f"📄 Complete Question Preview: {pregunta_id}")
+                        st.subheader(f"📄 Previsualización pregunta: {pregunta_id}")
                     with col_close:
                         if st.button("❌", key=f"close_preview_{pregunta_id}", help="Cerrar preview"):
                             st.session_state['preview_question'] = None
@@ -1907,23 +2202,38 @@ def main():
             # Use original df instead of filtered_df to ensure selected questions are always available
             selected_df = df[df['PreguntaID'].isin(st.session_state['selected_questions'])]
             
-            # Display summary metrics for selected questions
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Total Preguntas", selected_count)
+                st.metric(
+                    label="📚 Total Seleccionadas",
+                    value=selected_count,
+                    help="Número de preguntas seleccionadas"
+                )
             
             with col2:
                 areas = selected_df['Área temática'].nunique() if 'Área temática' in selected_df.columns else 0
-                st.metric("Áreas Temáticas", areas)
+                st.metric(
+                    label="🎯 Áreas Cubiertas",
+                    value=areas,
+                    help="Número de áreas temáticas en la selección"
+                )
             
             with col3:
                 difficulties = selected_df['Dificultad'].nunique() if 'Dificultad' in selected_df.columns else 0
-                st.metric("Niveles Dificultad", difficulties)
+                st.metric(
+                    label="📈 Niveles Dificultad",
+                    value=difficulties,
+                    help="Número de niveles de dificultad en la selección"
+                )
             
             with col4:
                 skills = selected_df['Habilidad'].nunique() if 'Habilidad' in selected_df.columns else 0
-                st.metric("Habilidades", skills)
+                st.metric(
+                    label="🧠 Habilidades",
+                    value=skills,
+                    help="Número de habilidades en la selección"
+                )
             
             st.markdown("---")
         
@@ -1968,7 +2278,9 @@ def main():
                         # Store the question to preview in session state
                         st.session_state['preview_question'] = pregunta_id
                         st.session_state['preview_file_path'] = row.get('Ruta relativa', '')
-                        # Don't rerun here - let the preview show below
+                        # Clear any other preview states
+                        st.session_state['show_usage_history'] = None
+                        st.rerun()
                 
                 with col_unselect:
                     if st.button("❌", key=f"summary_unselect_{pregunta_id}", help="Deseleccionar pregunta"):
@@ -1979,6 +2291,10 @@ def main():
                             st.session_state['selected_questions_ordered'].remove(pregunta_id)
                         # Remove position and renumber
                         remove_question_and_renumber(pregunta_id)
+                        # Clear any open previews when unselecting
+                        st.session_state['preview_question'] = None
+                        st.session_state['preview_file_path'] = None
+                        st.session_state['show_usage_history'] = None
                         st.success(f"✅ Pregunta {pregunta_id} deseleccionada")
                         st.rerun()
                 
@@ -2107,15 +2423,29 @@ def main():
                             'guide_name': selected_guide_name
                         }
                         
-                        st.download_button(
-                            label="📝 Descargar Guía Word",
-                            data=word_buffer.getvalue(),
-                            file_name=filename,
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            type="primary",
-                            on_click=track_guide_download,
-                            args=(current_subject, ordered_questions, selected_guide_name, selected_count)
-                        )
+                        # Create Excel file with question IDs and correct alternatives
+                        excel_buffer = create_questions_excel(ordered_questions, df, selected_guide_name)
+                        
+                        if excel_buffer:
+                            # Create ZIP file with both Word and Excel
+                            zip_buffer = create_guide_package(word_buffer, excel_buffer, filename)
+                            
+                            if zip_buffer:
+                                # Single download button for the complete package
+                                st.download_button(
+                                    label="📦 Descargar Guía Completa (Word + Excel)",
+                                    data=zip_buffer.getvalue(),
+                                    file_name=filename.replace('.docx', '_completa.zip'),
+                                    mime="application/zip",
+                                    type="primary",
+                                    on_click=track_guide_download,
+                                    args=(current_subject, ordered_questions, selected_guide_name, selected_count),
+                                    help="Descarga un archivo ZIP con la guía Word y el Excel con respuestas"
+                                )
+                            else:
+                                st.error("❌ Error al crear el paquete de descarga")
+                        else:
+                            st.error("❌ Error al generar Excel de preguntas")
                         
                         # Show download tracking message if available
                         if 'download_tracking_message' in st.session_state:
@@ -2130,7 +2460,8 @@ def main():
                         
                         # Show summary
                         st.info(f"📊 **Resumen:** {selected_count} preguntas seleccionadas de {current_subject}")
-                        st.info("💡 **Recomendación:** El documento Word contiene todas las preguntas con formato perfecto, imágenes y tablas preservadas.")
+                        st.info("💡 **Paquete Completo:** El archivo ZIP contiene la guía Word con formato perfecto y el Excel con respuestas para corrección.")
+                        st.info("📦 **Contenido:** Word (para estudiantes) + Excel (para profesores) + README (instrucciones)")
                         
                     else:
                         st.error("❌ Error al generar el documento Word")
@@ -2141,6 +2472,10 @@ def main():
                     st.session_state['selected_questions'] = set()
                     st.session_state['selected_questions_ordered'] = []
                     st.session_state['question_positions'] = {}
+                    # Clear any open previews when clearing selection
+                    st.session_state['preview_question'] = None
+                    st.session_state['preview_file_path'] = None
+                    st.session_state['show_usage_history'] = None
                     st.success("✅ Selección limpiada")
                     st.rerun()
     

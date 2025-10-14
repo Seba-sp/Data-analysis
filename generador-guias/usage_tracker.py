@@ -4,9 +4,7 @@ Usage tracking module for monitoring question usage in generated guides.
 
 import pandas as pd
 from datetime import datetime
-from pathlib import Path
 from typing import List, Dict, Any
-import os
 
 from config import USAGE_TRACKING_BASE_COLUMNS, EXCELES_MAESTROS_DIR, get_usage_column_names
 from storage import StorageClient
@@ -161,55 +159,6 @@ class UsageTracker:
         
         return df
     
-    def get_latest_usage_info(self, df: pd.DataFrame, question_id: str) -> Dict[str, Any]:
-        """
-        Get the latest usage information for a specific question.
-        
-        Args:
-            df: DataFrame containing the question data
-            question_id: The question ID to look up
-            
-        Returns:
-            Dictionary with latest usage information
-        """
-        try:
-            # Find the row with this question ID
-            mask = df['PreguntaID'] == question_id
-            if not mask.any():
-                return {"error": "Question not found"}
-            
-            row_idx = df[mask].index[0]
-            usage_count = df.loc[row_idx, 'Número de usos']
-            
-            if pd.isna(usage_count) or usage_count == 0:
-                return {
-                    "usage_count": 0,
-                    "latest_guide": None,
-                    "latest_date": None
-                }
-            
-            usage_count = int(usage_count)
-            
-            # Get the latest usage information
-            guide_name_col, date_col = get_usage_column_names(usage_count)
-            
-            latest_guide = None
-            latest_date = None
-            
-            if guide_name_col in df.columns:
-                latest_guide = df.loc[row_idx, guide_name_col]
-            if date_col in df.columns:
-                latest_date = df.loc[row_idx, date_col]
-            
-            return {
-                "usage_count": usage_count,
-                "latest_guide": latest_guide,
-                "latest_date": latest_date
-            }
-            
-        except Exception as e:
-            return {"error": f"Error getting latest usage info: {e}"}
-    
     def get_question_usage_stats(self, subject: str) -> Dict[str, Any]:
         """
         Get usage statistics for questions in a subject.
@@ -233,7 +182,11 @@ class UsageTracker:
             
             # Calculate statistics
             total_questions = len(df)
-            unused_questions = len(df[df['Número de usos'].isna() | (df['Número de usos'] == 0)])
+            
+            # Fill NaN values with 0 for unused questions
+            df['Número de usos'] = df['Número de usos'].fillna(0)
+            
+            unused_questions = len(df[df['Número de usos'] == 0])
             used_questions = total_questions - unused_questions
             
             # Count questions by usage frequency
@@ -249,65 +202,6 @@ class UsageTracker:
             
         except Exception as e:
             return {"error": f"Error getting usage stats: {e}"}
-    
-    def get_unused_questions(self, subject: str) -> List[str]:
-        """
-        Get list of unused question IDs for a subject.
-        
-        Args:
-            subject: Subject area
-            
-        Returns:
-            List of unused question IDs
-        """
-        try:
-            master_file = EXCELES_MAESTROS_DIR / f"excel_maestro_{subject.lower()}.xlsx"
-            
-            if not self.storage.exists(str(master_file)):
-                return []
-            
-            df = pd.read_excel(master_file)
-            df = self._ensure_usage_columns(df)
-            
-            # Get questions with no usage or 0 usage
-            unused_mask = df['Número de usos'].isna() | (df['Número de usos'] == 0)
-            unused_questions = df[unused_mask]['PreguntaID'].tolist()
-            
-            return unused_questions
-            
-        except Exception as e:
-            print(f"Error getting unused questions: {e}")
-            return []
-    
-    def get_questions_by_usage_count(self, subject: str, usage_count: int) -> List[str]:
-        """
-        Get list of question IDs that have been used exactly 'usage_count' times.
-        
-        Args:
-            subject: Subject area
-            usage_count: Number of times the question has been used
-            
-        Returns:
-            List of question IDs with the specified usage count
-        """
-        try:
-            master_file = EXCELES_MAESTROS_DIR / f"excel_maestro_{subject.lower()}.xlsx"
-            
-            if not self.storage.exists(str(master_file)):
-                return []
-            
-            df = pd.read_excel(master_file)
-            df = self._ensure_usage_columns(df)
-            
-            # Get questions with the specified usage count
-            usage_mask = df['Número de usos'] == usage_count
-            questions = df[usage_mask]['PreguntaID'].tolist()
-            
-            return questions
-            
-        except Exception as e:
-            print(f"Error getting questions by usage count: {e}")
-            return []
     
     def get_all_guides_for_subject(self, subject: str) -> List[Dict[str, Any]]:
         """
@@ -332,24 +226,29 @@ class UsageTracker:
                         guide['subject_source'] = subj
                     all_guides.extend(guides)
                 
-                # Aggregate guides with the same name and date across all subjects
-                aggregated_guides = {}
+                # Create unique guides - each guide should be separate even if they have the same name and date
+                # We'll use a combination of name, date, subject_source, and questions to create uniqueness
+                unique_guides = {}
                 for guide in all_guides:
-                    key = (guide['guide_name'], guide['date'])
+                    # Create a unique key that includes subject source and questions to distinguish guides
+                    # Even if they have the same name and date, they should be separate if they have different questions
+                    questions_key = tuple(sorted(guide['questions']))
+                    unique_key = (guide['guide_name'], guide['date'], guide['subject_source'], questions_key)
                     
-                    if key not in aggregated_guides:
+                    if unique_key not in unique_guides:
                         # First time seeing this guide
-                        aggregated_guides[key] = {
+                        unique_guides[unique_key] = {
                             'guide_name': guide['guide_name'],
                             'date': guide['date'],
                             'question_count': guide['question_count'],
                             'questions': set(guide['questions']),
                             'subject_sources': [guide['subject_source']],
-                            'usage_numbers': guide.get('usage_numbers', [])
+                            'usage_numbers': guide.get('usage_numbers', []),
+                            'unique_id': f"{guide['guide_name']}_{guide['date']}_{guide['subject_source']}_{len(guide['questions'])}"
                         }
                     else:
-                        # Guide already exists, aggregate the data
-                        existing = aggregated_guides[key]
+                        # This should rarely happen now, but if it does, merge the data
+                        existing = unique_guides[unique_key]
                         existing['questions'].update(guide['questions'])
                         existing['question_count'] = len(existing['questions'])
                         if guide['subject_source'] not in existing['subject_sources']:
@@ -358,19 +257,28 @@ class UsageTracker:
                         existing['usage_numbers'].extend(guide.get('usage_numbers', []))
                         existing['usage_numbers'] = sorted(list(set(existing['usage_numbers'])))
                 
-                # Convert back to list format
+                # Convert back to list format and add creation order
                 final_guides = []
-                for guide_data in aggregated_guides.values():
+                for guide_data in unique_guides.values():
                     final_guides.append({
                         'guide_name': guide_data['guide_name'],
                         'date': guide_data['date'],
                         'question_count': guide_data['question_count'],
                         'questions': list(guide_data['questions']),
                         'subject_sources': guide_data['subject_sources'],
-                        'usage_numbers': guide_data['usage_numbers']
+                        'usage_numbers': guide_data['usage_numbers'],
+                        'unique_id': guide_data['unique_id']
                     })
                 
-                return sorted(final_guides, key=lambda x: x['date'] if x['date'] else '', reverse=True)
+                # Sort by date (oldest first) to assign creation order numbers
+                sorted_by_creation = sorted(final_guides, key=lambda x: x['date'] if x['date'] else '', reverse=False)
+                
+                # Add creation order number to each guide
+                for i, guide in enumerate(sorted_by_creation, 1):
+                    guide['creation_order'] = i
+                
+                # Now sort by date (newest first) for display
+                return sorted(sorted_by_creation, key=lambda x: x['date'] if x['date'] else '', reverse=True)
             else:
                 return self._get_guides_from_single_subject(subject)
                 
@@ -401,46 +309,56 @@ class UsageTracker:
             unique_guides = {}
             
             # Look through all usage columns to find guides
+            # We need to process each usage column separately to avoid mixing different guide instances
             for col in df.columns:
                 if col.startswith('Nombre guía (uso '):
                     # Extract usage number
                     usage_num = int(col.split('(')[1].split(')')[0].split()[1])
+                    
+                    # Get the corresponding date column
+                    date_col = f"Fecha descarga (uso {usage_num})"
                     
                     # Get unique guide names from this column
                     guide_names = df[col].dropna().unique()
                     
                     for guide_name in guide_names:
                         if pd.notna(guide_name) and guide_name.strip():
-                            # Get the corresponding date column
-                            date_col = f"Fecha descarga (uso {usage_num})"
+                            # Find questions that used this guide in this specific usage number
+                            mask = df[col] == guide_name
+                            questions_used = df[mask]['PreguntaID'].tolist()
                             
-                            # Find questions that used this guide
-                            questions_used = df[df[col] == guide_name]['PreguntaID'].tolist()
-                            
-                            # Get the date (use the first occurrence)
+                            # Get the date for this specific usage
                             date_value = None
-                            if date_col in df.columns:
-                                date_mask = df[col] == guide_name
-                                if date_mask.any():
-                                    date_value = df[date_mask][date_col].iloc[0]
+                            if date_col in df.columns and mask.any():
+                                date_value = df[mask][date_col].iloc[0]
                             
-                            # Create a unique key for this guide (name + date)
+                            # Create a unique key based on guide name and date only
+                            # This groups guides with the same name and date together
                             guide_key = (guide_name, date_value)
                             
                             if guide_key not in unique_guides:
-                                # First time seeing this guide
+                                # First time seeing this guide instance
+                                # Find all questions that have this guide name and date in ANY usage column
+                                all_questions = set()
+                                for usage_col in df.columns:
+                                    if usage_col.startswith('Nombre guía (uso '):
+                                        usage_date_col = f"Fecha descarga (uso {usage_col.split('(')[1].split(')')[0].split()[1]})"
+                                        if usage_date_col in df.columns:
+                                            # Find questions that have this guide name and date
+                                            guide_mask = (df[usage_col] == guide_name) & (df[usage_date_col] == date_value)
+                                            questions_in_this_usage = df[guide_mask]['PreguntaID'].tolist()
+                                            all_questions.update(questions_in_this_usage)
+                                
                                 unique_guides[guide_key] = {
                                     'guide_name': guide_name,
                                     'date': date_value,
-                                    'question_count': len(questions_used),
-                                    'questions': set(questions_used),  # Use set to avoid duplicates
+                                    'question_count': len(all_questions),
+                                    'questions': all_questions,
                                     'usage_numbers': [usage_num]
                                 }
                             else:
-                                # Guide already exists, add questions and usage numbers
+                                # Guide already exists, just add this usage number if not already present
                                 existing_guide = unique_guides[guide_key]
-                                existing_guide['questions'].update(questions_used)
-                                existing_guide['question_count'] = len(existing_guide['questions'])
                                 if usage_num not in existing_guide['usage_numbers']:
                                     existing_guide['usage_numbers'].append(usage_num)
             
@@ -455,21 +373,31 @@ class UsageTracker:
                     'usage_numbers': sorted(guide_data['usage_numbers'])
                 })
             
-            # Sort by date (most recent first)
-            return sorted(guides, key=lambda x: x['date'] if x['date'] else '', reverse=True)
+            # Sort by date (oldest first) to assign creation order numbers
+            sorted_by_creation = sorted(guides, key=lambda x: x['date'] if x['date'] else '', reverse=False)
+            
+            # Add creation order number to each guide
+            for i, guide in enumerate(sorted_by_creation, 1):
+                guide['creation_order'] = i
+            
+            # Now sort by date (newest first) for display
+            return sorted(sorted_by_creation, key=lambda x: x['date'] if x['date'] else '', reverse=True)
             
         except Exception as e:
             print(f"Error getting guides from single subject {subject}: {e}")
             return []
     
-    def delete_guide_usage(self, subject: str, guide_name: str, guide_date: str = None) -> Dict[str, Any]:
+    def delete_specific_guide_usage(self, subject: str, guide_name: str, guide_date: str = None, questions: list = None, subject_sources: list = None) -> Dict[str, Any]:
         """
-        Delete a guide and un-use all its questions from the Excel files.
+        Delete a specific guide by matching name, date, and optionally questions/subject_sources.
+        This is more precise than the regular delete_guide_usage method.
         
         Args:
             subject: Subject area
             guide_name: Name of the guide to delete
             guide_date: Date of the guide (optional, for disambiguation)
+            questions: List of question IDs in the guide (optional, for precise matching)
+            subject_sources: List of subject sources (optional, for Ciencias guides)
             
         Returns:
             Dictionary with deletion results
@@ -482,34 +410,39 @@ class UsageTracker:
                 results = {}
                 
                 for subj in subjects_to_update:
-                    result = self._delete_guide_from_single_subject(subj, guide_name, guide_date)
-                    results[subj] = result
-                    if result['success']:
-                        total_deleted += result['questions_deleted']
+                    # Only process this subject if it's in the subject_sources or if no subject_sources specified
+                    if subject_sources is None or subj in subject_sources:
+                        result = self._delete_specific_guide_from_single_subject(subj, guide_name, guide_date, questions)
+                        results[subj] = result
+                        if result['success']:
+                            total_deleted += result['questions_deleted']
                 
                 return {
                     'success': any(r['success'] for r in results.values()),
                     'total_questions_deleted': total_deleted,
                     'subject_results': results,
-                    'message': f"Deleted guide '{guide_name}' from {total_deleted} questions across all Ciencias subjects"
+                    'message': f"Deleted specific guide '{guide_name}' from {total_deleted} questions across all Ciencias subjects"
                 }
             else:
-                return self._delete_guide_from_single_subject(subject, guide_name, guide_date)
+                return self._delete_specific_guide_from_single_subject(subject, guide_name, guide_date, questions)
                 
         except Exception as e:
             return {
                 'success': False,
-                'error': f"Error deleting guide: {e}"
+                'error': f"Error deleting specific guide: {e}"
             }
+
     
-    def _delete_guide_from_single_subject(self, subject: str, guide_name: str, guide_date: str = None) -> Dict[str, Any]:
+    def _delete_specific_guide_from_single_subject(self, subject: str, guide_name: str, guide_date: str = None, questions: list = None) -> Dict[str, Any]:
         """
-        Delete a guide from a single subject file.
+        Delete a specific guide from a single subject file by matching name, date, and questions.
+        This is more precise than the regular deletion method.
         
         Args:
             subject: Subject area
             guide_name: Name of the guide to delete
             guide_date: Date of the guide (optional, for disambiguation)
+            questions: List of question IDs in the guide (optional, for precise matching)
             
         Returns:
             Dictionary with deletion results
@@ -527,11 +460,10 @@ class UsageTracker:
             df = pd.read_excel(master_file)
             df = self._ensure_usage_columns(df)
             
-            # Find all questions that used this guide and collect usage numbers
-            questions_to_update = set()
-            usage_numbers_to_remove = set()
+            # Find all questions that used this specific guide and track which usage numbers to remove
+            questions_to_update = {}  # question_id -> list of usage numbers to remove for this question
             
-            print(f"DEBUG: Looking for guide '{guide_name}' with date '{guide_date}' in {subject}")
+            print(f"DEBUG: Looking for specific guide '{guide_name}' with date '{guide_date}' and questions {questions} in {subject}")
             
             # Look through all guide name columns
             for col in df.columns:
@@ -548,53 +480,58 @@ class UsageTracker:
                         mask = df[col] == guide_name
                     
                     if mask.any():
-                        # Add questions that used this guide
-                        questions_in_this_usage = df[mask]['PreguntaID'].tolist()
-                        questions_to_update.update(questions_in_this_usage)
-                        usage_numbers_to_remove.add(usage_num)
-                        print(f"DEBUG: Found {len(questions_in_this_usage)} questions in usage {usage_num}")
+                        # For each question that used this guide, check if it matches our criteria
+                        for idx in df[mask].index:
+                            question_id = df.loc[idx, 'PreguntaID']
+                            
+                            # If questions list is provided, only process questions that are in that list
+                            if questions is not None and question_id not in questions:
+                                continue
+                            
+                            if question_id not in questions_to_update:
+                                questions_to_update[question_id] = []
+                            questions_to_update[question_id].append(usage_num)
+                            print(f"DEBUG: Question {question_id} used specific guide in usage {usage_num}")
             
             print(f"DEBUG: Total questions to update: {len(questions_to_update)}")
-            print(f"DEBUG: Usage numbers to remove: {usage_numbers_to_remove}")
             
             if not questions_to_update:
                 return {
                     'success': False,
-                    'error': f"Guide '{guide_name}' not found in {subject}"
+                    'error': f"Specific guide '{guide_name}' not found in {subject} with the given criteria"
                 }
             
-            # Convert to lists for easier handling
-            questions_to_update = list(questions_to_update)
-            usage_numbers_to_remove = list(usage_numbers_to_remove)
-            
-            # For each question, remove the usage and shift other usages down
-            for question_id in questions_to_update:
-                self._remove_usage_from_question(df, question_id, usage_numbers_to_remove)
+            # For each question, remove only the specific usage numbers for this guide
+            total_questions_affected = 0
+            for question_id, usage_numbers_to_remove in questions_to_update.items():
+                self._remove_specific_usage_from_question(df, question_id, usage_numbers_to_remove)
+                total_questions_affected += 1
             
             # Save the updated Excel file
             df.to_excel(master_file, index=False)
             
             return {
                 'success': True,
-                'questions_deleted': len(questions_to_update),
-                'questions_affected': questions_to_update,
-                'message': f"Successfully deleted guide '{guide_name}' from {len(questions_to_update)} questions in {subject}"
+                'questions_deleted': total_questions_affected,
+                'questions_affected': list(questions_to_update.keys()),
+                'message': f"Successfully deleted specific guide '{guide_name}' from {total_questions_affected} questions in {subject}"
             }
             
         except Exception as e:
             return {
                 'success': False,
-                'error': f"Error deleting guide from {subject}: {e}"
+                'error': f"Error deleting specific guide from {subject}: {e}"
             }
     
-    def _remove_usage_from_question(self, df: pd.DataFrame, question_id: str, usage_numbers_to_remove: List[int]):
+    def _remove_specific_usage_from_question(self, df: pd.DataFrame, question_id: str, usage_numbers_to_remove: List[int]):
         """
         Remove specific usage numbers from a question and shift other usages down.
+        This method is more precise and only removes the exact usage entries specified.
         
         Args:
             df: DataFrame to modify
             question_id: Question ID to update
-            usage_numbers_to_remove: List of usage numbers to remove
+            usage_numbers_to_remove: List of specific usage numbers to remove for this question
         """
         try:
             # Find the row with this question ID
@@ -612,9 +549,10 @@ class UsageTracker:
                 return
             
             current_uses = int(current_uses)
-            print(f"DEBUG: Question {question_id} has {current_uses} uses, removing {usage_numbers_to_remove}")
+            print(f"DEBUG: Question {question_id} has {current_uses} uses, removing specific usages: {usage_numbers_to_remove}")
             
             # Create a mapping of old usage numbers to new usage numbers
+            # Only shift down the usage numbers that come after the removed ones
             usage_mapping = {}
             new_usage_count = 0
             
@@ -643,7 +581,7 @@ class UsageTracker:
                 if old_date_col in df.columns:
                     new_date_columns[new_date_col] = df.loc[row_idx, old_date_col]
             
-            # Remove old usage columns for this question
+            # Clear all old usage columns for this question
             for old_usage in range(1, current_uses + 1):
                 old_guide_col = f"Nombre guía (uso {old_usage})"
                 old_date_col = f"Fecha descarga (uso {old_usage})"
@@ -653,7 +591,7 @@ class UsageTracker:
                 if old_date_col in df.columns:
                     df.loc[row_idx, old_date_col] = None
             
-            # Set new usage columns
+            # Set new usage columns with shifted numbers
             for col_name, value in new_guide_columns.items():
                 if col_name not in df.columns:
                     df[col_name] = None
@@ -667,4 +605,4 @@ class UsageTracker:
             print(f"DEBUG: Successfully updated question {question_id}")
             
         except Exception as e:
-            print(f"Error removing usage from question {question_id}: {e}")
+            print(f"Error removing specific usage from question {question_id}: {e}")

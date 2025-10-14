@@ -11,5 +11,11 @@ OK guardar en BBDD preguntas que se usaron, con nombre de la guia y conteo de us
 OK filtro de preguntas libres o usadas x veces
 OK casos de errores después de la generación, eliminar guía y borrar de BBDD usados
 
+OK eliminación de 1 guía
+OK ejecutar programa con párametros de 1 sola asignatura
+OK al descargar word de guía, descargar excel con las preguntas usadas en esa guía |Pregunta 4 | Código pregunta | Clave | HTML
+OK cargar nuevo excel a excel maestro y no hacer join de todas las guias disponibles porque se pierden los usos
+OK lag al cargar
+
 cl hay texto asociado, revisar BBDD actual y ver estandarizacion
 primer uso, finales de octubre
