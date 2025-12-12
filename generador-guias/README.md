@@ -207,9 +207,16 @@ python main.py process-set "N1-GA10-Estandarizada" --subject F30M
 ```
 
 **Validaciones automáticas:**
+- ❌ Si el archivo ya fue procesado anteriormente: **DETIENE el procesamiento** (evita duplicados)
 - ❌ Si hay valores inválidos en `Clave` (debe ser A, B, C o D) o `Dificultad` (debe ser 1, 2 o 3): **DETIENE el procesamiento**
 - ⚠️ Si hay columnas faltantes o valores vacíos: **Muestra advertencias pero CONTINÚA**
 - ❌ Si el número de preguntas en Word y Excel no coincide: **DETIENE el procesamiento**
+
+**Protección contra duplicados:**
+El sistema detecta automáticamente si un archivo ya fue procesado verificando la existencia del archivo actualizado en `output/excels_actualizados/{subject}/`. Si intenta procesar un archivo que ya existe:
+- 🛑 Detiene el procesamiento
+- 📋 Muestra la ubicación del archivo ya procesado
+- 💡 Proporciona instrucciones para reprocesar si es necesario (debe eliminar el archivo existente primero)
 
 ### 2️⃣ Consolidación de archivos Excel
 
@@ -445,12 +452,13 @@ La aplicación web completa incluye las siguientes funcionalidades:
 
 #### Core del sistema
 
-- **`main.py`** (~450 líneas)
+- **`main.py`** (~550 líneas)
   - Punto de entrada CLI con argparse
   - Comandos: `process-set` (modo interactivo y directo), `consolidate`, `init`
   - Modo interactivo: menús numerados para seleccionar asignatura y pares de archivos
   - Funciones auxiliares: `select_subject_interactive()`, `select_file_pair_interactive()`
-  - Validaciones críticas: coincidencia Word-Excel, valores inválidos
+  - Protección contra duplicados: detecta archivos ya procesados y previene reprocesamiento
+  - Validaciones críticas: coincidencia Word-Excel, valores inválidos, archivos duplicados
   - Pipeline completo: Excel → Word → Validación → Archivos individuales → Excel actualizado
 
 - **`config.py`** (120 líneas)

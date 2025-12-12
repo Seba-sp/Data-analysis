@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 from storage import StorageClient
-from config import ensure_directories, SUBJECT_FOLDERS, INPUT_DIR
+from config import ensure_directories, SUBJECT_FOLDERS, INPUT_DIR, EXCELS_ACTUALIZADOS_DIR
 from question_processor import QuestionProcessor
 from excel_processor import ExcelProcessor
 from master_consolidator import MasterConsolidator
@@ -209,6 +209,28 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
     
     if not storage.exists(str(excel_path)):
         print(f"Error: Excel file not found: {excel_path}")
+        return False
+    
+    # Check if this file set has already been processed
+    subject_folder = SUBJECT_FOLDERS.get(subject, subject.upper())
+    output_dir = EXCELS_ACTUALIZADOS_DIR / subject_folder
+    output_filename = f"{base_filename}_actualizado.xlsx"
+    output_path = output_dir / output_filename
+    
+    if storage.exists(str(output_path)):
+        print(f"\n{'='*60}")
+        print(f"⚠️  FILE ALREADY PROCESSED")
+        print(f"{'='*60}")
+        print(f"❌ Cannot process this file set because it has already been processed.")
+        print(f"\n📁 Processed file exists at:")
+        print(f"   {output_path}")
+        print(f"\n💡 If you want to reprocess this file:")
+        print(f"   1. Delete or rename the existing processed file:")
+        print(f"      {output_path}")
+        print(f"   2. Run the process-set command again")
+        print(f"\n⚠️  Warning: Reprocessing will create new PreguntaIDs and may cause")
+        print(f"   duplicates in the master Excel file.")
+        print(f"{'='*60}\n")
         return False
     
     try:

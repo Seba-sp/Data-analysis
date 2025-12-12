@@ -41,7 +41,7 @@ EXCEL_COLUMNS = {
     "habilidad": "Habilidad",
     "dificultad": "Dificultad",
     "clave": "Clave",
-    "descripcion": "Descripción",
+    "descripcion": "Descripción BREVE",
     "enlace_video": "Enlace video",
     "fecha_creacion": "Fecha creacion",
     "pregunta_id": "PreguntaID",
@@ -61,7 +61,7 @@ REQUIRED_INPUT_COLUMNS = [
     "Habilidad",
     "Dificultad",
     "Clave",
-    "Descripción",
+    "Descripción BREVE",
     "Fecha creacion"
 ]
 
