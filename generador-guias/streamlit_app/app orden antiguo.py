@@ -95,9 +95,9 @@ def load_master_excel(subject: str) -> pd.DataFrame:
             df = pd.read_excel(master_file)
             return df
         else:
-            # If master file doesn't exist, try to consolidate
-            st.warning(f"Master file not found for {subject}. Attempting to consolidate...")
-            df, _ = consolidator.consolidate_and_save(subject)
+            # If master file doesn't exist, try to consolidate (using incremental - will create new master)
+            st.warning(f"Master file not found for {subject}. Attempting incremental consolidation...")
+            df, _ = consolidator.consolidate_and_append_new(subject)
             return df
             
     except Exception as e:
@@ -132,9 +132,9 @@ def load_ciencias_combined_data(storage, consolidator) -> pd.DataFrame:
                         combined_dfs.append(df)
                         st.info(f"✅ Loaded {len(df)} questions from {subject}")
                 else:
-                    # If master file doesn't exist, try to consolidate
-                    st.warning(f"Master file not found for {subject}. Attempting to consolidate...")
-                    df, _ = consolidator.consolidate_and_save(subject)
+                    # If master file doesn't exist, try to consolidate (using incremental - will create new master)
+                    st.warning(f"Master file not found for {subject}. Attempting incremental consolidation...")
+                    df, _ = consolidator.consolidate_and_append_new(subject)
                     if not df.empty:
                         df['Subject_Source'] = subject
                         combined_dfs.append(df)

@@ -21,7 +21,7 @@ class UsageTracker:
         Update the master Excel file with usage tracking information.
         
         Args:
-            subject: Subject area (e.g., 'M30M', 'Ciencias')
+            subject: Subject area (e.g., 'M1', 'Ciencias')
             question_ids: List of question IDs that were used
             guide_name: Name of the guide that was generated
             

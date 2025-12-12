@@ -14,12 +14,13 @@ Sistema automatizado para la creación de guías escolares filtradas por tema, h
 - **Procesamiento de Excel**: Actualiza archivos Excel con rutas relativas y metadatos de preguntas
 - **Validación de estructura**: Detecta columnas faltantes, valores vacíos y valores inválidos
 - **Consolidación maestro**: Combina múltiples archivos Excel en archivos maestros por asignatura
-- **Consolidación incremental**: Opción de solo consolidar archivos nuevos (no procesados previamente)
+- **Consolidación incremental (DEFAULT)**: Solo consolida archivos nuevos (no procesados previamente) - más rápido
+- **Consolidación completa**: Opción de resetear el maestro y procesar todos los archivos con flag `--full`
 - **Auto-ajuste de columnas**: Formato automático con ancho óptimo de columnas
 
 ### 🌐 Aplicación Web Streamlit
 - **Interfaz moderna**: Interfaz web completa con diseño responsivo y preservación de scroll
-- **Filtros avanzados**: Por área temática, subtema (dinámico), habilidad, dificultad y asignatura (para Ciencias)
+- **Filtros avanzados**: Por área temática, subtema (dinámico), descripción (búsqueda de texto), habilidad, dificultad y asignatura (para Ciencias)
 - **Vista previa**: Conversión de documentos Word a imágenes PNG usando LibreOffice para preview completo
 - **Selección múltiple**: Sistema de checkboxes con orden personalizable mediante drag-and-drop
 - **Reordenamiento**: Mover preguntas a posiciones específicas con preview visual
@@ -37,6 +38,7 @@ Sistema automatizado para la creación de guías escolares filtradas por tema, h
 - **Tracking completo**: Monitorea qué preguntas se han usado en cada guía con timestamp
 - **Columnas dinámicas**: Crea nuevas columnas automáticamente para cada uso (`Nombre guía (uso 1)`, `Fecha descarga (uso 1)`, etc.)
 - **Estadísticas de uso**: Obtiene distribución de uso, preguntas no usadas y porcentaje de uso
+- **Estadísticas generales**: Gráficos de barras y pie charts para ver distribución por área, habilidad y dificultad de todas las preguntas
 - **Gestión de guías**: Lista todas las guías creadas con detalles de preguntas y fechas
 - **Eliminación selectiva**: Elimina guías específicas y actualiza contadores de uso
 
@@ -62,11 +64,17 @@ generador-guias/
 ├── excel_processor.py           # Procesamiento de archivos Excel
 ├── master_consolidator.py       # Consolidación de archivos maestros
 ├── usage_tracker.py             # Seguimiento de uso de preguntas
-├── main.py                      # Punto de entrada CLI
+├── main.py                      # Punto de entrada CLI con modo interactivo
 ├── requirements.txt             # Dependencias
 ├── streamlit_app/
 │   └── app.py                   # Aplicación principal Streamlit
-├── input/                       # Archivos de entrada (Word + Excel)
+├── input/                       # Archivos de entrada organizados por asignatura
+│   ├── M30M/                   # Matemática (pares Word + Excel)
+│   ├── L30M/                   # Lenguaje (pares Word + Excel)
+│   ├── H30M/                   # Historia (pares Word + Excel)
+│   ├── B30M/                   # Biología (pares Word + Excel)
+│   ├── Q30M/                   # Química (pares Word + Excel)
+│   └── F30M/                   # Física (pares Word + Excel)
 ├── output/
 │   ├── preguntas_divididas/     # Archivos de preguntas individuales
 │   │   ├── M30M/               # Matemática
@@ -131,25 +139,69 @@ generador-guias/
 
 ### 1️⃣ Procesamiento de archivos (CLI)
 
-Coloca tus archivos Word (.docx) y Excel (.xlsx) con el mismo nombre base en la carpeta `input/`:
+Coloca tus archivos Word (.docx) y Excel (.xlsx) con el mismo nombre base en carpetas por asignatura dentro de `input/`:
 
+**Estructura de carpetas:**
+```
+input/
+├── F30M/              # Física
+│   ├── ensayo1.docx
+│   ├── ensayo1.xlsx
+│   ├── guia2.docx
+│   └── guia2.xlsx
+├── M1/              # Matemática
+│   ├── test.docx
+│   └── test.xlsx
+└── ... (otras asignaturas)
+```
+
+**Modo interactivo (recomendado):**
 ```bash
-# Procesar un conjunto de archivos (Word + Excel con mismo nombre)
+# Ejecutar sin argumentos para usar menús interactivos
+python main.py process-set
+
+# El sistema te mostrará un menú como este:
+# ============================================================
+# SELECT SUBJECT FOLDER
+# ============================================================
+#   [1] F30M (3 file pairs)
+#   [2] M30M (5 file pairs)
+#   [3] H30M (2 file pairs)
+#   [0] Cancel
+# ============================================================
+# Enter your choice (number): 1
+
+# Luego te muestra los archivos disponibles:
+# ============================================================
+# SELECT FILE PAIR IN F30M
+# ============================================================
+#   [1] ensayo1
+#       • ensayo1.docx
+#       • ensayo1.xlsx
+#   
+#   [2] guia-fisica-ondas
+#       • guia-fisica-ondas.docx
+#       • guia-fisica-ondas.xlsx
+#   
+#   [0] Go back
+# ============================================================
+# Enter your choice (number): 2
+
+# El sistema procesa automáticamente el conjunto seleccionado
+```
+
+**Modo directo (legacy):**
+```bash
+# Procesar un conjunto específico directamente
 python main.py process-set "N1-GA10-Estandarizada" --subject F30M
 
-# El sistema:
+# El sistema busca los archivos en input/F30M/ y:
 # 1. Lee el archivo Excel y genera PreguntaIDs únicos
 # 2. Valida la estructura del Excel (columnas, valores)
 # 3. Divide el Word en preguntas individuales (1 por página)
 # 4. Verifica que Word y Excel tengan el mismo número de preguntas
 # 5. Guarda las preguntas individuales en output/preguntas_divididas/{subject}/
 # 6. Actualiza el Excel con rutas relativas y lo guarda en output/excels_actualizados/{subject}/
-
-# Ejemplo con Matemática
-python main.py process-set "test base" --subject M30M
-
-# Ejemplo con Física
-python main.py process-set "Ensayo Agosto 2025 - Física" --subject F30M
 ```
 
 **Validaciones automáticas:**
@@ -162,27 +214,30 @@ python main.py process-set "Ensayo Agosto 2025 - Física" --subject F30M
 Combina todos los archivos Excel procesados en un archivo maestro por asignatura:
 
 ```bash
-# Consolidar una asignatura específica
+# Consolidar una asignatura específica (incremental - solo archivos nuevos)
 python main.py consolidate --subject F30M
 
-# Consolidar todas las asignaturas a la vez
+# Consolidar todas las asignaturas a la vez (incremental)
 python main.py consolidate --all-subjects
 
-# El sistema:
-# 1. Lee todos los archivos Excel de output/excels_actualizados/{subject}/
-# 2. Combina las filas en un solo DataFrame
-# 3. Elimina duplicados basándose en PreguntaID
-# 4. Ordena por PreguntaID
-# 5. Guarda en output/excels_maestros/excel_maestro_{subject}.xlsx
+# El sistema (modo incremental - DEFAULT):
+# 1. Identifica archivos Excel que NO están en el maestro actual
+# 2. Lee solo los archivos nuevos de output/excels_actualizados/{subject}/
+# 3. Combina las filas nuevas
+# 4. Elimina duplicados basándose en PreguntaID
+# 5. AGREGA al archivo maestro existente en output/excels_maestros/excel_maestro_{subject}.xlsx
 # 6. Agrega columna "Archivo origen" para rastrear procedencia
 ```
 
-**Consolidación incremental** (solo nuevos archivos):
+**Consolidación completa** (resetea el archivo maestro):
 ```bash
-# Consolida solo archivos que no están en el maestro actual
-python main.py consolidate --subject M30M --incremental
+# Consolida TODOS los archivos (resetea el maestro)
+python main.py consolidate --subject M30M --full
 
-# Útil para agregar nuevos conjuntos sin re-procesar todo
+# Consolidar todas las asignaturas en modo completo
+python main.py consolidate --all-subjects --full
+
+# Útil cuando necesitas reconstruir el maestro desde cero
 ```
 
 ### 3️⃣ Aplicación web Streamlit
@@ -243,11 +298,12 @@ python master_consolidator.py
 Columnas requeridas:
 - `Eje temático`: Ej: Física, Matemática, Lenguaje
 - `Área temática`: Ej: Ondas, Geometría, Lectura literal
-- `Conocimiento/Subtema`: Subtema específico
+- `Unidad temática`: Subtema específico (también conocido como Conocimiento/Subtema)
 - `Habilidad`: Habilidad cognitiva evaluada
-- `Dificultad`: 1,2,3 (Baja, Media o Alta)
-- `Clave`: Letra de la respuesta correcta (A–E)
-- `Fecha creación`: Fecha de creación
+- `Dificultad`: 1, 2, 3 (Baja, Media o Alta)
+- `Clave`: Letra de la respuesta correcta (A, B, C, D o E)
+- `Descripción`: Descripción breve de la pregunta o concepto evaluado
+- `Fecha creacion`: Fecha de creación de la pregunta
 
 ### PreguntaID generado
 
@@ -303,7 +359,7 @@ El sistema incluye tracking automático de uso de preguntas:
 La aplicación web completa incluye las siguientes funcionalidades:
 
 ### 1. **Carga de datos**
-- Selección de asignatura: M30M, L30M, H30M, B30M, Q30M, F30M, o Ciencias
+- Selección de asignatura: M1, M2, H30M, B30M, Q30M, F30M, o Ciencias
 - Carga automática del archivo maestro consolidado
 - Para "Ciencias": combina automáticamente F30M + Q30M + B30M
 - Validación de datos y estructura
@@ -313,8 +369,10 @@ La aplicación web completa incluye las siguientes funcionalidades:
 - **Asignatura** (solo para Ciencias): Filtrar por F30M, Q30M, B30M o todas
 - **Área temática**: Filtrado por áreas específicas de la asignatura
 - **Subtema**: Filtrado dinámico que se actualiza según área y asignatura seleccionadas
+- **Descripción**: Búsqueda por texto en las descripciones de preguntas (búsqueda parcial, no distingue mayúsculas/minúsculas)
 - **Habilidad**: Tipos de habilidades cognitivas evaluadas
 - **Dificultad**: Niveles 1, 2, 3 (Baja, Media, Alta)
+- **Filtro de uso**: Filtra preguntas por número de veces que han sido usadas (sin usar, 1 vez, 2 veces, etc.)
 - **Contador de resultados**: Muestra cuántas preguntas cumplen los filtros
 
 ### 3. **Vista previa y selección**
@@ -376,9 +434,11 @@ La aplicación web completa incluye las siguientes funcionalidades:
 
 #### Core del sistema
 
-- **`main.py`** (288 líneas)
+- **`main.py`** (~450 líneas)
   - Punto de entrada CLI con argparse
-  - Comandos: `process-set`, `consolidate`, `init`
+  - Comandos: `process-set` (modo interactivo y directo), `consolidate`, `init`
+  - Modo interactivo: menús numerados para seleccionar asignatura y pares de archivos
+  - Funciones auxiliares: `select_subject_interactive()`, `select_file_pair_interactive()`
   - Validaciones críticas: coincidencia Word-Excel, valores inválidos
   - Pipeline completo: Excel → Word → Validación → Archivos individuales → Excel actualizado
 
@@ -414,13 +474,14 @@ La aplicación web completa incluye las siguientes funcionalidades:
   - Actualización de rutas relativas a archivos de preguntas
   - Auto-ajuste de ancho de columnas (10-50 caracteres)
 
-- **`master_consolidator.py`** (519 líneas)
+- **`master_consolidator.py`** (533 líneas)
   - Consolidación de múltiples archivos Excel en maestros
-  - Modo completo: procesa todos los archivos
-  - Modo incremental: solo archivos nuevos (optimizado)
+  - **Modo incremental (DEFAULT)**: solo archivos nuevos (optimizado, recomendado)
+  - Modo completo: procesa todos los archivos (resetea maestro)
   - Eliminación automática de duplicados por PreguntaID
   - Validación de datos consolidados y generación de estadísticas
-  - Método `consolidate_all_subjects()` para procesamiento batch
+  - Método `consolidate_all_subjects_incremental()` para procesamiento batch incremental
+  - Método `consolidate_all_subjects()` para procesamiento batch completo
 
 #### Tracking y uso
 
@@ -488,14 +549,17 @@ La aplicación web completa incluye las siguientes funcionalidades:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. ENTRADA (input/)                                        │
+│  1. ENTRADA (input/{subject}/)                              │
 │     - archivo.docx (Word con ~25 preguntas, 1 por página)  │
 │     - archivo.xlsx (Excel con metadatos)                    │
+│     Ejemplo: input/F30M/ensayo1.docx + ensayo1.xlsx         │
 └────────────────────┬────────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  2. PROCESAMIENTO (main.py process-set)                     │
+│     Modo interactivo: menú para elegir asignatura y par     │
+│     Modo directo: especificar archivo y --subject           │
 │     a) Leer Excel y validar estructura                      │
 │     b) Generar PreguntaIDs únicos                           │
 │     c) Dividir Word en archivos individuales                │

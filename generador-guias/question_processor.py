@@ -214,7 +214,7 @@ class QuestionProcessor:
                             new_zip.write(file_path, arc_name)
                 
                 # Determine output path
-                subject_folder = SUBJECT_FOLDERS.get("M30M", "M30M")  # Default to M30M
+                subject_folder = SUBJECT_FOLDERS.get("M1", "M1")  # Default to M1
                 output_dir = PREGUNTAS_DIVIDIDAS_DIR / subject_folder
                 self.storage.ensure_directory(str(output_dir))
                 

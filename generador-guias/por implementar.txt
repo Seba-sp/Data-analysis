@@ -17,5 +17,14 @@ OK al descargar word de guía, descargar excel con las preguntas usadas en esa g
 OK cargar nuevo excel a excel maestro y no hacer join de todas las guias disponibles porque se pierden los usos
 OK lag al cargar
 
+Agregar HTML en excel resumen
+
+Estadisticas para todas las preguntas
+OK Un gráfico de barras con area
+OK Un circular con dist. dificultad
+OK Un circular con habilidad.
+OK Agregar columna de descripción
+OK filtrar columna de descripción por palabra
+
 cl hay texto asociado, revisar BBDD actual y ver estandarizacion
 primer uso, finales de octubre

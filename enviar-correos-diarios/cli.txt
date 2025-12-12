@@ -1,0 +1,11 @@
+aws sesv2 send-email --region us-east-2 --from-email-address plataforma@preum30m.com --destination "ToAddresses=sebastian.san.martin.p@gmail.com" --content "Template={TemplateName=links_zoom_clases,TemplateData=\"{}\"}" --list-management-options "ContactListName=alumnos"
+
+aws sesv2 send-email `
+  --region us-east-2 `
+  --from-email-address "plataforma@preum30m.com" `
+  --destination 'ToAddresses=sebastian.san.martin.p@gmail.com' `
+  --content 'Template={TemplateName=links_zoom_clases,TemplateData="{}"}' `
+  --list-management-options 'ContactListName=alumnos'
+
+aws sesv2 create-contact-list --region us-east-2 --contact-list-name alumnos
+aws sesv2 get-email-template --region us-east-2 --template-name links_zoom_clases --no-cli-pager | Out-File -FilePath tpl.json -Encoding utf8

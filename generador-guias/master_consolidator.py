@@ -116,6 +116,53 @@ class MasterConsolidator:
             print(f"Error reading Excel file {file_path}: {e}")
             return pd.DataFrame()
     
+    def _consolidate_files_list(self, excel_files: List[str], file_label: str = "file") -> pd.DataFrame:
+        """
+        Private helper method to consolidate a list of Excel files.
+        
+        Args:
+            excel_files: List of file paths to consolidate
+            file_label: Label for print messages (e.g., "file", "new file")
+            
+        Returns:
+            Consolidated DataFrame
+        """
+        if not excel_files:
+            return pd.DataFrame()
+        
+        # Read and combine Excel files
+        dataframes = []
+        
+        for file_path in excel_files:
+            print(f"Reading {file_label}: {file_path}...")
+            df = self.read_excel_file(file_path)
+            
+            if not df.empty:
+                # Add source file information
+                df['Archivo origen'] = Path(file_path).name
+                dataframes.append(df)
+            else:
+                print(f"Warning: Empty or invalid file {file_path}")
+        
+        if not dataframes:
+            return pd.DataFrame()
+        
+        # Concatenate all DataFrames
+        consolidated_df = pd.concat(dataframes, ignore_index=True, sort=False)
+        
+        # Remove duplicates based on PreguntaID
+        initial_count = len(consolidated_df)
+        consolidated_df = consolidated_df.drop_duplicates(subset=['PreguntaID'], keep='first')
+        final_count = len(consolidated_df)
+        
+        if initial_count != final_count:
+            print(f"Removed {initial_count - final_count} duplicate questions")
+        
+        # Sort by PreguntaID for consistency
+        consolidated_df = consolidated_df.sort_values('PreguntaID').reset_index(drop=True)
+        
+        return consolidated_df
+    
     def consolidate_subject_excels(self, subject: str) -> pd.DataFrame:
         """
         Consolidate all Excel files for a specific subject into one master DataFrame.
@@ -134,37 +181,11 @@ class MasterConsolidator:
                 print(f"No Excel files found for subject: {subject}")
                 return pd.DataFrame()
             
-            # Read and combine all Excel files
-            dataframes = []
+            # Use helper method to consolidate
+            consolidated_df = self._consolidate_files_list(excel_files, file_label="file")
             
-            for file_path in excel_files:
-                print(f"Reading {file_path}...")
-                df = self.read_excel_file(file_path)
-                
-                if not df.empty:
-                    # Add source file information
-                    df['Archivo origen'] = Path(file_path).name
-                    dataframes.append(df)
-                else:
-                    print(f"Warning: Empty or invalid file {file_path}")
-            
-            if not dataframes:
+            if consolidated_df.empty:
                 print(f"No valid data found for subject: {subject}")
-                return pd.DataFrame()
-            
-            # Concatenate all DataFrames
-            consolidated_df = pd.concat(dataframes, ignore_index=True, sort=False)
-            
-            # Remove duplicates based on PreguntaID
-            initial_count = len(consolidated_df)
-            consolidated_df = consolidated_df.drop_duplicates(subset=['PreguntaID'], keep='first')
-            final_count = len(consolidated_df)
-            
-            if initial_count != final_count:
-                print(f"Removed {initial_count - final_count} duplicate questions")
-            
-            # Sort by PreguntaID for consistency
-            consolidated_df = consolidated_df.sort_values('PreguntaID').reset_index(drop=True)
             
             return consolidated_df
             
@@ -192,34 +213,11 @@ class MasterConsolidator:
             
             print(f"Found {len(new_excel_files)} new files to process for {subject}")
             
-            # Read and combine only new Excel files
-            dataframes = []
+            # Use helper method to consolidate
+            new_data_df = self._consolidate_files_list(new_excel_files, file_label="new file")
             
-            for file_path in new_excel_files:
-                print(f"Reading new file: {file_path}...")
-                df = self.read_excel_file(file_path)
-                
-                if not df.empty:
-                    # Add source file information
-                    df['Archivo origen'] = Path(file_path).name
-                    dataframes.append(df)
-                else:
-                    print(f"Warning: Empty or invalid file {file_path}")
-            
-            if not dataframes:
+            if new_data_df.empty:
                 print(f"No valid new data found for subject: {subject}")
-                return pd.DataFrame()
-            
-            # Concatenate new DataFrames
-            new_data_df = pd.concat(dataframes, ignore_index=True, sort=False)
-            
-            # Remove duplicates based on PreguntaID
-            initial_count = len(new_data_df)
-            new_data_df = new_data_df.drop_duplicates(subset=['PreguntaID'], keep='first')
-            final_count = len(new_data_df)
-            
-            if initial_count != final_count:
-                print(f"Removed {initial_count - final_count} duplicate questions from new data")
             
             return new_data_df
             
@@ -322,7 +320,11 @@ class MasterConsolidator:
     
     def consolidate_and_save(self, subject: str) -> Tuple[pd.DataFrame, str]:
         """
-        Complete consolidation pipeline for a subject.
+        Complete FULL consolidation pipeline for a subject.
+        This RESETS the master file by processing ALL Excel files.
+        
+        Use this when you want to rebuild the master file from scratch.
+        For adding only new files, use consolidate_and_append_new() instead.
         
         Args:
             subject: Subject area
@@ -343,7 +345,11 @@ class MasterConsolidator:
     
     def consolidate_and_append_new(self, subject: str) -> Tuple[pd.DataFrame, str]:
         """
-        Incremental consolidation pipeline - only processes new files and appends to existing master.
+        INCREMENTAL consolidation pipeline - only processes new files and appends to existing master.
+        This is the RECOMMENDED default method as it's faster and preserves existing data.
+        
+        Only processes Excel files that are not already in the master file.
+        If the master file doesn't exist, it creates a new one.
         
         Args:
             subject: Subject area
@@ -430,7 +436,11 @@ class MasterConsolidator:
     
     def consolidate_all_subjects(self) -> Dict[str, Tuple[pd.DataFrame, str]]:
         """
-        Consolidate Excel files for all subjects.
+        FULL consolidation of Excel files for all subjects.
+        This RESETS all master files by processing ALL Excel files.
+        
+        Use this when you want to rebuild all master files from scratch.
+        For adding only new files, use consolidate_all_subjects_incremental() instead.
         
         Returns:
             Dictionary mapping subject names to (DataFrame, output_path) tuples
@@ -438,7 +448,7 @@ class MasterConsolidator:
         results = {}
         
         for subject in SUBJECT_FOLDERS.keys():
-            print(f"\nConsolidating {subject}...")
+            print(f"\nFull consolidation for {subject}...")
             df, output_path = self.consolidate_and_save(subject)
             
             if not df.empty:
@@ -456,7 +466,11 @@ class MasterConsolidator:
     
     def consolidate_all_subjects_incremental(self) -> Dict[str, Tuple[pd.DataFrame, str]]:
         """
-        Incremental consolidation for all subjects - only processes new files.
+        INCREMENTAL consolidation for all subjects - only processes new files.
+        This is the RECOMMENDED default method as it's faster and preserves existing data.
+        
+        Only processes Excel files that are not already in the master files.
+        If a master file doesn't exist, it creates a new one.
         
         Returns:
             Dictionary mapping subject names to (new_data_DataFrame, output_path) tuples

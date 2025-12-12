@@ -17,8 +17,8 @@ EXCELES_MAESTROS_DIR = OUTPUT_DIR / "excels_maestros"
 
 # Subject mappings for folder organization
 SUBJECT_FOLDERS = {
-    "M30M": "M30M", 
-    "L30M": "L30M",
+    "M1": "M1", 
+    "M2": "M2",
     "H30M": "H30M",
     "B30M": "B30M",
     "Q30M": "Q30M",
@@ -37,12 +37,36 @@ ID_CONFIG = {
 EXCEL_COLUMNS = {
     "eje_tematico": "Eje temático",
     "area_tematica": "Área temática", 
-    "conocimiento_subtema": "Conocimiento/Subtema",
+    "conocimiento_subtema": "Unidad temática",
     "habilidad": "Habilidad",
     "dificultad": "Dificultad",
     "clave": "Clave",
-    "fecha_creacion": "Fecha creacion"
+    "descripcion": "Descripción",
+    "fecha_creacion": "Fecha creacion",
+    "pregunta_id": "PreguntaID",
+    "ruta_relativa": "Ruta relativa",
+    "ruta_absoluta": "Ruta absoluta",
+    "archivo_origen": "Archivo origen",
+    "subject_source": "Subject_Source",  # For Ciencias combined subject
+    "numero_usos": "Número de usos"
 }
+
+# Required columns that must be present in input Excel files
+# These are the columns that users must provide before processing
+REQUIRED_INPUT_COLUMNS = [
+    "Eje temático",
+    "Área temática",
+    "Unidad temática",
+    "Habilidad",
+    "Dificultad",
+    "Clave",
+    "Descripción",
+    "Fecha creacion"
+]
+
+# Valid values for different columns
+VALID_ANSWER_KEYS = ['A', 'B', 'C', 'D', 'E']
+VALID_DIFFICULTY_VALUES = ['1', '2', '3']
 
 # New columns to add to Excel files
 NEW_COLUMNS = [
@@ -109,8 +133,11 @@ def ensure_directories():
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
         
-    # Create subject subdirectories
+    # Create subject subdirectories in input/ and output/ folders
     for subject_folder in SUBJECT_FOLDERS.values():
+        # Skip "Ciencias" as it's a virtual combined subject
+        if subject_folder != "Ciencias":
+            (INPUT_DIR / subject_folder).mkdir(parents=True, exist_ok=True)
         (PREGUNTAS_DIVIDIDAS_DIR / subject_folder).mkdir(parents=True, exist_ok=True)
         (EXCELS_ACTUALIZADOS_DIR / subject_folder).mkdir(parents=True, exist_ok=True)
 

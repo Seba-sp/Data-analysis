@@ -16,7 +16,7 @@ import tempfile
 sys.path.append(str(Path(__file__).parent.parent))
 
 from storage import StorageClient
-from config import EXCELES_MAESTROS_DIR, STREAMLIT_CONFIG, CHART_COLORS, NOMBRES_GUIAS_PATH
+from config import EXCELES_MAESTROS_DIR, STREAMLIT_CONFIG, CHART_COLORS, NOMBRES_GUIAS_PATH, EXCEL_COLUMNS
 from master_consolidator import MasterConsolidator
 from usage_tracker import UsageTracker
 
@@ -114,9 +114,9 @@ def load_master_excel(subject: str) -> pd.DataFrame:
             if storage.exists(str(master_file)):
                 df = pd.read_excel(master_file)
             else:
-                # If master file doesn't exist, try to consolidate
-                st.warning(f"Master file not found for {subject}. Attempting to consolidate...")
-                df, _ = consolidator.consolidate_and_save(subject)
+                # If master file doesn't exist, try to consolidate (using incremental - will create new master)
+                st.warning(f"Master file not found for {subject}. Attempting incremental consolidation...")
+                df, _ = consolidator.consolidate_and_append_new(subject)
         
         # Ensure usage tracking columns exist in the loaded DataFrame
         if not df.empty:
@@ -153,18 +153,18 @@ def load_ciencias_combined_data(storage, consolidator) -> pd.DataFrame:
                     df = pd.read_excel(master_file)
                     if not df.empty:
                         # Add a column to identify the source subject
-                        df['Subject_Source'] = subject
+                        df[EXCEL_COLUMNS['subject_source']] = subject
                         # Ensure usage tracking columns exist
                         usage_tracker = UsageTracker(storage)
                         df = usage_tracker._ensure_usage_columns(df)
                         combined_dfs.append(df)
                         st.info(f"✅ Loaded {len(df)} questions from {subject}")
                 else:
-                    # If master file doesn't exist, try to consolidate
-                    st.warning(f"Master file not found for {subject}. Attempting to consolidate...")
-                    df, _ = consolidator.consolidate_and_save(subject)
+                    # If master file doesn't exist, try to consolidate (using incremental - will create new master)
+                    st.warning(f"Master file not found for {subject}. Attempting incremental consolidation...")
+                    df, _ = consolidator.consolidate_and_append_new(subject)
                     if not df.empty:
-                        df['Subject_Source'] = subject
+                        df[EXCEL_COLUMNS['subject_source']] = subject
                         # Ensure usage tracking columns exist
                         usage_tracker = UsageTracker(storage)
                         df = usage_tracker._ensure_usage_columns(df)
@@ -209,10 +209,21 @@ def sort_questions_for_display(df: pd.DataFrame, subject: str) -> pd.DataFrame:
         # Define the sorting columns based on subject
         if subject == "Ciencias":
             # For Ciencias: subject, area, subtema, habilidad, dificultad
-            sort_columns = ['Subject_Source', 'Área temática', 'Conocimiento/Subtema', 'Habilidad', 'Dificultad']
+            sort_columns = [
+                EXCEL_COLUMNS['subject_source'], 
+                EXCEL_COLUMNS['area_tematica'], 
+                EXCEL_COLUMNS['conocimiento_subtema'], 
+                EXCEL_COLUMNS['habilidad'], 
+                EXCEL_COLUMNS['dificultad']
+            ]
         else:
             # For other subjects: area, subtema, habilidad, dificultad
-            sort_columns = ['Área temática', 'Conocimiento/Subtema', 'Habilidad', 'Dificultad']
+            sort_columns = [
+                EXCEL_COLUMNS['area_tematica'], 
+                EXCEL_COLUMNS['conocimiento_subtema'], 
+                EXCEL_COLUMNS['habilidad'], 
+                EXCEL_COLUMNS['dificultad']
+            ]
         
         # Filter out columns that don't exist in the dataframe
         existing_columns = [col for col in sort_columns if col in sorted_df.columns]
@@ -400,40 +411,48 @@ def filter_questions(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     
     # Apply filters
     if filters.get('area_tematica'):
-        filtered_df = filtered_df[filtered_df['Área temática'] == filters['area_tematica']]
+        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['area_tematica']] == filters['area_tematica']]
     
     if filters.get('dificultad'):
-        filtered_df = filtered_df[filtered_df['Dificultad'] == filters['dificultad']]
+        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['dificultad']] == filters['dificultad']]
     
     if filters.get('habilidad'):
-        filtered_df = filtered_df[filtered_df['Habilidad'] == filters['habilidad']]
+        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['habilidad']] == filters['habilidad']]
     
     if filters.get('subtema'):
-        filtered_df = filtered_df[filtered_df['Conocimiento/Subtema'] == filters['subtema']]
+        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['conocimiento_subtema']] == filters['subtema']]
+    
+    if filters.get('descripcion'):
+        # Text search in Descripción column (case-insensitive)
+        if EXCEL_COLUMNS['descripcion'] in filtered_df.columns:
+            search_term = filters['descripcion'].lower()
+            filtered_df = filtered_df[
+                filtered_df[EXCEL_COLUMNS['descripcion']].astype(str).str.lower().str.contains(search_term, na=False)
+            ]
     
     if filters.get('subject'):
-        filtered_df = filtered_df[filtered_df['Subject_Source'] == filters['subject']]
+        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['subject_source']] == filters['subject']]
     
     # Apply usage filter
     if filters.get('usage') is not None:
         usage_filter = filters['usage']
         
         # Ensure usage tracking columns exist
-        if 'Número de usos' not in filtered_df.columns:
-            filtered_df['Número de usos'] = 0
+        if EXCEL_COLUMNS['numero_usos'] not in filtered_df.columns:
+            filtered_df[EXCEL_COLUMNS['numero_usos']] = 0
         
         # Convert usage counts to numeric, handling any string values
-        filtered_df['Número de usos'] = pd.to_numeric(filtered_df['Número de usos'], errors='coerce').fillna(0)
+        filtered_df[EXCEL_COLUMNS['numero_usos']] = pd.to_numeric(filtered_df[EXCEL_COLUMNS['numero_usos']], errors='coerce').fillna(0)
         
         if usage_filter == 'unused':
             # Show only unused questions
-            filtered_df = filtered_df[filtered_df['Número de usos'] == 0]
+            filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['numero_usos']] == 0]
         elif usage_filter == '4+':
             # Show questions used 4 or more times
-            filtered_df = filtered_df[filtered_df['Número de usos'] >= 4]
+            filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['numero_usos']] >= 4]
         elif isinstance(usage_filter, int):
             # Show questions used exactly this many times
-            filtered_df = filtered_df[filtered_df['Número de usos'] == usage_filter]
+            filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['numero_usos']] == usage_filter]
     
     return filtered_df
 
@@ -656,7 +675,7 @@ def create_questions_excel(ordered_questions: list, questions_df: pd.DataFrame, 
     """
     try:
         # Filter selected questions and preserve order
-        selected_df = questions_df[questions_df['PreguntaID'].isin(ordered_questions)]
+        selected_df = questions_df[questions_df[EXCEL_COLUMNS['pregunta_id']].isin(ordered_questions)]
         
         if selected_df.empty:
             return None
@@ -666,21 +685,21 @@ def create_questions_excel(ordered_questions: list, questions_df: pd.DataFrame, 
         
         for idx, question_id in enumerate(ordered_questions, start=1):
             # Find the row for this question
-            question_row = selected_df[selected_df['PreguntaID'] == question_id]
+            question_row = selected_df[selected_df[EXCEL_COLUMNS['pregunta_id']] == question_id]
             if not question_row.empty:
                 row = question_row.iloc[0]
                 
                 # Get the correct alternative
-                correct_alternative = row.get('Clave', 'N/A')
+                correct_alternative = row.get(EXCEL_COLUMNS['clave'], 'N/A')
                 
                 excel_data.append({
-                    'PreguntaID': question_id,
+                    EXCEL_COLUMNS['pregunta_id']: question_id,
                     'Número': idx,
-                    'Clave': correct_alternative
+                    EXCEL_COLUMNS['clave']: correct_alternative
                 })
         
         # Create DataFrame
-        excel_df = pd.DataFrame(excel_data, columns=['PreguntaID', 'Número', 'Clave'])
+        excel_df = pd.DataFrame(excel_data, columns=[EXCEL_COLUMNS['pregunta_id'], 'Número', EXCEL_COLUMNS['clave']])
         
         # Create Excel buffer
         excel_buffer = BytesIO()
@@ -784,7 +803,7 @@ def create_word_document(ordered_questions: list, questions_df: pd.DataFrame, su
     """
     try:
         # Filter selected questions and preserve order
-        selected_df = questions_df[questions_df['PreguntaID'].isin(ordered_questions)]
+        selected_df = questions_df[questions_df[EXCEL_COLUMNS['pregunta_id']].isin(ordered_questions)]
         
         if selected_df.empty:
             return None
@@ -824,9 +843,9 @@ def create_word_guide(questions_df: pd.DataFrame, ordered_questions: list) -> By
             
             # First pass: find the first valid document
             for question_id in ordered_questions:
-                row = questions_df[questions_df['PreguntaID'] == question_id]
+                row = questions_df[questions_df[EXCEL_COLUMNS['pregunta_id']] == question_id]
                 if not row.empty:
-                    file_path = row.iloc[0].get('Ruta relativa', '')
+                    file_path = row.iloc[0].get(EXCEL_COLUMNS['ruta_relativa'], '')
                     if file_path:
                         absolute_path = project_root / file_path
                         if os.path.exists(str(absolute_path)):
@@ -843,12 +862,12 @@ def create_word_guide(questions_df: pd.DataFrame, ordered_questions: list) -> By
             
             # Second pass: collect all other documents in order
             for question_id in ordered_questions:
-                row = questions_df[questions_df['PreguntaID'] == question_id]
+                row = questions_df[questions_df[EXCEL_COLUMNS['pregunta_id']] == question_id]
                 if not row.empty:
-                    file_path = row.iloc[0].get('Ruta relativa', '')
-                if file_path:
-                    absolute_path = project_root / file_path
-                    if os.path.exists(str(absolute_path)) and str(absolute_path) != first_doc_path:
+                    file_path = row.iloc[0].get(EXCEL_COLUMNS['ruta_relativa'], '')
+                    if file_path:
+                        absolute_path = project_root / file_path
+                        if os.path.exists(str(absolute_path)) and str(absolute_path) != first_doc_path:
                             processed_questions.append((question_id, str(absolute_path)))
             
             # Calculate total questions
@@ -1350,6 +1369,103 @@ def create_pie_chart(values, names, title, total_questions):
     
     return fig
 
+def create_general_statistics_charts(df: pd.DataFrame, subject: str):
+    """
+    Create general statistics charts for all questions in the subject.
+    Displays:
+    1. Bar chart for Área temática distribution
+    2. Pie chart for Dificultad distribution  
+    3. Pie chart for Habilidad distribution
+    
+    Args:
+        df: DataFrame with all questions for the subject
+        subject: Current subject
+    """
+    try:
+        import plotly.express as px
+        import plotly.graph_objects as go
+        
+        if df.empty:
+            st.info("No hay preguntas disponibles para mostrar estadísticas.")
+            return
+        
+        # Bar chart for Área temática
+        if EXCEL_COLUMNS['area_tematica'] in df.columns:
+            area_counts = df[EXCEL_COLUMNS['area_tematica']].value_counts().sort_values(ascending=True)
+            
+            fig_bar = go.Figure(data=[
+                go.Bar(
+                    y=area_counts.index,
+                    x=area_counts.values,
+                    orientation='h',
+                    marker=dict(
+                        color=area_counts.values,
+                        colorscale='Blues',
+                        showscale=False
+                    ),
+                    text=area_counts.values,
+                    textposition='auto',
+                    hovertemplate='<b>%{y}</b><br>Cantidad: %{x}<extra></extra>'
+                )
+            ])
+            
+            fig_bar.update_layout(
+                title=f"Distribución por Área Temática<br><sub>{len(df)} preguntas totales</sub>",
+                xaxis_title="Cantidad de Preguntas",
+                yaxis_title="Área Temática",
+                height=max(400, len(area_counts) * 30),  # Dynamic height based on number of areas
+                showlegend=False,
+                font=dict(size=12)
+            )
+            
+            st.plotly_chart(fig_bar, use_container_width=True)
+        
+        # Row with two pie charts: Dificultad and Habilidad
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Pie chart for Dificultad
+            if EXCEL_COLUMNS['dificultad'] in df.columns:
+                difficulty_counts = df[EXCEL_COLUMNS['dificultad']].value_counts()
+                
+                # Map difficulty numbers to labels
+                difficulty_labels = {
+                    '1': 'Baja (1)',
+                    '2': 'Media (2)',
+                    '3': 'Alta (3)',
+                    1: 'Baja (1)',
+                    2: 'Media (2)',
+                    3: 'Alta (3)'
+                }
+                
+                difficulty_names = [difficulty_labels.get(str(d), str(d)) for d in difficulty_counts.index]
+                
+                fig_difficulty = create_pie_chart(
+                    difficulty_counts.values,
+                    difficulty_names,
+                    "Distribución por Dificultad",
+                    len(df)
+                )
+                
+                st.plotly_chart(fig_difficulty, use_container_width=True)
+        
+        with col2:
+            # Pie chart for Habilidad
+            if EXCEL_COLUMNS['habilidad'] in df.columns:
+                habilidad_counts = df[EXCEL_COLUMNS['habilidad']].value_counts()
+                
+                fig_habilidad = create_pie_chart(
+                    habilidad_counts.values,
+                    habilidad_counts.index,
+                    "Distribución por Habilidad",
+                    len(df)
+                )
+                
+                st.plotly_chart(fig_habilidad, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Error al crear gráficos de estadísticas: {e}")
+
 def create_summary_charts(selected_df: pd.DataFrame, subject: str):
     """
     Create summary pie charts for selected questions.
@@ -1369,13 +1485,13 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
         total_questions = len(selected_df)
         
         # First row: Subject and Area charts
-        if subject == "Ciencias" and 'Subject_Source' in selected_df.columns:
+        if subject == "Ciencias" and EXCEL_COLUMNS['subject_source'] in selected_df.columns:
             # For Ciencias: show Subject and Area side by side
             col1, col2 = st.columns(2)
             
             with col1:
                 # Subject pie chart
-                subject_counts = selected_df['Subject_Source'].value_counts()
+                subject_counts = selected_df[EXCEL_COLUMNS['subject_source']].value_counts()
                 fig_subject = create_pie_chart(
                     subject_counts.values,
                     subject_counts.index,
@@ -1386,8 +1502,8 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
             
             with col2:
                 # Area pie chart
-                if 'Área temática' in selected_df.columns:
-                    area_counts = selected_df['Área temática'].value_counts()
+                if EXCEL_COLUMNS['area_tematica'] in selected_df.columns:
+                    area_counts = selected_df[EXCEL_COLUMNS['area_tematica']].value_counts()
                     fig_area = create_pie_chart(
                         area_counts.values,
                         area_counts.index,
@@ -1397,8 +1513,8 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
                     st.plotly_chart(fig_area, use_container_width=True)
         else:
             # For other subjects: show Area full width
-            if 'Área temática' in selected_df.columns:
-                area_counts = selected_df['Área temática'].value_counts()
+            if EXCEL_COLUMNS['area_tematica'] in selected_df.columns:
+                area_counts = selected_df[EXCEL_COLUMNS['area_tematica']].value_counts()
                 fig_area = create_pie_chart(
                     area_counts.values,
                     area_counts.index,
@@ -1412,8 +1528,8 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
         
         with col3:
             # Habilidad pie chart
-            if 'Habilidad' in selected_df.columns:
-                habilidad_counts = selected_df['Habilidad'].value_counts()
+            if EXCEL_COLUMNS['habilidad'] in selected_df.columns:
+                habilidad_counts = selected_df[EXCEL_COLUMNS['habilidad']].value_counts()
                 fig_habilidad = create_pie_chart(
                     habilidad_counts.values,
                     habilidad_counts.index,
@@ -1424,8 +1540,8 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
         
         with col4:
             # Dificultad pie chart
-            if 'Dificultad' in selected_df.columns:
-                dificultad_counts = selected_df['Dificultad'].value_counts()
+            if EXCEL_COLUMNS['dificultad'] in selected_df.columns:
+                dificultad_counts = selected_df[EXCEL_COLUMNS['dificultad']].value_counts()
                 fig_dificultad = create_pie_chart(
                     dificultad_counts.values,
                     dificultad_counts.index,
@@ -1435,8 +1551,8 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
                 st.plotly_chart(fig_dificultad, use_container_width=True)
         
         # Third row: Subtema chart (full width)
-        if 'Conocimiento/Subtema' in selected_df.columns:
-            subtema_counts = selected_df['Conocimiento/Subtema'].value_counts()
+        if EXCEL_COLUMNS['conocimiento_subtema'] in selected_df.columns:
+            subtema_counts = selected_df[EXCEL_COLUMNS['conocimiento_subtema']].value_counts()
             
             # Limit to top 10 subtemas if there are too many
             if len(subtema_counts) > 10:
@@ -1602,9 +1718,16 @@ def main():
                                             total_questions = stats['total_questions']
                                             percentage = (count / total_questions) if total_questions > 0 else 0
                                             
-                                            # Display with progress bar
-                                            st.markdown(f"**{label}:** {count} preguntas")
-                                            st.progress(percentage)
+                                        # Display with progress bar
+                                        st.markdown(f"**{label}:** {count} preguntas")
+                                        st.progress(percentage)
+                            
+                            # Add general statistics charts for this subject
+                            st.markdown("#### 📊 Estadísticas Generales")
+                            # Load data for this specific subject
+                            subject_df = load_master_excel(subj)
+                            if not subject_df.empty:
+                                create_general_statistics_charts(subject_df, subj)
                             
                             st.markdown("---")
                 else:
@@ -1672,6 +1795,12 @@ def main():
                                         # Display with progress bar
                                         st.markdown(f"**{label}:** {count} preguntas")
                                         st.progress(percentage)
+                        
+                        # Add general statistics charts for this subject
+                        st.markdown("#### 📊 Estadísticas Generales")
+                        # Get the loaded questions DataFrame from session state
+                        if 'questions_df' in st.session_state:
+                            create_general_statistics_charts(st.session_state['questions_df'], current_subject)
                     else:
                         st.error(f"❌ {stats['error']}")
     
@@ -1820,7 +1949,7 @@ def main():
         )
     
     with col2:
-        areas = df['Área temática'].nunique() if 'Área temática' in df.columns else 0
+        areas = df[EXCEL_COLUMNS['area_tematica']].nunique() if EXCEL_COLUMNS['area_tematica'] in df.columns else 0
         st.metric(
             label="🎯 Áreas Temáticas",
             value=areas,
@@ -1828,7 +1957,7 @@ def main():
         )
     
     with col3:
-        difficulties = df['Dificultad'].nunique() if 'Dificultad' in df.columns else 0
+        difficulties = df[EXCEL_COLUMNS['dificultad']].nunique() if EXCEL_COLUMNS['dificultad'] in df.columns else 0
         st.metric(
             label="📈 Niveles Dificultad",
             value=difficulties,
@@ -1836,7 +1965,7 @@ def main():
         )
     
     with col4:
-        skills = df['Habilidad'].nunique() if 'Habilidad' in df.columns else 0
+        skills = df[EXCEL_COLUMNS['habilidad']].nunique() if EXCEL_COLUMNS['habilidad'] in df.columns else 0
         st.metric(
             label="🧠 Habilidades",
             value=skills,
@@ -1854,8 +1983,8 @@ def main():
         
         with col_asig:
             # Subject filter for Ciencias
-            if 'Subject_Source' in df.columns:
-                subjects = ['Todas'] + sorted(df['Subject_Source'].unique().tolist())
+            if EXCEL_COLUMNS['subject_source'] in df.columns:
+                subjects = ['Todas'] + sorted(df[EXCEL_COLUMNS['subject_source']].unique().tolist())
                 selected_subject = st.selectbox("Asignatura", subjects)
                 subject_filter = None if selected_subject == 'Todas' else selected_subject
             else:
@@ -1863,16 +1992,16 @@ def main():
         
         with col_area:
             # Area filter
-            if 'Área temática' in df.columns:
-                areas = ['Todas'] + sorted(df['Área temática'].unique().tolist())
+            if EXCEL_COLUMNS['area_tematica'] in df.columns:
+                areas = ['Todas'] + sorted(df[EXCEL_COLUMNS['area_tematica']].unique().tolist())
                 selected_area = st.selectbox("Área Temática", areas)
                 area_filter = None if selected_area == 'Todas' else selected_area
             else:
                 area_filter = None
     else:
         # For other subjects, just show Área Temática in full width
-        if 'Área temática' in df.columns:
-            areas = ['Todas'] + sorted(df['Área temática'].unique().tolist())
+        if EXCEL_COLUMNS['area_tematica'] in df.columns:
+            areas = ['Todas'] + sorted(df[EXCEL_COLUMNS['area_tematica']].unique().tolist())
             selected_area = st.selectbox("Área Temática", areas)
             area_filter = None if selected_area == 'Todas' else selected_area
         else:
@@ -1880,32 +2009,43 @@ def main():
         
     
     # Second row: Subtema (full width) - dynamic based on selected filters
-    if 'Conocimiento/Subtema' in df.columns:
+    if EXCEL_COLUMNS['conocimiento_subtema'] in df.columns:
         # Filter subtemas based on selected area and subject (for Ciencias)
         filtered_df_for_subtema = df.copy()
         
         # Apply subject filter first (for Ciencias)
         if current_subject == "Ciencias" and 'subject_filter' in locals() and subject_filter is not None:
-            filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema['Subject_Source'] == subject_filter]
+            filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema[EXCEL_COLUMNS['subject_source']] == subject_filter]
         
         # Apply area filter
         if area_filter is not None:
-            filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema['Área temática'] == area_filter]
+            filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema[EXCEL_COLUMNS['area_tematica']] == area_filter]
         
-        available_subtemas = sorted(filtered_df_for_subtema['Conocimiento/Subtema'].unique().tolist())
+        available_subtemas = sorted(filtered_df_for_subtema[EXCEL_COLUMNS['conocimiento_subtema']].unique().tolist())
         subtemas = ['Todos'] + available_subtemas
         selected_subtema = st.selectbox("Subtema", subtemas)
         subtema_filter = None if selected_subtema == 'Todos' else selected_subtema
     else:
         subtema_filter = None
     
+    # Descripción filter (text search) - positioned after Subtema
+    if EXCEL_COLUMNS['descripcion'] in df.columns:
+        descripcion_search = st.text_input(
+            "Buscar por Descripción", 
+            placeholder="Escribe una palabra para buscar en las descripciones...",
+            help="Busca preguntas que contengan esta palabra en su descripción (no distingue mayúsculas/minúsculas)"
+        )
+        descripcion_filter = descripcion_search.strip() if descripcion_search else None
+    else:
+        descripcion_filter = None
+    
     # Third row: Habilidad and Dificultad
     col_hab, col_dif = st.columns(2)
     
     with col_hab:
         # Skill filter
-        if 'Habilidad' in df.columns:
-            skills = ['Todas'] + sorted(df['Habilidad'].unique().tolist())
+        if EXCEL_COLUMNS['habilidad'] in df.columns:
+            skills = ['Todas'] + sorted(df[EXCEL_COLUMNS['habilidad']].unique().tolist())
             selected_skill = st.selectbox("Habilidad", skills)
             skill_filter = None if selected_skill == 'Todas' else selected_skill
         else:
@@ -1913,8 +2053,8 @@ def main():
     
     with col_dif:
         # Difficulty filter
-        if 'Dificultad' in df.columns:
-            difficulties = ['Todas'] + sorted(df['Dificultad'].unique().tolist())
+        if EXCEL_COLUMNS['dificultad'] in df.columns:
+            difficulties = ['Todas'] + sorted(df[EXCEL_COLUMNS['dificultad']].unique().tolist())
             selected_difficulty = st.selectbox("Dificultad", difficulties)
             difficulty_filter = None if selected_difficulty == 'Todas' else selected_difficulty
         else:
@@ -1927,8 +2067,8 @@ def main():
         usage_options = ['Todas', 'Sin usar']
         
         # Get unique usage counts from the data
-        if 'Número de usos' in df.columns:
-            usage_counts = df['Número de usos'].dropna().unique()
+        if EXCEL_COLUMNS['numero_usos'] in df.columns:
+            usage_counts = df[EXCEL_COLUMNS['numero_usos']].dropna().unique()
             usage_counts = sorted([int(x) for x in usage_counts if x > 0])
             
             # Add specific usage count options
@@ -1974,6 +2114,7 @@ def main():
         'dificultad': difficulty_filter,
         'habilidad': skill_filter,
         'subtema': subtema_filter,
+        'descripcion': descripcion_filter,
         'usage': usage_filter
     }
     
@@ -1982,7 +2123,7 @@ def main():
         filters['subject'] = subject_filter if 'subject_filter' in locals() else None
     
     # Clear any open previews when filters change (this will be triggered by any filter interaction)
-    if any([area_filter, difficulty_filter, skill_filter, subtema_filter, usage_filter, 
+    if any([area_filter, difficulty_filter, skill_filter, subtema_filter, descripcion_filter, usage_filter, 
             ('subject_filter' in locals() and subject_filter)]):
         # Only clear if we're not in the initial load
         if 'preview_question' in st.session_state or 'show_usage_history' in st.session_state:
@@ -2014,7 +2155,7 @@ def main():
         
         # Display questions in a table
         for idx, row in filtered_df.iterrows():
-            pregunta_id = row.get('PreguntaID', f'Q{idx+1}')
+            pregunta_id = row.get(EXCEL_COLUMNS['pregunta_id'], f'Q{idx+1}')
             
             col1, col2, col3, col4 = st.columns([1, 1, 6, 1])
             
@@ -2082,13 +2223,13 @@ def main():
             with col3:
                 # Show subject source for Ciencias
                 subject_info = ""
-                if 'Subject_Source' in row and row['Subject_Source']:
-                    subject_info = f" [{row['Subject_Source']}]"
+                if EXCEL_COLUMNS['subject_source'] in row and row[EXCEL_COLUMNS['subject_source']]:
+                    subject_info = f" [{row[EXCEL_COLUMNS['subject_source']]}]"
                 
                 # Show usage information
                 usage_info = ""
-                if 'Número de usos' in row and not pd.isna(row['Número de usos']) and row['Número de usos'] > 0:
-                    usage_count = int(row['Número de usos'])
+                if EXCEL_COLUMNS['numero_usos'] in row and not pd.isna(row[EXCEL_COLUMNS['numero_usos']]) and row[EXCEL_COLUMNS['numero_usos']] > 0:
+                    usage_count = int(row[EXCEL_COLUMNS['numero_usos']])
                     usage_info = f" | 🔄 **Usada {usage_count} ve{'ces' if usage_count > 1 else 'z'}**"
                     
                     # Show latest guide name if available
@@ -2097,10 +2238,10 @@ def main():
                         usage_info += f" (última: {row[latest_guide_col]})"
                 
                 st.write(f"**{pregunta_id}**{subject_info} | "
-                        f"Área: **{row.get('Área temática', 'N/A')}** | "
-                        f"Dificultad: **{row.get('Dificultad', 'N/A')}** | "
-                        f"Habilidad: **{row.get('Habilidad', 'N/A')}**{usage_info}")
-                st.write(f"{row.get('Conocimiento/Subtema', 'Sin subtema')}")
+                        f"Área: **{row.get(EXCEL_COLUMNS['area_tematica'], 'N/A')}** | "
+                        f"Dificultad: **{row.get(EXCEL_COLUMNS['dificultad'], 'N/A')}** | "
+                        f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}**{usage_info}")
+                st.write(f"{row.get(EXCEL_COLUMNS['conocimiento_subtema'], 'Sin subtema')}")
             
             with col4:
                 col_preview, col_history = st.columns(2)
@@ -2109,14 +2250,14 @@ def main():
                     if st.button("👁️", key=f"preview_{pregunta_id}", help="Ver pregunta"):
                         # Store the question to preview in session state
                         st.session_state['preview_question'] = pregunta_id
-                        st.session_state['preview_file_path'] = row.get('Ruta relativa', '')
+                        st.session_state['preview_file_path'] = row.get(EXCEL_COLUMNS['ruta_relativa'], '')
                         # Clear any other preview states
                         st.session_state['show_usage_history'] = None
                         st.rerun()
                 
                 with col_history:
                     # Show usage history button if question has been used
-                    if 'Número de usos' in row and not pd.isna(row['Número de usos']) and row['Número de usos'] > 0:
+                    if EXCEL_COLUMNS['numero_usos'] in row and not pd.isna(row[EXCEL_COLUMNS['numero_usos']]) and row[EXCEL_COLUMNS['numero_usos']] > 0:
                         if st.button("📊", key=f"history_{pregunta_id}", help="Ver historial de uso"):
                             st.session_state['show_usage_history'] = pregunta_id
                             # Clear any other preview states
@@ -2139,8 +2280,8 @@ def main():
                             st.rerun()
                     
                     # Display usage history
-                    if 'Número de usos' in row and not pd.isna(row['Número de usos']) and row['Número de usos'] > 0:
-                        usage_count = int(row['Número de usos'])
+                    if EXCEL_COLUMNS['numero_usos'] in row and not pd.isna(row[EXCEL_COLUMNS['numero_usos']]) and row[EXCEL_COLUMNS['numero_usos']] > 0:
+                        usage_count = int(row[EXCEL_COLUMNS['numero_usos']])
                         
                         # Create a table with usage history
                         history_data = []
@@ -2200,7 +2341,7 @@ def main():
         if selected_count > 0:
             # Show selected questions with ordering and preview
             # Use original df instead of filtered_df to ensure selected questions are always available
-            selected_df = df[df['PreguntaID'].isin(st.session_state['selected_questions'])]
+            selected_df = df[df[EXCEL_COLUMNS['pregunta_id']].isin(st.session_state['selected_questions'])]
             
             col1, col2, col3, col4 = st.columns(4)
             
@@ -2212,7 +2353,7 @@ def main():
                 )
             
             with col2:
-                areas = selected_df['Área temática'].nunique() if 'Área temática' in selected_df.columns else 0
+                areas = selected_df[EXCEL_COLUMNS['area_tematica']].nunique() if EXCEL_COLUMNS['area_tematica'] in selected_df.columns else 0
                 st.metric(
                     label="🎯 Áreas Cubiertas",
                     value=areas,
@@ -2220,7 +2361,7 @@ def main():
                 )
             
             with col3:
-                difficulties = selected_df['Dificultad'].nunique() if 'Dificultad' in selected_df.columns else 0
+                difficulties = selected_df[EXCEL_COLUMNS['dificultad']].nunique() if EXCEL_COLUMNS['dificultad'] in selected_df.columns else 0
                 st.metric(
                     label="📈 Niveles Dificultad",
                     value=difficulties,
@@ -2228,7 +2369,7 @@ def main():
                 )
             
             with col4:
-                skills = selected_df['Habilidad'].nunique() if 'Habilidad' in selected_df.columns else 0
+                skills = selected_df[EXCEL_COLUMNS['habilidad']].nunique() if EXCEL_COLUMNS['habilidad'] in selected_df.columns else 0
                 st.metric(
                     label="🧠 Habilidades",
                     value=skills,
@@ -2252,7 +2393,7 @@ def main():
             
             for position, (pregunta_id, _) in enumerate(sorted_questions, 1):
                 # Find the row for this question
-                question_row = selected_df[selected_df['PreguntaID'] == pregunta_id]
+                question_row = selected_df[selected_df[EXCEL_COLUMNS['pregunta_id']] == pregunta_id]
                 if question_row.empty:
                     continue
                     
@@ -2264,20 +2405,20 @@ def main():
                 with col_info:
                     # Show subject source for Ciencias
                     subject_info = ""
-                    if 'Subject_Source' in row and row['Subject_Source']:
-                        subject_info = f" [{row['Subject_Source']}]"
+                    if EXCEL_COLUMNS['subject_source'] in row and row[EXCEL_COLUMNS['subject_source']]:
+                        subject_info = f" [{row[EXCEL_COLUMNS['subject_source']]}]"
                     
                     st.write(f"**{position}.** {pregunta_id}{subject_info} | "
-                            f"Área: **{row.get('Área temática', 'N/A')}** | "
-                            f"Dificultad: **{row.get('Dificultad', 'N/A')}** | "
-                            f"Habilidad: **{row.get('Habilidad', 'N/A')}**")
-                    st.write(f"{row.get('Conocimiento/Subtema', 'Sin subtema')}")
+                            f"Área: **{row.get(EXCEL_COLUMNS['area_tematica'], 'N/A')}** | "
+                            f"Dificultad: **{row.get(EXCEL_COLUMNS['dificultad'], 'N/A')}** | "
+                            f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}**")
+                    st.write(f"{row.get(EXCEL_COLUMNS['conocimiento_subtema'], 'Sin subtema')}")
                 
                 with col_preview:
                     if st.button("👁️", key=f"summary_preview_{pregunta_id}", help="Ver pregunta"):
                         # Store the question to preview in session state
                         st.session_state['preview_question'] = pregunta_id
-                        st.session_state['preview_file_path'] = row.get('Ruta relativa', '')
+                        st.session_state['preview_file_path'] = row.get(EXCEL_COLUMNS['ruta_relativa'], '')
                         # Clear any other preview states
                         st.session_state['show_usage_history'] = None
                         st.rerun()

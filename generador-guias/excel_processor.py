@@ -7,16 +7,12 @@ from pathlib import Path
 from typing import List, Dict
 
 from storage import StorageClient
-from config import EXCELS_ACTUALIZADOS_DIR, EXCEL_COLUMNS, SUBJECT_FOLDERS
+from config import EXCELS_ACTUALIZADOS_DIR, EXCEL_COLUMNS, SUBJECT_FOLDERS, VALID_ANSWER_KEYS, VALID_DIFFICULTY_VALUES, REQUIRED_INPUT_COLUMNS
 from id_generator import generate_pregunta_id
 
 # =============================================================================
 # CONFIGURATION CONSTANTS - All hardcoded values here at the top
 # =============================================================================
-
-# Valid values for different columns
-VALID_ANSWER_KEYS = ['A', 'B', 'C', 'D']
-VALID_DIFFICULTY_VALUES = ['1', '2', '3']
 
 # New columns to add to Excel files
 NEW_COLUMNS = ['PreguntaID', 'Archivo generado', 'Ruta relativa']
@@ -188,13 +184,12 @@ class ExcelProcessor:
             issues['missing_columns'].append("DataFrame is empty")
             return issues
         
-        # Check for missing required columns
-        required_columns = list(EXCEL_COLUMNS.values())
-        missing_columns = [col for col in required_columns if col not in df.columns]
+        # Check for missing required INPUT columns (not generated ones)
+        missing_columns = [col for col in REQUIRED_INPUT_COLUMNS if col not in df.columns]
         issues['missing_columns'] = missing_columns
         
-        # Check for empty values in required columns
-        for col in required_columns:
+        # Check for empty values in required input columns
+        for col in REQUIRED_INPUT_COLUMNS:
             if col in df.columns:
                 empty_count = df[col].isna().sum() + (df[col] == '').sum()
                 if empty_count > 0:

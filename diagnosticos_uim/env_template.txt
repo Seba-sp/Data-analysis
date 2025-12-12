@@ -1,0 +1,28 @@
+# Google Cloud Configuration
+GOOGLE_CLOUD_PROJECT=your-project-id
+TASK_LOCATION=us-central1
+TASK_QUEUE_ID=batch-processing-queue
+
+# LearnWorlds API Configuration
+CLIENT_ID=your_learnworlds_client_id
+SCHOOL_DOMAIN=your_school.learnworlds.com
+ACCESS_TOKEN=your_learnworlds_access_token
+
+# LearnWorlds Webhook Configuration
+LEARNWORLDS_WEBHOOK_SECRET=your_webhook_secret
+
+# Assessment IDs (24-character hex IDs from LearnWorlds)
+M1_ASSESSMENT_ID=507f1f77bcf86cd799439011
+CL_ASSESSMENT_ID=507f1f77bcf86cd799439012
+CIEN_ASSESSMENT_ID=507f1f77bcf86cd799439013
+HYST_ASSESSMENT_ID=507f1f77bcf86cd799439014
+
+# Email Configuration
+EMAIL_FROM=your-email@gmail.com
+EMAIL_PASS=your-app-password
+
+# Batch Processing Configuration
+BATCH_INTERVAL_MINUTES=15
+
+# Optional: Date filter for downloads (YYYY-MM-DD)
+# MIN_DOWNLOAD_DATE=2024-01-01
