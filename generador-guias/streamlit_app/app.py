@@ -473,21 +473,32 @@ def display_question_preview(pregunta_id: str, file_path: str):
         absolute_path = project_root / file_path
         
         if not storage.exists(str(absolute_path)):
-            st.error(f"File not found: {absolute_path}")
+            st.error(f"❌ Archivo no encontrado: {absolute_path}")
+            st.info("💡 Asegúrate de que el archivo existe en la ubicación correcta")
             return
         
         # Convert document to images using LibreOffice
-        with st.spinner("🔄 Converting document to images (optimized for speed)..."):
+        with st.spinner("🔄 Convirtiendo documento a imagen (puede tomar unos segundos)..."):
             preview_images = convert_docx_to_images(str(absolute_path))
         
         if preview_images:
             # Display the images with smaller width
+            st.success(f"✅ Vista previa generada ({len(preview_images)} página{'s' if len(preview_images) > 1 else ''})")
             for i, image_data in enumerate(preview_images):
                 st.image(image_data, width=800)
         else:
             # Show installation instructions
-            st.warning("⚠️ Image conversion failed. Please ensure LibreOffice is installed:")
-            st.code("""
+            st.warning("⚠️ La conversión de imagen falló.")
+            st.info("💡 Posibles causas:")
+            st.markdown("""
+            1. **LibreOffice no está instalado o no se encuentra en PATH**
+            2. **El archivo Word está dañado o no se puede abrir**
+            3. **LibreOffice está ocupado procesando otro documento**
+            4. **Permisos insuficientes para crear archivos temporales**
+            """)
+            
+            with st.expander("📖 Ver instrucciones de instalación de LibreOffice"):
+                st.code("""
 # On Windows:
 # Download LibreOffice from: https://www.libreoffice.org/download/download/
 
@@ -496,11 +507,14 @@ sudo apt-get install libreoffice  # Ubuntu/Debian
 
 # On macOS:
 brew install --cask libreoffice
-            """)
-            st.error("Could not convert document to images. Please check LibreOffice installation.")
+                """)
+            
+            st.error("❌ No se pudo convertir el documento a imágenes.")
+            st.info("💡 Intenta hacer clic en el ícono del ojo nuevamente. El sistema reintentará automáticamente.")
         
     except Exception as e:
-        st.error(f"Error displaying question preview: {e}")
+        st.error(f"❌ Error al mostrar vista previa: {e}")
+        st.info("💡 Intenta cerrar la vista previa y volver a abrirla.")
 
 @st.cache_data(ttl=7200)  # Cache for 2 hours (longer cache for better performance)
 def convert_docx_to_images(docx_path: str) -> list:
@@ -525,79 +539,138 @@ def convert_docx_to_images(docx_path: str) -> list:
         return []
 
 
-def convert_docx_to_images_via_libreoffice_direct(docx_path: str) -> list:
+def convert_docx_to_images_via_libreoffice_direct(docx_path: str, max_retries: int = 2) -> list:
     """
     Convert Word document to images using LibreOffice directly (optimized for speed).
+    Includes retry logic for better reliability.
     
     Args:
         docx_path: Path to the Word document
+        max_retries: Number of retry attempts (default: 2)
         
     Returns:
         List of image data (bytes) for each page
     """
-    try:
-        import subprocess
-        
-        # Create temporary directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Try different LibreOffice paths for Windows
-            libreoffice_paths = [
-                "libreoffice",  # If in PATH
-                r"C:\Program Files\LibreOffice\program\soffice.exe",
-                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
-            ]
-            
-            result = None
-            for libreoffice_path in libreoffice_paths:
-                try:
-                    # Convert DOCX to images using LibreOffice with balanced speed and reliability
-                    result = subprocess.run([
-                        libreoffice_path, 
-                        "--headless", 
-                        "--invisible",
-                        "--nodefault",
-                        "--nolockcheck",
-                        "--nologo",
-                        "--norestore",
-                        "--convert-to", "png", 
-                        "--outdir", temp_dir, 
-                        docx_path
-                    ], capture_output=True, text=True, timeout=30)  # Increased timeout for reliability
+    import subprocess
+    import time
+    
+    for attempt in range(max_retries + 1):
+        try:
+            # Create temporary directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Try different LibreOffice paths for Windows
+                libreoffice_paths = [
+                    "libreoffice",  # If in PATH
+                    r"C:\Program Files\LibreOffice\program\soffice.exe",
+                    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                    r"C:\Program Files\LibreOffice\program\soffice.com",  # Alternative executable
+                ]
+                
+                result = None
+                last_error = None
+                
+                for libreoffice_path in libreoffice_paths:
+                    try:
+                        # Check if file exists before trying
+                        if not os.path.exists(docx_path):
+                            raise FileNotFoundError(f"Document not found: {docx_path}")
+                        
+                        # Convert DOCX to images using LibreOffice with balanced speed and reliability
+                        result = subprocess.run([
+                            libreoffice_path, 
+                            "--headless", 
+                            "--invisible",
+                            "--nodefault",
+                            "--nolockcheck",
+                            "--nologo",
+                            "--norestore",
+                            "--convert-to", "png", 
+                            "--outdir", temp_dir, 
+                            docx_path
+                        ], capture_output=True, text=True, timeout=45)  # Increased timeout to 45s
+                        
+                        if result.returncode == 0:
+                            break
+                        else:
+                            last_error = f"Return code {result.returncode}: {result.stderr}"
+                            
+                    except FileNotFoundError:
+                        continue
+                    except subprocess.TimeoutExpired:
+                        last_error = f"Timeout after 45 seconds"
+                        if attempt < max_retries:
+                            st.info(f"⏱️ Conversion timeout, retrying... (attempt {attempt + 1}/{max_retries + 1})")
+                        continue
+                    except Exception as e:
+                        last_error = str(e)
+                        continue
+                
+                if not result or result.returncode != 0:
+                    error_msg = last_error if last_error else 'LibreOffice not found'
+                    if result and result.stderr:
+                        error_msg = f"{error_msg} | stderr: {result.stderr[:200]}"
+                    if result and result.stdout:
+                        error_msg = f"{error_msg} | stdout: {result.stdout[:200]}"
                     
-                    if result.returncode == 0:
-                        break
-                except FileNotFoundError:
-                    continue
-                except subprocess.TimeoutExpired:
-                    st.warning(f"LibreOffice conversion timed out for {libreoffice_path}")
-                    continue
+                    # If not the last attempt, retry
+                    if attempt < max_retries:
+                        st.info(f"🔄 Conversion failed, retrying... (attempt {attempt + 1}/{max_retries + 1})")
+                        time.sleep(1)  # Wait 1 second before retry
+                        continue
+                    else:
+                        raise Exception(f"LibreOffice conversion failed after {max_retries + 1} attempts: {error_msg}")
+                
+                # Find generated image files
+                image_files = []
+                for file in os.listdir(temp_dir):
+                    if file.endswith('.png'):
+                        image_files.append(os.path.join(temp_dir, file))
+                
+                if not image_files:
+                    # Check if temp_dir has any files at all
+                    all_files = os.listdir(temp_dir)
+                    error_detail = f"Temp directory has {len(all_files)} files: {all_files[:5]}" if all_files else "Temp directory is empty"
+                    
+                    # If not the last attempt, retry
+                    if attempt < max_retries:
+                        st.info(f"🔄 No images generated, retrying... (attempt {attempt + 1}/{max_retries + 1})")
+                        time.sleep(1)
+                        continue
+                    else:
+                        raise Exception(f"No PNG files were generated. {error_detail}")
+                
+                # Read image files with optimized processing
+                images = []
+                for image_file in sorted(image_files):
+                    try:
+                        with open(image_file, 'rb') as f:
+                            images.append(f.read())
+                    except Exception as e:
+                        st.warning(f"⚠️ Failed to read image {image_file}: {e}")
+                        continue
+                
+                if not images:
+                    if attempt < max_retries:
+                        st.info(f"🔄 Failed to read images, retrying... (attempt {attempt + 1}/{max_retries + 1})")
+                        time.sleep(1)
+                        continue
+                    else:
+                        raise Exception("Failed to read any image files")
+                
+                # Success - return images
+                if attempt > 0:
+                    st.success(f"✅ Conversion succeeded on attempt {attempt + 1}")
+                return images
             
-            if not result or result.returncode != 0:
-                error_msg = result.stderr if result and result.stderr else 'LibreOffice not found'
-                if result and result.stdout:
-                    error_msg += f" | Output: {result.stdout}"
-                raise Exception(f"LibreOffice conversion failed: {error_msg}")
-            
-            # Find generated image files
-            image_files = []
-            for file in os.listdir(temp_dir):
-                if file.endswith('.png'):
-                    image_files.append(os.path.join(temp_dir, file))
-            
-            if not image_files:
-                raise Exception("No image files were generated")
-            
-            # Read image files with optimized processing
-            images = []
-            for image_file in sorted(image_files):
-                with open(image_file, 'rb') as f:
-                    images.append(f.read())
-            
-            return images
-        
-    except Exception as e:
-        st.warning(f"LibreOffice direct conversion failed: {e}")
-        return []
+        except Exception as e:
+            if attempt >= max_retries:
+                st.error(f"❌ LibreOffice conversion failed after {max_retries + 1} attempts: {e}")
+                return []
+            # Continue to next attempt
+            continue
+    
+    # Should not reach here, but just in case
+    return []
 
 def create_guide_package(word_buffer: BytesIO, excel_buffer: BytesIO, word_filename: str) -> BytesIO:
     """

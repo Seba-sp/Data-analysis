@@ -389,6 +389,9 @@ La aplicación web completa incluye las siguientes funcionalidades:
 
 ### 3. **Vista previa y selección**
 - **Vista previa completa**: Conversión Word→PNG usando LibreOffice
+- **Reintento automático**: Sistema de reintentos (hasta 3 intentos) para conversiones fallidas
+- **Timeout extendido**: 45 segundos por intento para mayor confiabilidad
+- **Mensajes informativos**: Feedback claro sobre el progreso y posibles problemas
 - **Preview inline**: Se muestra debajo de cada pregunta seleccionada
 - **Botón de cerrar**: Cierra la vista previa sin recargar la página
 - **Selección múltiple**: Sistema de checkboxes para elegir preguntas
@@ -437,7 +440,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
 - **Session state**: Mantiene selecciones y estado entre reruns
 - **Caching**: Conversiones PNG cacheadas por 2 horas (TTL=7200s)
 - **Manejo de errores**: Mensajes informativos con íconos y colores
-- **Performance optimizada**: Timeout de 30s para conversiones LibreOffice
+- **Performance optimizada**: Timeout de 45s con reintentos automáticos (hasta 3 intentos) para conversiones LibreOffice
 - **Limpieza automática**: Archivos temporales se eliminan después del uso
 
 ### 8. **Controles de gestión**
