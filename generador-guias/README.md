@@ -20,12 +20,12 @@ Sistema automatizado para la creación de guías escolares filtradas por tema, h
 
 ### 🌐 Aplicación Web Streamlit
 - **Interfaz moderna**: Interfaz web completa con diseño responsivo y preservación de scroll
-- **Filtros avanzados**: Por área temática, subtema (dinámico), descripción (búsqueda de texto), habilidad, dificultad y asignatura (para Ciencias)
+- **Filtros avanzados**: Por área temática, unidad (dinámico), descripción (búsqueda de texto), habilidad, dificultad y asignatura (para Ciencias)
 - **Vista previa**: Conversión de documentos Word a imágenes PNG usando LibreOffice para preview completo
 - **Selección múltiple**: Sistema de checkboxes con orden personalizable mediante drag-and-drop
 - **Reordenamiento**: Mover preguntas a posiciones específicas con preview visual
 - **Ordenamiento automático**: Por área temática o asignatura (para Ciencias)
-- **Gráficos resumen**: Pie charts con distribución por asignatura, área, habilidad, dificultad y subtema
+- **Gráficos resumen**: Pie charts con distribución por asignatura, área, habilidad, dificultad y unidad
 
 ### 📝 Generación de Guías
 - **Exportación a Word**: Fusión perfecta de documentos Word preservando todo el formato
@@ -264,7 +264,7 @@ streamlit run streamlit_app/app.py
 **Flujo de trabajo en la aplicación:**
 
 1. **Cargar datos**: Selecciona una asignatura (M30M, L30M, H30M, B30M, Q30M, F30M, o Ciencias)
-2. **Filtrar preguntas**: Usa los filtros de área, subtema, habilidad, dificultad
+2. **Filtrar preguntas**: Usa los filtros de área, unidad, habilidad, dificultad
 3. **Seleccionar preguntas**: Marca las preguntas que deseas incluir (con preview)
 4. **Reordenar**: Arrastra y suelta para cambiar el orden, o usa ordenamiento automático
 5. **Ver resumen**: Revisa los gráficos de distribución de preguntas seleccionadas
@@ -380,7 +380,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
 ### 2. **Filtros avanzados y dinámicos**
 - **Asignatura** (solo para Ciencias): Filtrar por F30M, Q30M, B30M o todas
 - **Área temática**: Filtrado por áreas específicas de la asignatura
-- **Subtema**: Filtrado dinámico que se actualiza según área y asignatura seleccionadas
+- **Unidad**: Filtrado dinámico que se actualiza según área y asignatura seleccionadas
 - **Descripción**: Búsqueda por texto en las descripciones de preguntas (búsqueda parcial, no distingue mayúsculas/minúsculas)
 - **Habilidad**: Tipos de habilidades cognitivas evaluadas
 - **Dificultad**: Niveles 1, 2, 3 (Baja, Media, Alta)
@@ -392,7 +392,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
 - **Preview inline**: Se muestra debajo de cada pregunta seleccionada
 - **Botón de cerrar**: Cierra la vista previa sin recargar la página
 - **Selección múltiple**: Sistema de checkboxes para elegir preguntas
-- **Información detallada**: Muestra PreguntaID, área, dificultad, habilidad y subtema
+- **Información detallada**: Muestra PreguntaID, área, dificultad, habilidad y unidad
 - **Identificación de origen**: En Ciencias, muestra la asignatura origen [F30M], [Q30M] o [B30M]
 
 ### 4. **Reordenamiento de preguntas**
@@ -415,7 +415,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
   - Distribución por área temática
   - Distribución por habilidad
   - Distribución por dificultad
-  - Distribución por subtema (top 10 + otros)
+  - Distribución por unidad (top 10 + otros)
 
 ### 6. **Generación de guías Word**
 - **Exportación a Word**: Fusión perfecta de documentos individuales
@@ -527,7 +527,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
 - **`streamlit_app/app.py`** (1700 líneas)
   - Aplicación Streamlit completa con interfaz moderna
   - Carga y combinación de datos (incluyendo Ciencias)
-  - Filtros dinámicos: subtema se actualiza según área seleccionada
+  - Filtros dinámicos: unidad se actualiza según área seleccionada
   - Vista previa: conversión Word→PNG usando LibreOffice con cache (2 horas TTL)
   - Sistema de selección con checkboxes y orden personalizable
   - Reordenamiento visual: selector de pregunta + posición target
@@ -615,7 +615,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
 ┌─────────────────────────────────────────────────────────────┐
 │  6. APLICACIÓN WEB (streamlit_app/app.py)                   │
 │     a) Cargar archivo maestro                               │
-│     b) Filtrar preguntas (área, subtema, habilidad, etc.)   │
+│     b) Filtrar preguntas (área, unidad, habilidad, etc.)   │
 │     c) Vista previa de preguntas (Word→PNG)                 │
 │     d) Seleccionar y reordenar preguntas                    │
 │     e) Generar guía Word (fusión de documentos)             │
@@ -748,7 +748,7 @@ python master_consolidator.py
 
 #### Aplicación web
 - ✅ **Interfaz completa**: Diseño moderno con Streamlit
-- ✅ **Filtros dinámicos**: Subtema se actualiza según área seleccionada
+- ✅ **Filtros dinámicos**: Unidad se actualiza según área seleccionada
 - ✅ **Vista previa avanzada**: Conversión Word→PNG con LibreOffice
 - ✅ **Reordenamiento visual**: Sistema drag-and-drop con preview de posiciones
 - ✅ **Gráficos interactivos**: Pie charts con Plotly para todas las dimensiones

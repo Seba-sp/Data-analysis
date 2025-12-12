@@ -37,7 +37,7 @@ ID_CONFIG = {
 EXCEL_COLUMNS = {
     "eje_tematico": "Eje temático",
     "area_tematica": "Área temática", 
-    "conocimiento_subtema": "Unidad temática",
+    "conocimiento_subtema": "Unidad temática ",
     "habilidad": "Habilidad",
     "dificultad": "Dificultad",
     "clave": "Clave",
@@ -57,7 +57,7 @@ EXCEL_COLUMNS = {
 REQUIRED_INPUT_COLUMNS = [
     "Eje temático",
     "Área temática",
-    "Unidad temática",
+    "Unidad temática ",
     "Habilidad",
     "Dificultad",
     "Clave",

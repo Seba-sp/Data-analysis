@@ -1554,11 +1554,11 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
                 )
                 st.plotly_chart(fig_dificultad, use_container_width=True)
         
-        # Third row: Subtema chart (full width)
+        # Third row: Unidad chart (full width)
         if EXCEL_COLUMNS['conocimiento_subtema'] in selected_df.columns:
             subtema_counts = selected_df[EXCEL_COLUMNS['conocimiento_subtema']].value_counts()
             
-            # Limit to top 10 subtemas if there are too many
+            # Limit to top 10 unidades if there are too many
             if len(subtema_counts) > 10:
                 top_subtemas = subtema_counts.head(10)
                 others_count = subtema_counts.iloc[10:].sum()
@@ -1569,7 +1569,7 @@ def create_summary_charts(selected_df: pd.DataFrame, subject: str):
             fig_subtema = create_pie_chart(
                 subtema_counts.values,
                 subtema_counts.index,
-                "Distribución por Subtema",
+                "Distribución por Unidad",
                 total_questions
             )
             # Override height for subtema chart
@@ -2012,9 +2012,9 @@ def main():
             area_filter = None
         
     
-    # Second row: Subtema (full width) - dynamic based on selected filters
+    # Second row: Unidad (full width) - dynamic based on selected filters
     if EXCEL_COLUMNS['conocimiento_subtema'] in df.columns:
-        # Filter subtemas based on selected area and subject (for Ciencias)
+        # Filter unidades based on selected area and subject (for Ciencias)
         filtered_df_for_subtema = df.copy()
         
         # Apply subject filter first (for Ciencias)
@@ -2027,12 +2027,12 @@ def main():
         
         available_subtemas = sorted(filtered_df_for_subtema[EXCEL_COLUMNS['conocimiento_subtema']].unique().tolist())
         subtemas = ['Todos'] + available_subtemas
-        selected_subtema = st.selectbox("Subtema", subtemas)
+        selected_subtema = st.selectbox("Unidad", subtemas)
         subtema_filter = None if selected_subtema == 'Todos' else selected_subtema
     else:
         subtema_filter = None
     
-    # Descripción filter (text search) - positioned after Subtema
+    # Descripción filter (text search) - positioned after Unidad
     if EXCEL_COLUMNS['descripcion'] in df.columns:
         descripcion_search = st.text_input(
             "Buscar por Descripción", 
