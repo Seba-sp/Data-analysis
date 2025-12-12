@@ -663,7 +663,7 @@ Asignatura: {st.session_state.get('subject', 'N/A')}
 
 def create_questions_excel(ordered_questions: list, questions_df: pd.DataFrame, guide_name: str) -> BytesIO:
     """
-    Create an Excel file with question IDs, their position number, and their correct alternatives.
+    Create an Excel file with question IDs, their position number, correct alternatives, and video links.
     
     Args:
         ordered_questions: List of question IDs in the desired order
@@ -680,7 +680,7 @@ def create_questions_excel(ordered_questions: list, questions_df: pd.DataFrame, 
         if selected_df.empty:
             return None
         
-        # Create a new DataFrame with the required columns: Número, PreguntaID, Clave
+        # Create a new DataFrame with the required columns: Número, PreguntaID, Clave, Enlace video
         excel_data = []
         
         for idx, question_id in enumerate(ordered_questions, start=1):
@@ -692,14 +692,18 @@ def create_questions_excel(ordered_questions: list, questions_df: pd.DataFrame, 
                 # Get the correct alternative
                 correct_alternative = row.get(EXCEL_COLUMNS['clave'], 'N/A')
                 
+                # Get the video link if available
+                video_link = row.get(EXCEL_COLUMNS['enlace_video'], '') if EXCEL_COLUMNS['enlace_video'] in row else ''
+                
                 excel_data.append({
                     EXCEL_COLUMNS['pregunta_id']: question_id,
                     'Número': idx,
-                    EXCEL_COLUMNS['clave']: correct_alternative
+                    EXCEL_COLUMNS['clave']: correct_alternative,
+                    EXCEL_COLUMNS['enlace_video']: video_link
                 })
         
-        # Create DataFrame
-        excel_df = pd.DataFrame(excel_data, columns=[EXCEL_COLUMNS['pregunta_id'], 'Número', EXCEL_COLUMNS['clave']])
+        # Create DataFrame with all columns
+        excel_df = pd.DataFrame(excel_data, columns=[EXCEL_COLUMNS['pregunta_id'], 'Número', EXCEL_COLUMNS['clave'], EXCEL_COLUMNS['enlace_video']])
         
         # Create Excel buffer
         excel_buffer = BytesIO()

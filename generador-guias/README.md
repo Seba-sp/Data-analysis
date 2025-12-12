@@ -30,6 +30,8 @@ Sistema automatizado para la creación de guías escolares filtradas por tema, h
 ### 📝 Generación de Guías
 - **Exportación a Word**: Fusión perfecta de documentos Word preservando todo el formato
 - **Numeración automática**: Preguntas numeradas secuencialmente (1., 2., 3., etc.)
+- **Excel resumen**: Archivo Excel con PreguntaID, número de pregunta, clave correcta y enlace a video explicativo
+- **Paquete completo**: Descarga ZIP con Word (estudiantes), Excel (profesores) y README
 - **Gestión de imágenes**: Sistema de mapeo y copia inteligente de imágenes con nombres únicos
 - **Relaciones preservadas**: Actualización automática de relationship IDs para imágenes
 - **Configuración A4**: Márgenes de 2.54 cm en todos los lados, tamaño A4 estándar
@@ -305,6 +307,9 @@ Columnas requeridas:
 - `Descripción`: Descripción breve de la pregunta o concepto evaluado
 - `Fecha creacion`: Fecha de creación de la pregunta
 
+Columnas opcionales:
+- `Enlace video`: URL de video explicativo de la pregunta (se incluye automáticamente en el Excel resumen al descargar guías)
+
 ### PreguntaID generado
 
 Formato: `{EJE}-{AREA}-{SUBTEMA}-{HABILIDAD}-{DIFICULTAD}-{CLAVE}-{RANDOM8}`
@@ -408,6 +413,12 @@ La aplicación web completa incluye las siguientes funcionalidades:
 ### 6. **Generación de guías Word**
 - **Exportación a Word**: Fusión perfecta de documentos individuales
 - **Numeración automática**: Preguntas numeradas secuencialmente (1., 2., 3., etc.)
+- **Excel resumen incluido**: Archivo Excel complementario con columnas:
+  - `PreguntaID`: Identificador único de cada pregunta
+  - `Número`: Posición en la guía (1, 2, 3, etc.)
+  - `Clave`: Respuesta correcta (A, B, C, D, E)
+  - `Enlace video`: URL del video explicativo (si está disponible)
+- **Paquete ZIP**: Descarga completa con Word + Excel + README
 - **Preservación total**: Mantiene imágenes, tablas, ecuaciones y todo el formato
 - **Timestamp en nombre**: Archivo generado con fecha y hora
 - **Descarga inmediata**: Botón de descarga después de generar

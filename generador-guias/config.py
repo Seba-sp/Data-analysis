@@ -42,6 +42,7 @@ EXCEL_COLUMNS = {
     "dificultad": "Dificultad",
     "clave": "Clave",
     "descripcion": "Descripción",
+    "enlace_video": "Enlace video",
     "fecha_creacion": "Fecha creacion",
     "pregunta_id": "PreguntaID",
     "ruta_relativa": "Ruta relativa",
