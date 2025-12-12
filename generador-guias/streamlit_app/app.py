@@ -11,6 +11,7 @@ from io import BytesIO
 import shutil
 import zipfile
 import tempfile
+from unidecode import unidecode
 
 # Add parent directory to path to import our modules
 sys.path.append(str(Path(__file__).parent.parent))
@@ -32,6 +33,22 @@ st.set_page_config(
 @st.cache_resource
 def get_storage_client():
     return StorageClient()
+
+def normalize_text(text: str) -> str:
+    """
+    Normalize text for flexible searching by:
+    - Converting to lowercase
+    - Removing accents and special characters (á->a, é->e, ñ->n, etc.)
+    
+    Args:
+        text: Text to normalize
+        
+    Returns:
+        Normalized text
+    """
+    if pd.isna(text) or text is None:
+        return ""
+    return unidecode(str(text).lower())
 
 def preserve_scroll_with_events():
     """Use proper event timing for scroll preservation."""
@@ -423,11 +440,16 @@ def filter_questions(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
         filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['conocimiento_subtema']] == filters['subtema']]
     
     if filters.get('descripcion'):
-        # Text search in Descripción column (case-insensitive)
+        # Text search in Descripción column (case-insensitive, accent-insensitive, partial match)
         if EXCEL_COLUMNS['descripcion'] in filtered_df.columns:
-            search_term = filters['descripcion'].lower()
+            # Normalize search term (remove accents, lowercase)
+            search_term_normalized = normalize_text(filters['descripcion'])
+            
+            # Apply filter by normalizing each description and checking if it contains the search term
             filtered_df = filtered_df[
-                filtered_df[EXCEL_COLUMNS['descripcion']].astype(str).str.lower().str.contains(search_term, na=False)
+                filtered_df[EXCEL_COLUMNS['descripcion']].apply(
+                    lambda x: search_term_normalized in normalize_text(x)
+                )
             ]
     
     if filters.get('subject'):
@@ -2109,8 +2131,8 @@ def main():
     if EXCEL_COLUMNS['descripcion'] in df.columns:
         descripcion_search = st.text_input(
             "Buscar por Descripción", 
-            placeholder="Escribe una palabra para buscar en las descripciones...",
-            help="Busca preguntas que contengan esta palabra en su descripción (no distingue mayúsculas/minúsculas)"
+            placeholder="Ej: republica, revolución, población...",
+            help="🔍 Búsqueda inteligente: encuentra coincidencias parciales, ignora mayúsculas/minúsculas y acentos (república = republica)"
         )
         descripcion_filter = descripcion_search.strip() if descripcion_search else None
     else:
@@ -2319,6 +2341,10 @@ def main():
                         f"Dificultad: **{row.get(EXCEL_COLUMNS['dificultad'], 'N/A')}** | "
                         f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}**{usage_info}")
                 st.write(f"{row.get(EXCEL_COLUMNS['conocimiento_subtema'], 'Sin subtema')}")
+                
+                # Show description if available
+                if EXCEL_COLUMNS['descripcion'] in row and row[EXCEL_COLUMNS['descripcion']] and not pd.isna(row[EXCEL_COLUMNS['descripcion']]):
+                    st.markdown(f"<div style='margin-top: -10px; font-size: 0.9em;'>📝 {row[EXCEL_COLUMNS['descripcion']]}</div>", unsafe_allow_html=True)
             
             with col4:
                 col_preview, col_history = st.columns(2)
@@ -2490,6 +2516,10 @@ def main():
                             f"Dificultad: **{row.get(EXCEL_COLUMNS['dificultad'], 'N/A')}** | "
                             f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}**")
                     st.write(f"{row.get(EXCEL_COLUMNS['conocimiento_subtema'], 'Sin subtema')}")
+                    
+                    # Show description if available
+                    if EXCEL_COLUMNS['descripcion'] in row and row[EXCEL_COLUMNS['descripcion']] and not pd.isna(row[EXCEL_COLUMNS['descripcion']]):
+                        st.markdown(f"<div style='margin-top: -10px; font-size: 0.9em;'>📝 {row[EXCEL_COLUMNS['descripcion']]}</div>", unsafe_allow_html=True)
                 
                 with col_preview:
                     if st.button("👁️", key=f"summary_preview_{pregunta_id}", help="Ver pregunta"):

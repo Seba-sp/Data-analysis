@@ -381,7 +381,10 @@ La aplicación web completa incluye las siguientes funcionalidades:
 - **Asignatura** (solo para Ciencias): Filtrar por F30M, Q30M, B30M o todas
 - **Área temática**: Filtrado por áreas específicas de la asignatura
 - **Unidad**: Filtrado dinámico que se actualiza según área y asignatura seleccionadas
-- **Descripción**: Búsqueda por texto en las descripciones de preguntas (búsqueda parcial, no distingue mayúsculas/minúsculas)
+- **Descripción**: Búsqueda inteligente por texto en las descripciones de preguntas
+  - ✅ Búsqueda parcial (encuentra "repub" en "república")
+  - ✅ No distingue mayúsculas/minúsculas (REPÚBLICA = república)
+  - ✅ Ignora acentos y caracteres especiales (republica = república, nino = niño)
 - **Habilidad**: Tipos de habilidades cognitivas evaluadas
 - **Dificultad**: Niveles 1, 2, 3 (Baja, Media, Alta)
 - **Filtro de uso**: Filtra preguntas por número de veces que han sido usadas (sin usar, 1 vez, 2 veces, etc.)
@@ -395,7 +398,7 @@ La aplicación web completa incluye las siguientes funcionalidades:
 - **Preview inline**: Se muestra debajo de cada pregunta seleccionada
 - **Botón de cerrar**: Cierra la vista previa sin recargar la página
 - **Selección múltiple**: Sistema de checkboxes para elegir preguntas
-- **Información detallada**: Muestra PreguntaID, área, dificultad, habilidad y unidad
+- **Información detallada**: Muestra PreguntaID, área, dificultad, habilidad, unidad y descripción breve
 - **Identificación de origen**: En Ciencias, muestra la asignatura origen [F30M], [Q30M] o [B30M]
 
 ### 4. **Reordenamiento de preguntas**
