@@ -1,0 +1,67 @@
+=== DUPLICATE QUESTIONS SUMMARY ===
+
+Total exact duplicates found: 15
+Total possible matches found: 0
+
+EXACT DUPLICATES:
+--------------------------------------------------------------------------------
+
+✓ Question: 'Un investigador estudia la función de una biomolécula en un organismo. Observa que cuando está prese...'
+  File 1: N1-GA2-Estandarizada.docx (Page 1)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 1)
+
+✓ Question: 'Un grupo de estudiantes aplica cambios en la concentración de soluto del medio extracelular (cambio ...'
+  File 1: N1-GA2-Estandarizada.docx (Page 1)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 1)
+
+✓ Question: 'Un estudiante de cuarto medio se encuentra estudiando el intestino, a partir de muestras de ratón. A...'
+  File 1: N1-GA2-Estandarizada.docx (Page 1)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 1)
+
+✓ Question: 'Los resultados obtenidos por un grupo de biólogos moleculares que estudian la estructura del núcleo ...'
+  File 1: N1-GA2-Estandarizada.docx (Page 1)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 1)
+
+✓ Question: 'Un grupo de tecnólogos médicos expertos en actividad física de alto rendimiento están desarrollando ...'
+  File 1: N1-GA2-Estandarizada.docx (Page 2)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 2)
+
+✓ Question: 'La apoptosis es un mecanismo esencial para la mantención de la homeostasis en organismos multicelula...'
+  File 1: N1-GA2-Estandarizada.docx (Page 2)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 2)
+
+✓ Question: 'Antes de efectuar un experimento, una profesora pidió a sus estudiantes indagar acerca de los compon...'
+  File 1: N1-GA2-Estandarizada.docx (Page 2)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 2)
+
+✓ Question: 'Un investigador que estudia la estructura y función de las cápsulas que conforman a diferentes tipos...'
+  File 1: N1-GA2-Estandarizada.docx (Page 2)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 2)
+
+✓ Question: 'Un estudiante confunde la muestra con la que se encuentra trabajando, debido a que los tubos no se e...'
+  File 1: N1-GA2-Estandarizada.docx (Page 3)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 3)
+
+✓ Question: 'La teoría endosimbiótica propone que las primeras células eucariontes, con núcleo organizado, eran f...'
+  File 1: N1-GA2-Estandarizada.docx (Page 3)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 3)
+
+✓ Question: 'En una investigación sobre las vacuolas de cebolla se desea analizar su contenido en términos de nut...'
+  File 1: N1-GA2-Estandarizada.docx (Page 3)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 3)
+
+✓ Question: '¿Cuál de las siguientes alternativas describe la relación entre las variables presentes en el gráfic...'
+  File 1: N1-GA2-Estandarizada.docx (Page 4)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 4)
+
+✓ Question: 'Un grupo de estudiantes se encuentra investigando el proceso de contracción muscular a nivel de la c...'
+  File 1: N1-GA2-Estandarizada.docx (Page 4)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 4)
+
+✓ Question: 'La célula muscular es de vital importancia para nuestro organismo, pues es la encargada de la contra...'
+  File 1: N1-GA2-Estandarizada.docx (Page 5)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 5)
+
+✓ Question: 'Pregunta en tabla 2...'
+  File 1: N1-GA2-Estandarizada.docx (Page 101)
+  File 2: N1-GA2-Estandarizada - copia.docx (Page 101)

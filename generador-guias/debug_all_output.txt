@@ -1,0 +1,29 @@
+Total paragraphs: 132
+
+ALL paragraphs (including empty):
+====================================================================================================
+[ 70] EMPTY
+[ 71] NONEMPTY: A) Los cloroplastos son organelos exclusivos de las células vegetales.
+[ 72] NONEMPTY: B) Las mitocondrias y cloroplastos están presentes en todos los tipos celulares.
+[ 73] NONEMPTY: C) Los cloroplastos y mitocondrias son organelos exclusivos de las células vegetales.
+[ 74] NONEMPTY: D) Las mitocondrias son organelos compartidos entre las células animales y vegetales.
+[ 75] EMPTY
+[ 76] NONEMPTY: En una investigación sobre las vacuolas de cebolla se desea analizar su contenido en términos de nutrientes y desechos, ¿cuál combinación de instrumentos (A, B y C) sería el más adecuado para desarrollar esta investigación?
+[ 77] EMPTY
+[ 78] EMPTY
+[ 79] EMPTY
+[ 80] NONEMPTY: Este gráfico representa el potencial de acción de una neurona. Referente a las variables indicadas, ¿Cuál sería la relación correcta entre ellas?
+[ 81] EMPTY
+[ 82] NONEMPTY: Recuperado: Neurocirugía  
+[ 83] EMPTY
+[ 84] NONEMPTY: A) El potencial de membrana no sufre variaciones a lo largo del tiempo.
+[ 85] NONEMPTY: B) El potencial de membrana es inversamente proporcional al tiempo.
+[ 86] NONEMPTY: C) El potencial de membrana es directamente proporcional al tiempo.
+[ 87] NONEMPTY: D) El potencial de membrana se modifica a lo largo del tiempo.
+[ 88] EMPTY
+[ 89] NONEMPTY: Las neuronas, las estructuras fundamentales del sistema nervioso, son células altamente especializadas que reciben estímulos y transmiten señales eléctricas en respuesta. Estas células poseen una estructura compleja, compuesta por un cuerpo celular y diversas prolongaciones. Una de las mayores prolongaciones es el axón, que puede estar cubierta por una capa aislante la mielina.
+[ 90] NONEMPTY: El siguiente gráfico muestra la relación entre la velocidad de conducción y el diámetro de los axones de neuronas mielinizadas y no mielinizadas:
+[ 91] EMPTY
+[ 92] EMPTY
+[ 93] EMPTY
+[ 94] EMPTY

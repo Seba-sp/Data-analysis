@@ -1,0 +1,73 @@
+=== DUPLICATE QUESTIONS SUMMARY ===
+
+Total exact duplicates found: 11
+Total possible matches found: 3
+
+EXACT DUPLICATES:
+--------------------------------------------------------------------------------
+
+✓ Question: 'Entre los elementos más importantes del desarrollo de la ilustración, fue la crítica establecida en ...'
+  File 1: H30M-NG-GA2.docx (Page 1)
+  File 2: H30M-NG-GA2 - copia.docx (Page 1)
+
+✓ Question: 'La revolución francesa, entre otras cosas, presentó un aspecto fundacional en la sociedad occidental...'
+  File 1: H30M-NG-GA2.docx (Page 2)
+  File 2: H30M-NG-GA2 - copia.docx (Page 2)
+
+✓ Question: 'Entre los elementos que encontramos en los procesos que acompañaron a la industrialización, fueron c...'
+  File 1: H30M-NG-GA2.docx (Page 4)
+  File 2: H30M-NG-GA2 - copia.docx (Page 4)
+
+✓ Question: 'A partir de las revoluciones de hispanoamérica, se evidenció la existencia de una profunda red de in...'
+  File 1: H30M-NG-GA2.docx (Page 6)
+  File 2: H30M-NG-GA2 - copia.docx (Page 6)
+
+✓ Question: 'Uno de los elementos que caracterizaron la etapa de la creación de los estados-nacionales en latinoa...'
+  File 1: H30M-NG-GA2.docx (Page 7)
+  File 2: H30M-NG-GA2 - copia.docx (Page 7)
+
+✓ Question: 'Una de las principales características de la independencia, fue la razón multicausal de esta misma. ...'
+  File 1: H30M-NG-GA2.docx (Page 8)
+  File 2: H30M-NG-GA2 - copia.docx (Page 8)
+
+✓ Question: 'La independencia chilena tuvo características coyunturales y estructurales, lo cual permite entender...'
+  File 1: H30M-NG-GA2.docx (Page 10)
+  File 2: H30M-NG-GA2 - copia.docx (Page 10)
+
+✓ Question: 'Una de las características fundamentales de la patria nueva fue el abandono total de la instituciona...'
+  File 1: H30M-NG-GA2.docx (Page 11)
+  File 2: H30M-NG-GA2 - copia.docx (Page 11)
+
+✓ Question: 'La constitución conservadora tuvo como principal objetivo, servir de hito para la fundación de una i...'
+  File 1: H30M-NG-GA2.docx (Page 13)
+  File 2: H30M-NG-GA2 - copia.docx (Page 13)
+
+✓ Question: 'Los federalistas tuvieron como principal objetivo instaurar un régimen que atentaba contra la posici...'
+  File 1: H30M-NG-GA2.docx (Page 14)
+  File 2: H30M-NG-GA2 - copia.docx (Page 14)
+
+✓ Question: 'La iglesia católica fue de las pocas instituciones que tuvo continuidades respecto al periodo coloni...'
+  File 1: H30M-NG-GA2.docx (Page 15)
+  File 2: H30M-NG-GA2 - copia.docx (Page 15)
+
+
+POSSIBLE MATCHES (Review Manually):
+--------------------------------------------------------------------------------
+
+~ File 1 Question: 'En la segunda mitad del siglo XIX se produjo en Europa un fenómeno que terminó de configurar espacia...'
+  File 2 Question: 'En la segunda mitad del siglo XX se produjo en Europa un fenómeno que terminó de configurar espacial...'
+  File 1: H30M-NG-GA2.docx (Page 3)
+  File 2: H30M-NG-GA2 - copia.docx (Page 3)
+  Levenshtein Distance: 1
+
+~ File 1 Question: 'A partir del siglo XIX, se dió la colonización en territorios africanos. Entre las principales razon...'
+  File 2 Question: 'A partir del siglo XX, se dió la colonización en territorios africanos. Entre las principales razone...'
+  File 1: H30M-NG-GA2.docx (Page 5)
+  File 2: H30M-NG-GA2 - copia.docx (Page 5)
+  Levenshtein Distance: 1
+
+~ File 1 Question: 'Durante 1823 a 1830, hubo una serie de agrupaciones de índole económica y política que secuestraron ...'
+  File 2 Question: 'Durante 1923 a 1930, hubo una serie de agrupaciones de índole económica y política que secuestraron ...'
+  File 1: H30M-NG-GA2.docx (Page 12)
+  File 2: H30M-NG-GA2 - copia.docx (Page 12)
+  Levenshtein Distance: 2
