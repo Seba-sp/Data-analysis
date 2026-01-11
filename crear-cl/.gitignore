@@ -1,0 +1,40 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Google credentials
+credentials.json
+token.json
+token.pickle
+
+# Data files
+data/
+*.csv
+*.pdf
+*.docx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Debug files
+debug_questions_*.txt
+debug_questions_improved_*.txt
+debug_review_*.txt
+debug_response_*.txt
+

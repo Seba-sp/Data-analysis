@@ -1,0 +1,200 @@
+ENTRADAS
+A) REGISTRO_EXISTENTE_CSV (opcional): pegar tabla previa (CSV/TSV). Si viene, NO debes repetir ningún texto ya usado.
+B) ID_INICIAL (opcional): ej. C001 para seguir numeración.
+C) TEMAS_PRIORITARIOS (opcional): si se indica, prioriza; si no, diversidad.
+D) MODO_SALIDA (obligatorio): TSV o XLSX
+OBJETIVO
+Entregar EXACTAMENTE 30 candidatos listos para filtrar, con distribución 10-10-10:
+- 10 literarios
+- 10 expositivos/divulgación
+- 10 argumentativos
+
+0) MODO_SALIDA=TSV:
+- Entrega EXACTAMENTE 30 filas en TSV en UN SOLO bloque de código.
+- IDs deben ser consecutivos desde ID_INICIAL con formato C001, C002, ... C030 (si no se entrega, usa C001–C030).
+- ID_RANDOM debe ser un string de 16 caracteres alfanuméricos aleatorios
+- Header EXACTO (mismo que el sistema actual):
+ID, ID_RANDOM, Tipo, Tema, Autor, Titulo, Ano, Fuente, URL, URL_Canonica, Licencia, Tipo_Evidencia_Licencia, Evidencia_Licencia_Quote, Evidencia_Licencia_Ubicacion, Palabras_Fragmento_Estimadas, Palabras_Fragmento_Real, Inicio_Fragmento, Fin_Fragmento, Alertas, Recurso_Discontinuo, URL_Recurso, Licencia_Recurso, Tipo_Evidencia_Recurso, Evidencia_Recurso_Quote, Evidencia_Recurso_Ubicacion, Linea_Cita_PAES, Clave_Dedup, Riesgos
+
+META OPERATIVA (EXPECTATIVA)
+- Apuntar a que 18–24 de los 30 queden “OK” tras el filtrado (por licencias/origen/brand-safety), sin necesidad de volver a buscar.
+
+POLÍTICA OPERATIVA DE USO EN PLATAFORMA (OBLIGATORIA)
+- Por defecto: TEXT_ONLY. SOLO texto del fragmento, sin imágenes, sin embeds, sin objetos digitales.
+- Recursos discontinuos (tabla/gráfico/figura) SOLO se incluyen cuando:
+  (i) el fragmento referencia explícitamente el recurso (ej. “Tabla 1”, “Figura 2”, “Gráfico”, “como se observa en…”),
+  (ii) el recurso es evaluable,
+  (iii) la licencia del recurso es compatible y verificable en el mismo dominio,
+  (iv) y se declara INCLUYE_RECURSO.
+- Aun si el artículo original tiene imágenes, eso NO es problema si Uso_Plataforma=TEXT_ONLY.
+
+JURISDICCIÓN OBJETIVO (OBLIGATORIO)
+- El producto se usa en CHILE.
+- Regla interna dominio público Chile (para esta curaduría): vida+70.
+
+CONDICIÓN LEGAL “LLEGAR Y USAR” (NO NEGOCIABLE)
+Se aceptan SOLO estos casos para el TEXTO:
+A) CC BY o CC BY-SA declarada explícitamente en el MISMO URL del texto o en el PDF oficial del texto.
+B) Dominio Público (PD) declarado explícitamente en el MISMO URL del texto o en el PDF oficial del texto (o ficha oficial del MISMO repositorio), sin términos restrictivos.
+
+EXCEPCIÓN CONTROLADA (PERMITIDA) PARA ELEJANDRÍA Y AFINES (MUY ESTRICTA)
+C) PD_POR_PLAZO_CHILE (solo si se cumplen TODAS):
+C1) En el MISMO URL del texto, el repositorio declara explícitamente que el ebook está libre de restricciones de derechos de autor (aunque lo declare “en España”).
+C2) En el MISMO dominio (misma página o ficha del autor), aparece el AÑO DE MUERTE del autor/a, visible y citable.
+C3) Con ese dato interno, cumple vida+70 (>=71 años desde fallecimiento).
+C4) Sin restricciones de uso (no uso personal, no no-comercial, no no-redistribución, etc.).
+C5) Si dice “revise leyes locales”, no se descarta por sí solo, pero se marca como riesgo operativo.
+Si NO puedes cumplir C2 y C3 en el mismo dominio, DESCARTAR.
+
+REGLA EXTRA PARA TRADUCCIONES/ADAPTACIONES (HARD FAIL)
+- Si el texto es traducción/adaptación/versión/edición moderna (“traducida por…”, “adaptación de…”, “versión de…”), NO basta el autor original.
+- Solo se permite bajo PD_POR_PLAZO_CHILE si el MISMO dominio muestra el año de muerte del traductor/adaptador/editor responsable y cumple vida+70.
+- Si no puedes verificarlo en el mismo dominio, DESCARTAR.
+
+Cómo registrar PD_POR_PLAZO_CHILE en la tabla:
+- Licencia: PD_POR_PLAZO_CHILE
+- Tipo_Evidencia_Licencia: in-article
+- Evidencia_Licencia_Quote: cita literal “libre de restricciones…” (texto plano).
+- Evidencia_Licencia_Ubicacion: ubicación exacta
+- Alertas: PD_Por_Plazo=Sí; Jurisdiccion=Chile; Verificacion_Extra=Recomendada
+- Riesgos: Autor_fallece=YYYY (mismo dominio); Base=vida+70
+- Si aplica traducción: Traductor_fallece=YYYY (mismo dominio); Base=vida+70
+
+PROHIBIDO (HARD FAIL)
+- Evidencia externa (Wikipedia, blogs, etc.).
+- Inferir PD por muerte (salvo PD_POR_PLAZO_CHILE con evidencia interna).
+- CC BY-NC / CC BY-ND / CC BY-NC-SA / CC BY-NC-ND / ND / NC / “All rights reserved” / licencia ambigua.
+- The Conversation (directo o derivado/republicado).
+- Dictadura/DD.HH. en Chile (Pinochet, DINA/CNI, detenidos desaparecidos, tortura y afines).
+- Desinformación: fuentes dudosas o señales claras de desinformación; si dudas, descarta.
+
+LISTA NEGRA (NO USAR)
+- cervantesvirtual.com
+- theconversation.com
+- portales con términos restrictivos (uso personal/privado, sin fines comerciales, prohibida la distribución, no comunicación pública, derechos exclusivos sobre la edición digital)
+
+POLÍTICA Y CONTINGENCIA (PERMITIDO SIN “AGENDA”, CON CUOTA Y NEUTRALIDAD)
+- Se permite incluir política/contingencia SOLO bajo estas reglas:
+  CUOTA: máximo 6 de 30 candidatos pueden ser Politica_Contingencia=Sí (≈20%).
+  Sugerencia de mix dentro de esos 6: 3 expositivos + 3 argumentativos.
+- PROHIBIDO dentro de política/contingencia (HARD FAIL):
+  a) campañas, propaganda, llamados a votar, “influir en tu voto”.
+  b) ataque partidista, insultos, descalificación, texto militante/activista polarizante.
+  c) columna/editorial sin contrapesos (sin límites/objeciones/contraargumentos).
+- REQUISITOS DE NEUTRALIDAD (OBLIGATORIOS si Politica_Contingencia=Sí):
+  1) Registro analítico/explicativo (no panfleto).
+  2) Debe presentar al menos 2 perspectivas o reconocer explícitamente una objeción/limitación.
+  3) Evitar foco en “personalidades”; preferir procesos/instituciones/políticas públicas en abstracto.
+  4) Diversidad: no repetir el mismo país/actor/partido/gobierno dentro de los 6.
+- En Alertas registrar: Politica_Contingencia=Sí/No; Neutralidad=Alta/Media/Baja; Campana=Sí/No.
+  Si Campana=Sí o Neutralidad=Baja, DESCARTAR (no incluir como candidato).
+
+VERIFICACIÓN DE LICENCIA (OBLIGATORIA Y ESTRICTA)
+- Evidencia del TEXTO debe venir del MISMO URL/PDF (mismo dominio).
+- Si Evidencia_Licencia_Quote proviene de otro dominio, DESCARTAR.
+- Tipo_Evidencia_Licencia: in-article | pdf | site-wide.
+- site-wide se permite SOLO si NO contradice el uso comercial y de derivados del TEXTO.
+  Nota: “condiciones operativas” (atribución/enlace/indicar cambios/excluir material de terceros) NO son contradicción.
+- Evidencia_Licencia_Quote debe ser texto plano literal. PROHIBIDOS tokens internos (oaicite, contentReference, etc.).
+
+REGLA INTELIGENTE PARA “FUENTE QUE USA OTRAS FUENTES”
+Clasifica ORIGEN leyendo el MISMO URL:
+- ORIGEN=PROPIO: no hay “Fuente/Vía/Publicado originalmente…”
+- ORIGEN=COLABORACIÓN: “Fuente:” es institución/organismo (universidad, instituto, museo, centro de investigación), NO medio/agencia
+- ORIGEN=SINDICADO: “Publicado originalmente…” o “Fuente:” es medio/agencia (Reuters/AP/AFP/EFE/Europa Press/The Conversation, etc.)
+Regla:
+- ORIGEN=SINDICADO: DESCARTAR SIEMPRE.
+- ORIGEN=COLABORACIÓN: SOLO si licencia compatible del TEXTO es explícita en el MISMO dominio; si es genérica/ambigua, DESCARTAR.
+- ORIGEN=PROPIO: OK si pasa licencias.
+En Alertas registrar: Origen=Propio/Colaboracion/Sindicado; Fuente_Declarada=<literal si existe>.
+
+REGLAS DURAS DE SELECCIÓN (NO FLEXIBLES)
+- Por cada candidato:
+  - Fragmento continuo autocontenido de 650–900 palabras (aprox.).
+  - Debe permitir 10 preguntas (2 Localizar + 5 Interpretar + 3 Evaluar aprox.).
+  - Debe contener al menos 8 anclajes preguntables.
+- A nivel pool de 30:
+  - 10/10/10 tipos.
+  - Máximo 6 Politica_Contingencia=Sí.
+  - Preferir diversidad temática; evitar acumulación de un mismo país/actor/tema.
+
+REQUISITO DISCONTINUO EVALUABLE (EN EL POOL)
+- En los 30 candidatos, al menos 3 deben ser “Discontinuo referido y licenciado” (para asegurar que al filtrar siempre quede al menos 1).
+- Un candidato solo cuenta como discontinuo si el FRAGMENTO referencia explícitamente Tabla/Gráfico/Figura y se llena URL_Recurso + licencia del recurso con evidencia en el mismo dominio.
+
+FUENTES PRIORIZADAS (EN ESTE ORDEN)
+- INE Chile (PDF CC BY-SA; ideal discontinuo referido)
+- Memoria Chilena (solo investigación/presentación CC BY-SA; excluir objetos digitales)
+- Agencia SINC (solo si NO sindicado y pasa ORIGEN; TEXT_ONLY)
+- Global Voices (CC BY; TEXT_ONLY; descartar si sindicado o cae en campaña/activismo polarizante)
+- Project Gutenberg (PD declarado)
+- Wikisource (CC BY-SA; descartar si hay avisos internos dudosos)
+- Elejandría y afines (solo PD_POR_PLAZO_CHILE; descartar traducciones/“tomado de Wikipedia”)
+
+REGLA DE FRAGMENTO (IMPORTANTE)
+Inicio_Fragmento y Fin_Fragmento deben ser 12–20 palabras literales exactas (sin “…”).
+
+FASES DE VALIDACIÓN (OBLIGATORIAS, ANTES DE IMPRIMIR)
+FASE 0 — Técnico:
+- URL_Canonica carga (sin 404/paywall/captcha/error).
+- URL_Canonica final, limpia (sin utm, sin #, sin “…”).
+FASE 0.5 — CONSISTENCIA TÍTULO–URL (HARD FAIL):
+- El Titulo/Autor visibles en la página coinciden con Titulo/Autor registrados.
+- Si no coincide, DESCARTAR.
+- Alertas: Title_URL_Match=Sí/No.
+FASE 1 — Licencia explícita compatible (A/B/C).
+FASE 2 — Origen: no sindicado, no The Conversation.
+FASE 3 — Alertas internas del repositorio (Wikisource, etc.).
+FASE 4 — Dependencia de recurso: si referencia, licenciar recurso o cambiar fragmento.
+FASE 5 — Política: cuota y neutralidad.
+
+VALIDADOR INTERNO OBLIGATORIO (NO IMPRIMIR SI FALLA)
+Antes de entregar, confirma en el Resumen:
+- Filas: 30/30
+- URL_OK: 30/30 Sí
+- Title_URL_Match: 30/30 Sí
+- Licencia_Explicita: 30/30 Sí
+- Sindicado: 0/30
+- TheConversation: 0/30
+- Prohibidos_Chile_Dictadura_DDHH: 0/30
+- Desinformacion: 0/30
+- Politica_Contingencia: <=6/30; Campana 0/30; Neutralidad_Baja 0/30; sin repetición actor/país
+- Distribución 10-10-10: OK
+- Discontinuo referido y licenciado: >=3/30
+Si cualquiera falla, reemplaza candidatos antes de imprimir.
+
+REPORTE (EN LAS MISMAS COLUMNAS)
+- En Alertas agrega obligatoriamente:
+  URL_OK=Sí/No; Title_URL_Match=Sí/No; Licencia_Explicita=Sí/No; Sindicado=Sí/No; Origen=Propio/Colaboracion/Sindicado;
+  Uso_Plataforma=TEXT_ONLY/INCLUYE_RECURSO; Recurso_En_Pagina=Sí/No; Texto_Depende_Recurso=Sí/No;
+  Politica_Contingencia=Sí/No; Neutralidad=Alta/Media/Baja; Campana=Sí/No.
+
+SALIDA OBLIGATORIA
+
+0) FORMATO (HARD FAIL)
+- NO uses tablas Markdown.
+- Entrega solo bloques de código (sin texto entre el resumen y los bloques).
+- URLs en texto plano.
+- Prohibido saltos de línea dentro de celdas (reemplaza por espacios).
+- Permite_Comercial y Permite_Derivados solo “Sí” o “No”.
+- Prohibido tokens internos (oaicite, contentReference, etc.).
+
+1) RESUMEN (máx 10 líneas, SIN viñetas)
+- Conteo por tipo (10/10/10)
+- Conteo por fuente
+- Conteo por licencia (PD / CC BY / CC BY-SA / PD_POR_PLAZO_CHILE)
+- Politica_Contingencia: X/30 (<=6), Neutralidad_Baja: 0, Campana: 0
+- Discontinuo referido y licenciado: X/30 (>=3)
+- Validador interno (todas las métricas en una sola línea)
+
+2) MODO_SALIDA=TSV:
+- Entrega EXACTAMENTE 30 filas en TSV en UN SOLO bloque de código.
+- IDs deben ser consecutivos desde ID_INICIAL con formato C001, C002, ... C030 (si no se entrega, usa C001–C030).
+- ID_RANDOM debe ser un string de 16 caracteres alfanuméricos aleatorios
+- Header EXACTO (mismo que el sistema actual):
+ID, ID_RANDOM, Tipo, Tema, Autor, Titulo, Ano, Fuente, URL, URL_Canonica, Licencia, Tipo_Evidencia_Licencia, Evidencia_Licencia_Quote, Evidencia_Licencia_Ubicacion, Palabras_Fragmento_Estimadas, Palabras_Fragmento_Real, Inicio_Fragmento, Fin_Fragmento, Alertas, Recurso_Discontinuo, URL_Recurso, Licencia_Recurso, Tipo_Evidencia_Recurso, Evidencia_Recurso_Quote, Evidencia_Recurso_Ubicacion, Linea_Cita_PAES, Clave_Dedup, Riesgos
+
+REGLA DE FALLA
+- Prohibido entregar menos de 30 o entregar “suplentes”.
+- Prohibido entregar menos de 30 columnas por cada texto.
+- Si no logras 30 cumpliendo todo: “FALLA: …” + 5–10 líneas con gates que bloquearon.
