@@ -6,10 +6,13 @@ Recent improvements (Jan 2026):
 - Fixed input handling to use Agent 3's article_text and raw_response
 - Added debug file saving (debug_review_*.txt)
 - Cleaned up outdated input references
+- Added DOCX file upload support for reviewing with full article context
 """
 from google import genai
+import google.generativeai as genai_legacy
 from typing import Dict, Optional, List
 import os
+import time
 
 from config import config
 
@@ -35,6 +38,17 @@ class ReviewAgent:
         # Use Gemini 3 Flash model for question review
         self.model_id = config.GEMINI_MODEL_AGENTS234
         
+        # Initialize legacy API for file upload support
+        genai_legacy.configure(api_key=self.api_key)
+        self.model_legacy = genai_legacy.GenerativeModel(
+            model_name=self.model_id,
+            generation_config={
+                'temperature': 0.3,
+                'top_p': 0.95,
+                'max_output_tokens': 8000,
+            }
+        )
+        
         # Load prompt template
         prompt_path = config.get_prompt_path('agent4_prompt.txt')
         with open(prompt_path, 'r', encoding='utf-8') as f:
@@ -43,72 +57,96 @@ class ReviewAgent:
     
     def review_questions(self, article: Dict, questions: Dict) -> Dict:
         """
-        Review PAES questions using DEMRE quality standards.
+        Review generated questions by uploading DOCX to Gemini.
         
         Args:
-            article: Article dictionary
-            questions: Questions dictionary from Agent 3 with 'article_text' and 'raw_response'
-            
+            article: Article dict with docx_path
+            questions: Questions dict from Agent 3 with raw_response
+        
         Returns:
-            Dictionary with DEMRE-style feedback (nota/10, veredicto, diagnostico)
+            Dict with approval status and feedback
         """
         article_id = article.get('article_id', 'T01')
-        print(f"[Agent 4] Reviewing PAES questions for: {article.get('title', 'Untitled')[:50]}...")
+        docx_path = article.get('docx_path', '')
+        
+        print(f"[Agent 4] Reviewing questions for: {article_id}")
         
         try:
-            # Get article text from Agent 3's extraction (in questions dict)
-            article_text = questions.get('article_text', '')
+            # Reuse PDF from Agent 3 if available
+            from config import config
+            pdf_path = questions.get('pdf_path')
             
-            # Get full PAES response from Agent 3 (includes LECTURA + PREGUNTAS sections)
-            questions_paes = questions.get('raw_response', '')
-            
-            # If article_text is missing, try to extract it from raw_response
-            if not article_text and questions_paes:
-                # Agent 3 response has A) LECTURA section with the text
-                # We can just send the whole raw_response since it has everything
-                print(f"[Agent 4] Using full raw_response (includes LECTURA + PREGUNTAS)")
-                review_input = questions_paes
-            else:
-                # Build input with separate sections
-                print(f"[Agent 4] Article text: {len(article_text)} chars")
-                print(f"[Agent 4] Questions format: {len(questions_paes)} chars")
+            if not pdf_path or not os.path.exists(pdf_path):
+                # Fallback: check if PDF exists in data directory
+                pdf_filename = f"{article_id}_article.pdf"
+                pdf_path = os.path.join(config.BASE_DATA_PATH, pdf_filename)
                 
-                review_input = f"""FRAGMENTO:
-{article_text}
+                if not os.path.exists(pdf_path):
+                    # Last resort: convert DOCX to PDF
+                    from docx2pdf import convert
+                    print(f"[Agent 4] Converting DOCX to PDF for review...")
+                    convert(docx_path, pdf_path)
+                    print(f"[Agent 4] Conversion complete: {pdf_filename}")
+                else:
+                    print(f"[Agent 4] Reusing existing PDF: {pdf_filename}")
+            else:
+                print(f"[Agent 4] Reusing PDF from Agent 3: {os.path.basename(pdf_path)}")
+            
+            # Upload PDF to Gemini
+            uploaded_pdf = genai_legacy.upload_file(pdf_path,
+                                                   display_name=f"{article_id}_review.pdf")
+            
+            # Wait for processing
+            while uploaded_pdf.state.name == "PROCESSING":
+                time.sleep(2)
+                uploaded_pdf = genai_legacy.get_file(uploaded_pdf.name)
+            
+            if uploaded_pdf.state.name != "ACTIVE":
+                raise ValueError(f"PDF processing failed: {uploaded_pdf.state.name}")
+            
+            print(f"[Agent 4] PDF ready for review")
+            
+            # Build review prompt
+            questions_text = questions.get('raw_response', '')
+            review_prompt = f"""Eres revisor/a senior de preguntas PAES de Competencia Lectora.
 
-PREGUNTAS Y CLAVES:
-{questions_paes}
+ARTÍCULO ANALIZADO:
+Lee el archivo PDF adjunto con el texto completo del artículo.
+El archivo puede incluir imágenes, tablas y formato especial.
+
+PREGUNTAS GENERADAS:
+===================================================================
+{questions_text}
+===================================================================
+
+{self.prompt_template}
 """
             
-            # Prepare prompt (template already has all instructions)
-            prompt = self.prompt_template + "\n\n" + review_input
+            print(f"[Agent 4] Review prompt: {len(review_prompt)} chars")
             
-            print(f"[Agent 4] Prompt length: {len(prompt)} chars")
-            
-            # Generate feedback using Interactions API
-            print(f"[Agent 4] Calling Gemini for DEMRE quality review...")
-            interaction = self.client.interactions.create(
-                model=self.model_id,
-                input=prompt,
-                store=False  # Don't store for privacy
-            )
-            
-            # Extract response text from interaction outputs
-            response_text = self._extract_interaction_text(interaction)
+            # Generate review with PDF file
+            response = self.model_legacy.generate_content([review_prompt, uploaded_pdf])
+            feedback_text = response.text
+                
+            # Clean up Gemini upload (keep local PDF)
+            try:
+                genai_legacy.delete_file(uploaded_pdf.name)
+            except:
+                pass
             
             # Save debug file
-            self._save_debug_file(article_id, response_text)
+            self._save_debug_file(article_id, feedback_text)
             
             # Parse feedback (DEMRE format: nota/10, veredicto, diagnostico, parches)
             feedback_dict = {
                 'article_id': article_id,
                 'article_title': article.get('title', ''),
-                'raw_feedback': response_text,
-                'nota_global': self._extract_nota(response_text),
-                'veredicto': self._extract_veredicto(response_text),
-                'diagnostico_por_pregunta': self._parse_diagnostico(response_text),
-                'parches': self._extract_parches(response_text),
-                'top_3_fixes': self._extract_top_fixes(response_text)
+                'raw_feedback': feedback_text,
+                'nota_global': self._extract_nota(feedback_text),
+                'veredicto': self._extract_veredicto(feedback_text),
+                'diagnostico_por_pregunta': self._parse_diagnostico(feedback_text),
+                'parches': self._extract_parches(feedback_text),
+                'top_3_fixes': self._extract_top_fixes(feedback_text)
             }
             
             nota = feedback_dict['nota_global']
@@ -116,16 +154,10 @@ PREGUNTAS Y CLAVES:
             return feedback_dict
         
         except Exception as e:
-            print(f"[Agent 4] Error reviewing questions: {e}")
+            print(f"[Agent 4] ERROR reviewing: {e}")
             import traceback
             traceback.print_exc()
-            return {
-                'article_id': article_id,
-                'article_title': article.get('title', ''),
-                'raw_feedback': '',
-                'nota_global': 0.0,
-                'error': str(e)
-            }
+            raise
     
     def _extract_interaction_text(self, interaction) -> str:
         """Extract text from interaction outputs."""
@@ -145,7 +177,10 @@ PREGUNTAS Y CLAVES:
     def _save_debug_file(self, article_id: str, response_text: str):
         """Save raw response for debugging."""
         try:
-            debug_file = f"debug_review_{article_id}.txt"
+            from config import config
+            # Save to data directory
+            debug_dir = config.BASE_DATA_PATH
+            debug_file = os.path.join(debug_dir, f"debug_review_{article_id}.txt")
             with open(debug_file, 'w', encoding='utf-8') as f:
                 f.write("=== RAW RESPONSE FROM AGENT 4 ===\n\n")
                 f.write(response_text)
@@ -254,26 +289,26 @@ PREGUNTAS Y CLAVES:
     def _extract_nota(self, feedback_text: str) -> float:
         """
         Extract nota global (x/10) from DEMRE feedback.
-        
+
         Args:
             feedback_text: Raw feedback text
-            
+
         Returns:
             Float nota (0-10)
         """
         import re
-        
-        # Look for patterns like "Nota global: 8.5/10" or "8,5/10"
-        nota_pattern = r'[Nn]ota\s*(?:global)?:?\s*(\d+(?:[,\.]\d+)?)\s*/\s*10'
+
+        # Matches common patterns like "**Nota Global: 8,5/10**", "- **Nota global:** 8,5/10", "**Nota Global:** **8,2 / 10**", "*   **Nota global:** **8,8/10**"
+        # Handles asterisks, dashes, bolding, extra spaces, etc.
+        nota_pattern = r'(?i)[\*\s\-]*nota\s*global[\*\s]*:?[\*\s]*([0-9]+(?:[,.][0-9]+)?)\s*/\s*10'
         match = re.search(nota_pattern, feedback_text)
-        
         if match:
-            nota_str = match.group(1).replace(',', '.')
+            nota_str = match.group(1).replace(',', '.').strip()
             try:
                 return float(nota_str)
             except ValueError:
                 return 0.0
-        
+
         return 0.0
     
     def _extract_veredicto(self, feedback_text: str) -> Dict:

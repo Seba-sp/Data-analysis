@@ -8,12 +8,14 @@ Comprehensive setup, configuration, and technical documentation for the PAES Mul
 
 - [Installation & Setup](#installation--setup)
 - [Configuration Guide](#configuration-guide)
-- [Agent Configuration](#agent-configuration)
-- [Testing & Troubleshooting](#testing--troubleshooting)
-- [Technical Architecture](#technical-architecture)
+- [Agent Architecture](#agent-architecture)
 - [API Details](#api-details)
 - [Data Flow & State Management](#data-flow--state-management)
+- [Batch Document Generation](#batch-document-generation)
+- [Excel Files Merger](#excel-files-merger)
+- [Document Formats](#document-formats)
 - [Performance & Optimization](#performance--optimization)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -116,9 +118,6 @@ GEMINI_MODEL_AGENTS234=gemini-2.0-flash-exp
 AGENT1_MODE=agent  # for deep research
 # or
 AGENT1_MODE=model  # for fast processing
-
-# Temporary override (Linux/Mac)
-AGENT1_MODE=model python main.py --batches 3
 
 # Temporary override (Windows PowerShell)
 $env:AGENT1_MODE="model"; python main.py --batches 3
@@ -235,193 +234,7 @@ Requirements:
 
 ---
 
-# Agent Configuration
-
-## Custom Prompts
-
-All agent behavior is controlled by prompts in `prompts/` folder:
-
-- `agent1_prompt.txt` - Research and curation rules
-- `agent2_prompt.txt` - License validation criteria
-- `agent3_prompt.txt` - Question generation format
-- `agent4_prompt.txt` - Review standards
-
-**Edit these files to customize agent behavior.**
-
-## Agent 1: Research Configuration
-
-**Deep Research Agent Mode:**
-```python
-# Uses deep-research-pro-preview-12-2025 agent
-# Google Search built-in (no tools parameter needed)
-# Background execution (async polling)
-# Store=True for conversation context
-```
-
-**Model with Google Search Mode:**
-```python
-# Uses gemini-3-flash-preview (or custom model)
-# Google Search via explicit tools parameter
-# Synchronous execution
-# Store=False for privacy
-```
-
-## Agent 2: Validation
-
-Uses Legacy API (`google-generativeai`) for structured validation.
-
-**Migration Note:** Agent 2 will be migrated to Interactions API in future updates for consistency.
-
-## Agents 3 & 4: Questions and Review
-
-Use Interactions API (`google-genai`) with:
-- Model: `gemini-3-flash-preview`
-- Better multimodal handling (PDFs)
-- Improved context caching
-- Structured output generation
-
----
-
-# Testing & Troubleshooting
-
-## Testing
-
-### 1. Validate Configuration
-
-```bash
-python main.py --validate-only
-```
-
-Expected output:
-```
-[Config] All configuration checks passed!
-[Config] Gemini API key: Configured
-[Config] Google Drive credentials: Found
-[Config] Agent 1 mode: agent
-[Config] PDF context folder: agent-3-context/
-```
-
-### 2. Test Mode (Single Batch)
-
-```bash
-python main.py --test-mode
-```
-
-This will:
-- Process 1 batch of 10 articles
-- Generate 30 candidates (Agent 1)
-- Validate licenses (Agent 2) → ~18-24 approved
-- Generate questions (Agent 3) with PDF context
-- Review questions (Agent 4)
-- Improve questions (Agent 3)
-- Upload to Google Drive
-
-Expected time:
-- Agent mode: ~30-40 minutes total
-- Model mode: ~10-15 minutes total
-
-### 3. Production Batches
-
-```bash
-# Process 5 batches
-python main.py --batches 5
-
-# With topic filter
-python main.py --batches 3 --topic "inteligencia artificial"
-
-# Check progress
-# Monitor console output for batch completion
-# Check Google Drive for uploaded files
-```
-
-## Troubleshooting
-
-### Configuration Errors
-
-**"GEMINI_API_KEY is not set"**
-- Create `.env` file with your API key
-- Ensure file is in project root
-- No spaces around `=` in `.env`
-
-**"Google Drive credentials file not found"**
-- Download `credentials.json` from Google Cloud Console
-- Place in project root directory
-- Check filename matches `.env` setting
-
-**"Permission denied" (Google Drive)**
-- Delete `token.json` file
-- Run again to re-authenticate
-- Grant all requested permissions in browser
-
-### Agent Issues
-
-**Agent 1 too slow**
-```env
-# Switch to model mode
-AGENT1_MODE=model
-```
-
-**Agent 1 results not thorough enough**
-```env
-# Switch to agent mode
-AGENT1_MODE=agent
-```
-
-**Few articles approved by Agent 2**
-- Check `auditoria_*.tsv` for rejection reasons
-- Ensure `AGENT1_MODE=agent` for better license finding
-- Edit `prompts/agent2_prompt.txt` to adjust criteria
-
-**"Empty PDF Context"**
-- Add at least 1 PDF to `agent-3-context/` folder
-- Check PDFs are text-based (not scans)
-- Verify `.pdf` file extension
-
-### API Errors
-
-**"Model not found: gemini-3-flash-preview"**
-```bash
-pip install --upgrade google-genai
-```
-
-**"Agent not found: deep-research-pro-preview-12-2025"**
-- Verify API key has access to Deep Research agent
-- Check [documentation](https://ai.google.dev/gemini-api/docs/deep-research) for latest agent name
-
-**"ModuleNotFoundError: No module named 'google.genai'"**
-```bash
-pip install google-genai>=1.55.0
-```
-
-### Processing Issues
-
-**Duplicate articles across batches**
-- Check `data/processing_state.csv` is being updated
-- Verify state manager is tracking URLs
-- Look for "Excluding N already processed articles" in console
-
-**No articles found**
-- Check internet connection
-- Verify API key is valid
-- Try different topic: `--topic "science"`
-- Check Agent 1 console output for errors
-
-### Output Issues
-
-**No files in Google Drive**
-- Check Google Drive permissions granted
-- Verify `DRIVE_MAIN_FOLDER_NAME` in `.env`
-- Look for "Upload to Drive" messages in console
-- Check local `data/` folder for backups
-
-**Word documents empty or malformed**
-- Check Agent 3 output for errors
-- Verify PDF context loaded successfully
-- Review `prompts/agent3_prompt.txt` format
-
----
-
-# Technical Architecture
+# Agent Architecture
 
 ## System Overview
 
@@ -459,9 +272,7 @@ pip install google-genai>=1.55.0
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Agent Architecture
-
-### Agent 1: Research
+## Agent 1: Research
 
 **File:** `agents/agent1_research.py`
 
@@ -498,7 +309,7 @@ elif AGENT1_MODE == 'model':
 ID	ID_RANDOM	Tipo	Tema	Autor	Titulo	Ano	Fuente	URL	URL_Canonica	Licencia	Tipo_Evidencia_Licencia	Evidencia_Licencia_Quote	Evidencia_Licencia_Ubicacion	Palabras_Fragmento_Estimadas	Palabras_Fragmento_Real	Inicio_Fragmento	Fin_Fragmento	Alertas	Recurso_Discontinuo	URL_Recurso	Licencia_Recurso	Tipo_Evidencia_Recurso	Evidencia_Recurso_Quote	Evidencia_Recurso_Ubicacion	Linea_Cita_PAES	Clave_Dedup	Riesgos
 ```
 
-### Agent 2: Validation
+## Agent 2: Validation
 
 **File:** `agents/agent2_validation.py`
 
@@ -512,7 +323,7 @@ ID	ID_RANDOM	Tipo	Tema	Autor	Titulo	Ano	Fuente	URL	URL_Canonica	Licencia	Tipo_Ev
 5. PHASE 5-6: Special rules (Memoria Chilena, SINC)
 6. PHASE 7: Portfolio rules (4/4/4 distribution, max 2/source)
 
-### Agent 3: Question Generation
+## Agent 3: Question Generation
 
 **File:** `agents/agent3_questions.py`
 
@@ -576,7 +387,7 @@ P1: Microevidencia: "..." (líneas X-Y)
 ...
 ```
 
-### Agent 4: Review
+## Agent 4: Review
 
 **File:** `agents/agent4_review.py`
 
@@ -673,8 +484,10 @@ P1: Microevidencia: "..." (líneas X-Y)
    │   │
    ├─▶ Document Generation
    │   │
-   │   ├─▶ preguntas_iniciales.docx (includes article text)
-   │   └─▶ preguntas_mejoradas.docx (includes article text)
+   │   ├─▶ questions_initial_ID.docx (clean format)
+   │   ├─▶ questions_initial_ID.xlsx (metadata)
+   │   ├─▶ questions_improved_ID.docx (clean format)
+   │   └─▶ questions_improved_ID.xlsx (metadata)
    │   │
    └─▶ Upload to Google Drive
        │
@@ -737,12 +550,311 @@ NewsArticlesProcessing/
 ├── candidatos_20260108.tsv        # Batch TSVs
 ├── auditoria_20260108.tsv         # Audit TSVs
 ├── Texto_C001_La_Inteligencia_Artificial/
-│   ├── preguntas_iniciales.docx   # Includes article text + questions
-│   └── preguntas_mejoradas.docx   # Includes article text + improved questions
+│   ├── questions_initial_C001.docx   # Clean format
+│   ├── questions_initial_C001.xlsx   # Metadata
+│   ├── questions_improved_C001.docx  # Clean format
+│   └── questions_improved_C001.xlsx  # Metadata
 ├── Texto_C002_El_Cambio_Climatico/
 │   └── ...
 └── ...
 ```
+
+---
+
+# Batch Document Generation
+
+## Overview
+
+**Script:** `batch_generate_documents.py`  
+**Purpose:** Scan a folder for all `debug_questions*.txt` files and automatically generate Word + Excel documents for each one.
+
+## Quick Start
+
+### Basic Usage
+
+```bash
+# Process current directory
+python batch_generate_documents.py .
+
+# Process specific folder
+python batch_generate_documents.py data/
+
+# Process absolute path
+python batch_generate_documents.py C:/path/to/folder
+```
+
+## What It Does
+
+1. **Scans** the specified folder for all `debug_questions*.txt` files
+2. **Extracts** article ID and improvement status from filename
+3. **Parses** questions using Agent 3's parser
+4. **Extracts** article metadata (title, author, source, etc.) from content
+5. **Generates** Word document (clean format: question + alternatives only)
+6. **Generates** Excel file (complete metadata: answer keys, skills, justifications)
+7. **Saves** all files to the **same folder** as the input txt files
+
+## Filename Detection
+
+The script automatically detects:
+
+| Filename Pattern | Article ID | Type |
+|-----------------|------------|------|
+| `debug_questions_C001.txt` | C001 | Initial |
+| `debug_questions_improved_C001.txt` | C001 | Improved |
+| `debug_questions_C123.txt` | C123 | Initial |
+| `debug_questions_improved_C456.txt` | C456 | Improved |
+
+**Output filenames:**
+- Initial: `questions_{ID}_initial.docx` + `questions_{ID}_initial.xlsx`
+- Improved: `questions_{ID}_improved.docx` + `questions_{ID}_improved.xlsx`
+
+## Features
+
+### Automatic Metadata Extraction
+
+The script automatically extracts from the raw response:
+- **Author** - From format: "Author, Title (Year)"
+- **Title** - From format: "Author, Title (Year)"
+- **Date** - From format: "Author, Title (Year)"
+- **Source** - From "Fuente:" line
+- **License** - Detects: Dominio Público, CC-BY, CC-BY-SA, Public Domain
+- **URL** - From "URL:" line
+
+### Smart Parsing
+
+- Handles both initial and improved versions
+- Extracts article text from LECTURA section
+- Parses all 10 questions with alternatives
+- Extracts answer keys (Clave)
+- Parses skills and tasks from `[Localizar-a]` format
+- Includes justifications with microevidencia
+
+### Progress Reporting
+
+For each file:
+```
+Processing: debug_questions_C001.txt
+  Article ID: C001
+  Improved: False
+  [1/4] Reading file...
+  [OK] Read 9,778 characters
+  [2/4] Parsing questions...
+  [OK] Parsed 10 questions
+  [OK] Article text: 2,699 characters
+  [OK] Complete questions: 10/10
+  [3/4] Generating Word document...
+  [OK] Word: questions_C001_initial.docx (39,701 bytes)
+  [4/4] Generating Excel file...
+  [OK] Excel: questions_C001_initial.xlsx (6,516 bytes)
+  [SUCCESS] Generated Word + Excel
+```
+
+## Use Cases
+
+### 1. Bulk Processing After Pipeline Run
+
+After running the main pipeline and generating many `debug_questions*.txt` files:
+
+```bash
+# Process all debug files in current directory
+python batch_generate_documents.py .
+```
+
+### 2. Process Specific Folder
+
+If you have debug files in a specific folder:
+
+```bash
+python batch_generate_documents.py output/
+python batch_generate_documents.py archived_questions/
+```
+
+### 3. Re-generate Documents
+
+If you need to regenerate Word/Excel files with updated formatting:
+
+```bash
+# Just run the script again
+python batch_generate_documents.py .
+```
+
+Files will be overwritten with new versions.
+
+---
+
+# Excel Files Merger
+
+## Overview
+
+**Script:** `merge_excel_files.py`  
+**Purpose:** Merge multiple Excel files into a single Excel file, adding the source filename as the first column.
+
+## Quick Start
+
+### Basic Usage
+
+```bash
+# Merge all Excel files in a folder
+python merge_excel_files.py <folder_path>
+```
+
+### Examples
+
+```bash
+# Merge files in Batch 3 folder
+python merge_excel_files.py "data/Batch 3"
+
+# Merge files in current directory
+python merge_excel_files.py .
+
+# Merge with custom output name
+python merge_excel_files.py "data/Batch 3" custom_output.xlsx
+```
+
+## What It Does
+
+1. **Scans** folder for all `.xlsx` files
+2. **Reads** each Excel file
+3. **Adds** filename as first column (without extension)
+4. **Merges** all files into a single Excel file
+5. **Saves** output in the same folder
+
+## Output Structure
+
+### Before Merge (individual file)
+
+`questions_C001_initial.xlsx`:
+
+| Número de pregunta | Clave | Habilidad | Tarea lectora | Justificación | Acción |
+|--------------------|-------|-----------|---------------|---------------|--------|
+| 1                  | B     | Localizar | a             | ...           |        |
+| 2                  | B     | Interpretar | d           | ...           |        |
+
+### After Merge (combined file)
+
+`merged_Batch 3_20260118_203049.xlsx`:
+
+| Archivo | Número de pregunta | Clave | Habilidad | Tarea lectora | Justificación | Acción |
+|---------|-------------------|-------|-----------|---------------|---------------|--------|
+| questions_C001_initial | 1 | B | Localizar | a | ... | |
+| questions_C001_initial | 2 | B | Interpretar | d | ... | |
+| questions_C001_improved | 1 | B | Localizar | a | ... | |
+| questions_C002_initial | 1 | A | Evaluar | k | ... | |
+
+**Key Feature:** The "Archivo" column identifies which file each row came from!
+
+## Features
+
+### 1. Automatic Filename Column
+
+Each row gets the source filename (without extension) in the first column:
+
+```
+questions_C001_initial    ← From questions_C001_initial.xlsx
+questions_C001_improved   ← From questions_C001_improved.xlsx
+questions_C002_initial    ← From questions_C002_initial.xlsx
+```
+
+### 2. Preserves All Columns
+
+All original columns are kept in their original order:
+- Número de pregunta
+- Clave
+- Habilidad
+- Tarea lectora
+- Justificación
+- Acción
+
+### 3. Automatic Output Naming
+
+Output filename includes:
+- Prefix: "merged_"
+- Folder name: e.g., "Batch 3"
+- Timestamp: e.g., "20260118_203049"
+- Extension: ".xlsx"
+
+Example: `merged_Batch 3_20260118_203049.xlsx`
+
+## Use Cases
+
+### 1. Combine Questions from Multiple Articles
+
+Merge all question Excel files from a batch:
+
+```bash
+python merge_excel_files.py "data/Batch 3"
+```
+
+**Result:** One Excel file with all questions, sortable by source file.
+
+### 2. Compare Initial vs Improved Questions
+
+The merged file includes both initial and improved versions:
+- `questions_C001_initial` - Original questions
+- `questions_C001_improved` - After Agent 4 review
+
+Easy to filter and compare in Excel!
+
+### 3. Analysis and Statistics
+
+With all questions in one file, you can:
+- Count questions by Habilidad (Localizar, Interpretar, Evaluar)
+- Analyze distribution of Tarea lectora (a-n)
+- Filter by article (Archivo column)
+- Sort by Clave (answer key)
+- Search across all justifications
+
+### 4. Complete Workflow
+
+```bash
+# Step 1: Generate questions (creates many Excel files)
+python batch_generate_documents.py "data/Batch 3"
+
+# Step 2: Merge all Excel files
+python merge_excel_files.py "data/Batch 3"
+
+# Result: One master Excel with all questions
+```
+
+---
+
+# Document Formats
+
+## Word Document Format
+
+### Structure
+
+**Content:**
+1. Article title (header)
+2. Full article text
+3. Page break
+4. Questions (one per page):
+   - Question text only
+   - A) Alternative A
+   - B) Alternative B
+   - C) Alternative C
+   - D) Alternative D
+
+### What's NOT included:
+- ❌ Question numbers
+- ❌ Skill labels `[Localizar-a]`
+- ❌ Correct answer indication
+- ❌ Colors or formatting
+- ❌ Justifications
+
+**Purpose:** Clean format for students/printing
+
+## Excel File Format
+
+### Columns:
+1. **Número de pregunta** - Question number (1-10)
+2. **Clave** - Correct answer (A, B, C, D)
+3. **Habilidad** - Skill (Localizar, Interpretar, Evaluar)
+4. **Tarea lectora** - Reading task (a-n)
+5. **Justificación** - Full justification with microevidencia
+6. **Acción** - Action column (blank)
+
+**Purpose:** Complete metadata for teachers/grading/analysis
 
 ---
 
@@ -783,6 +895,118 @@ NewsArticlesProcessing/
 - Automatic context caching (beta)
 - Improves performance for repeated queries
 - Reduces token usage
+
+---
+
+# Troubleshooting
+
+## Configuration Errors
+
+### "GEMINI_API_KEY is not set"
+**Solution:** Create `.env` file with your API key. Ensure file is in project root. No spaces around `=` in `.env`.
+
+### "Google Drive credentials file not found"
+**Solution:** Download `credentials.json` from Google Cloud Console. Place in project root directory. Check filename matches `.env` setting.
+
+### "Permission denied" (Google Drive)
+**Solution:** Delete `token.json` file. Run again to re-authenticate. Grant all requested permissions in browser.
+
+## Agent Issues
+
+### Agent 1 too slow
+```env
+# Switch to model mode
+AGENT1_MODE=model
+```
+
+### Agent 1 results not thorough enough
+```env
+# Switch to agent mode
+AGENT1_MODE=agent
+```
+
+### Few articles approved by Agent 2
+**Solution:** Check `auditoria_*.tsv` for rejection reasons. Ensure `AGENT1_MODE=agent` for better license finding. Edit `prompts/agent2_prompt.txt` to adjust criteria.
+
+### "Empty PDF Context"
+**Solution:** Add at least 1 PDF to `agent-3-context/` folder. Check PDFs are text-based (not scans). Verify `.pdf` file extension.
+
+## API Errors
+
+### "Model not found: gemini-3-flash-preview"
+```bash
+pip install --upgrade google-genai
+```
+
+### "Agent not found: deep-research-pro-preview-12-2025"
+**Solution:** Verify API key has access to Deep Research agent. Check [documentation](https://ai.google.dev/gemini-api/docs/deep-research) for latest agent name.
+
+### "ModuleNotFoundError: No module named 'google.genai'"
+```bash
+pip install google-genai>=1.55.0
+```
+
+## Processing Issues
+
+### Duplicate articles across batches
+**Solution:** Check `data/processing_state.csv` is being updated. Verify state manager is tracking URLs. Look for "Excluding N already processed articles" in console.
+
+### No articles found
+**Solution:** Check internet connection. Verify API key is valid. Try different topic: `--topic "science"`. Check Agent 1 console output for errors.
+
+### No files in Google Drive
+**Solution:** Check Google Drive permissions granted. Verify `DRIVE_MAIN_FOLDER_NAME` in `.env`. Look for "Upload to Drive" messages in console. Check local `data/` folder for backups.
+
+### Word documents empty or malformed
+**Solution:** Check Agent 3 output for errors. Verify PDF context loaded successfully. Review `prompts/agent3_prompt.txt` format.
+
+## Batch Generation Issues
+
+### "No debug_questions*.txt files found"
+**Solution:** Make sure you're in the correct directory or specify the right path.
+
+```bash
+# Check current directory
+dir debug_questions*.txt
+
+# Try absolute path
+python batch_generate_documents.py C:/full/path/to/folder
+```
+
+### "ERROR: Parsing failed"
+**Cause:** Debug file format doesn't match expected structure.
+
+**Solution:** Check the debug file manually. Should contain:
+- `A) LECTURA` section with article text
+- `B) PREGUNTAS` section with 10 questions
+
+### "Missing folder path argument"
+**Solution:** Provide a folder path:
+
+```bash
+python batch_generate_documents.py .
+```
+
+## Excel Merger Issues
+
+### No Excel Files Found
+```
+No .xlsx files found in: data/Batch 3
+```
+**Solution:** Check folder path and ensure it contains `.xlsx` files.
+
+### Failed to Read File
+```
+  Reading: corrupted_file.xlsx
+    [ERROR] Failed to read corrupted_file.xlsx: [error details]
+```
+**Solution:** Script continues with other files. Check the corrupted file separately.
+
+### Folder Not Found
+```
+ERROR: Folder not found: data/Batch 99
+```
+**Solution:** Verify the folder path exists.
 
 ---
 

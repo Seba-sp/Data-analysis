@@ -10,6 +10,8 @@ Automated pipeline using Gemini API to discover, validate, and process news arti
 - **Batch Processing**: Process N batches with automatic duplicate prevention
 - **PDF Context**: Reference documents guide question generation via Gemini File API
 - **Google Drive Integration**: Organized output folders with automated uploads
+- **Document Generation**: Word (clean format) + Excel (metadata) files per article
+- **Utility Scripts**: Batch document generation and Excel merging tools
 
 ## 📋 Quick Start
 
@@ -47,7 +49,7 @@ Place PAES reference documents in `agent-3-context/` folder:
 - Guidelines for question design
 - Example questions (3+ files recommended)
 
-### 5. Run Test
+### 5. Run Pipeline
 
 ```bash
 # Process 1 batch of 10 articles
@@ -58,6 +60,9 @@ python main.py --batches 5
 
 # Custom topic
 python main.py --batches 3 --topic "inteligencia artificial"
+
+# Validate configuration
+python main.py --validate-only
 ```
 
 ## 🤖 Agent Pipeline
@@ -76,7 +81,7 @@ python main.py --batches 3 --topic "inteligencia artificial"
 
 ### Agent 3: Question Generation
 - **Input**: Approved articles + 4 reference PDF documents
-- **Output**: 10 PAES-format questions (A-D alternatives) in Word documents
+- **Output**: 10 PAES-format questions (A-D alternatives) in Word + Excel
 - **Standards**: 2-5-3 distribution (Localizar/Interpretar/Evaluar), microevidencia, distractores plausibles
 
 ### Agent 4: Question Review
@@ -92,10 +97,42 @@ NewsArticlesProcessing/
 ├── candidatos_YYYYMMDD.tsv        # Agent 1 candidates
 ├── auditoria_YYYYMMDD.tsv         # Agent 2 audit
 ├── Texto_C001_Titulo/             # Per article folder
-│   ├── preguntas_iniciales.docx   # Initial questions (includes article text)
-│   └── preguntas_mejoradas.docx   # Improved questions (includes article text)
+│   ├── questions_initial_C001.docx   # Initial questions (clean format)
+│   ├── questions_initial_C001.xlsx   # Initial metadata
+│   ├── questions_improved_C001.docx  # Improved questions (clean format)
+│   └── questions_improved_C001.xlsx  # Improved metadata
 └── ...
 ```
+
+## 🛠️ Utility Scripts
+
+### Batch Document Generation
+
+Process all debug files in a folder:
+
+```bash
+# Generate Word + Excel for all debug_questions*.txt files
+python batch_generate_documents.py <folder_path>
+
+# Example
+python batch_generate_documents.py data/Batch1/
+```
+
+**Output:** 2 files per article (Word + Excel) for both initial and improved versions
+
+### Excel Files Merger
+
+Merge multiple Excel files into one:
+
+```bash
+# Merge all .xlsx files in folder
+python merge_excel_files.py <folder_path>
+
+# Example
+python merge_excel_files.py data/Batch1/
+```
+
+**Output:** Single merged Excel with source filename as first column
 
 ## ⚙️ Configuration
 
@@ -115,61 +152,20 @@ AGENT1_MODE=agent  # or 'model'
 AGENT1_MODEL=gemini-3-flash-preview  # only for model mode
 ```
 
-### Model Selection
-
-All models are configurable via environment variables:
-
-```env
-# Agent 1 Model (only used in model mode)
-AGENT1_MODEL=gemini-3-flash-preview
-
-# Agents 2, 3, 4 Model
-GEMINI_MODEL_AGENTS234=gemini-2.0-flash-exp
-```
-
-## 📊 Batch Processing
-
-```bash
-# Single batch (test)
-python main.py --test-mode
-
-# Multiple batches
-python main.py --batches 5
-
-# With topic filter
-python main.py --batches 3 --topic "cambio climático"
-
-# Validate configuration
-python main.py --validate-only
-```
-
 ### Flexible Pipeline Starts
-
-You can start the pipeline from any agent, useful for resuming after errors:
 
 ```bash
 # Start from Agent 1 (default - full pipeline)
 python main.py --test-mode
 
 # Start from Agent 2 (skip research, use existing candidatos TSV)
-python main.py --test-mode --start-from agent2
 python main.py --test-mode --start-from agent2 --tsv-file data/candidatos_20260109.tsv
 
-# Start from Agent 3 (skip to question generation, requires both TSV files)
-python main.py --test-mode --start-from agent3 --tsv-file data/auditoria_20260109.tsv --candidatos-file data/candidatos_20260109.tsv
+# Start from Agent 3 (skip to question generation, only needs enriched audit file)
+python main.py --test-mode --start-from agent3 --tsv-file data/auditoria_20260109.tsv
 ```
 
-**Use cases:**
-- **Agent 2**: Already have candidate texts from Agent 1, want to re-validate
-- **Agent 3**: Agent 1 & 2 completed successfully, but Agent 3 failed (API errors, PDF issues, etc.) - requires both audit and candidatos TSV files
-
-### Duplicate Prevention
-
-- All processed URLs tracked in `data/processing_state.csv`
-- Agent 1 excludes previously processed articles
-- Double-check filtering after API call
-
-## 🔧 Troubleshooting
+## 🔧 Common Issues
 
 ### "GEMINI_API_KEY is not set"
 Add your API key to `.env` file.
@@ -183,20 +179,17 @@ Add at least one PDF to `agent-3-context/` folder.
 ### Agent 1 too slow?
 Switch to model mode: `AGENT1_MODE=model` in `.env`
 
-### Few articles approved?
-- Check `auditoria_*.tsv` for rejection reasons
-- Ensure Agent 1 mode is set to `agent` for better license verification
-
 ## 📖 Documentation
 
-- **SETUP.md** - Detailed setup and configuration guide
-- **ARCHITECTURE.md** - Technical details about agents, models, and APIs
-
-## 🔐 Security
-
-- Keep `.env` and `credentials.json` private (both in `.gitignore`)
-- Never commit API keys or OAuth tokens
-- Use environment variables for all sensitive data
+See **DOCUMENTATION.md** for complete technical details:
+- Installation & setup
+- Configuration guide
+- Agent architecture
+- API details
+- Batch processing guides
+- Excel merging guide
+- Troubleshooting
+- Performance optimization
 
 ## 📝 Requirements
 
@@ -213,4 +206,4 @@ The system uses Spanish number formatting (decimal: `,`, thousands: `.`) for Chi
 
 **Status**: ✅ Production Ready  
 **License**: See project license  
-**Support**: See SETUP.md for detailed troubleshooting
+**Support**: See DOCUMENTATION.md for detailed help

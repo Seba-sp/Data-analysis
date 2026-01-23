@@ -8,6 +8,7 @@ import google.generativeai as genai_legacy
 from typing import Dict, List, Optional
 import os
 import re
+import time
 
 from config import config
 from utils.pdf_loader import get_pdf_context_loader
@@ -50,98 +51,185 @@ class QuestionAgent:
     
     def generate_questions(self, article: Dict) -> Dict:
         """
-        Generate PAES-format questions for an approved article.
+        Generate PAES-format questions by uploading DOCX to Gemini.
         
         Args:
-            article: Article dict from Agent 2 with fields:
+            article: Article dict with:
                 - article_id: ID (e.g., C001)
                 - title: Article title
                 - author: Author name
-                - url: Article URL
-                - source: Source/publication
-                - date: Publication year
                 - type: Text type (literario/expositivo/argumentativo)
-                - license: License type
-                - fragment_start: First 12-20 words
-                - fragment_end: Last 12-20 words
-                - tsv_row: Full TSV row data
+                - docx_path: Path to DOCX file (text + images)
         
         Returns:
-            Dict with questions and raw response
+            Dict with questions only (no article_text)
         """
         article_id = article.get('article_id', 'T01')
-        print(f"[Agent 3] Generating PAES questions for: {article_id}")
+        docx_path = article.get('docx_path', '')
+        
+        print(f"[Agent 3] Generating questions for: {article_id}")
+        print(f"[Agent 3] DOCX: {docx_path}")
+        
+        # Validate DOCX exists
+        if not os.path.exists(docx_path):
+            raise FileNotFoundError(f"DOCX not found: {docx_path}")
         
         try:
-            # Build metadata section for prompt
+            # Convert DOCX to PDF for Gemini upload
+            from docx2pdf import convert
+            
+            print(f"[Agent 3] Converting DOCX to PDF...")
+            
+            # Save PDF in data directory (persistent, not temporary)
+            pdf_filename = f"{article_id}_article.pdf"
+            pdf_path = os.path.join(config.BASE_DATA_PATH, pdf_filename)
+            
+            # Convert DOCX to PDF
+            convert(docx_path, pdf_path)
+            print(f"[Agent 3] Conversion complete: {pdf_filename}")
+            
+            # Upload PDF to Gemini File API
+            print(f"[Agent 3] Uploading PDF to Gemini...")
+            uploaded_pdf = genai_legacy.upload_file(pdf_path, 
+                                                    display_name=f"{article_id}_article.pdf")
+            
+            # Wait for processing
+            while uploaded_pdf.state.name == "PROCESSING":
+                print(f"[Agent 3] Processing PDF...")
+                time.sleep(2)
+                uploaded_pdf = genai_legacy.get_file(uploaded_pdf.name)
+            
+            if uploaded_pdf.state.name != "ACTIVE":
+                raise ValueError(f"PDF processing failed: {uploaded_pdf.state.name}")
+            
+            print(f"[Agent 3] PDF ready: {uploaded_pdf.uri}")
+            
+            # Build metadata for prompt
             metadata = self._build_metadata_section(article)
             
-            # Combine with prompt template
-            full_prompt = metadata + "\n\n" + self.prompt_template
+            # Instruction to read uploaded PDF
+            pdf_instruction = """
+TEXTO DEL ARTÍCULO
+===================================================================
+Lee el archivo PDF adjunto que contiene el texto completo del artículo.
+El archivo puede incluir imágenes, tablas y formato especial.
+Analiza TODO el contenido del archivo para generar las preguntas.
+===================================================================
+"""
             
-            print(f"[Agent 3] Prompt length: {len(full_prompt)} chars")
-            print(f"[Agent 3] Article: {article.get('title', 'N/A')[:50]}...")
+            # Combine: metadata + pdf instruction + prompt template
+            full_prompt = metadata + "\n\n" + pdf_instruction + "\n\n" + self.prompt_template
             
-            # Generate using legacy API with PDF context
+            print(f"[Agent 3] Prompt: {len(full_prompt)} chars")
+            
+            # Collect files to send: PDF references + article PDF
+            files_to_send = []
             if self.pdf_loader and self.pdf_loader.has_context():
-                file_count = len(self.pdf_loader.get_loaded_files())
-                print(f"[Agent 3] Using PDF context ({file_count} files)")
-                response_text = self._generate_with_pdfs(full_prompt)
-            else:
-                print(f"[Agent 3] No PDF context available, using Google Search")
-                response_text = self._generate_with_search(full_prompt)
+                files_to_send.extend(self.pdf_loader.get_file_references())
+                print(f"[Agent 3] Including {len(files_to_send)} PDF references")
             
-            # Save raw response for debugging
+            files_to_send.append(uploaded_pdf)
+            print(f"[Agent 3] Total files: {len(files_to_send)} (Reference PDFs + Article PDF)")
+            
+            # Generate with legacy API (supports file uploads)
+            response = self.model_legacy.generate_content([full_prompt] + files_to_send)
+            response_text = response.text
+            
+            # Clean up uploaded PDF from Gemini
+            try:
+                genai_legacy.delete_file(uploaded_pdf.name)
+                print(f"[Agent 3] Cleaned up PDF upload from Gemini")
+            except:
+                pass  # Auto-expires in 48h anyway
+            
+            # Keep the local PDF file for Agent 4 to reuse
+            
+            # Save debug file
             self._save_debug_file(article_id, response_text)
             
-            # Parse questions and article text
+            # Parse questions ONLY (no article_text extraction)
             parsed_result = self._parse_paes_format(response_text)
             parsed_questions = parsed_result.get('questions', [])
-            article_text = parsed_result.get('article_text', '')
             
-            print(f"[Agent 3] Parsed {len(parsed_questions)} questions")
+            print(f"[Agent 3] Generated {len(parsed_questions)} questions")
             self._print_parse_summary(parsed_questions)
             
             return {
                 'article_id': article_id,
+                'docx_path': docx_path,  # Pass forward
+                'pdf_path': pdf_path,  # Pass PDF path for Agent 4 to reuse
                 'raw_response': response_text,
-                'article_text': article_text,
                 'questions': parsed_questions,
                 'question_count': len(parsed_questions)
             }
         
+        except FileNotFoundError:
+            print(f"[Agent 3] ERROR: DOCX not found")
+            raise  # Let orchestrator handle skipping
         except Exception as e:
             print(f"[Agent 3] ERROR: {e}")
             import traceback
             traceback.print_exc()
-            return {
-                'article_id': article_id,
-                'raw_response': '',
-                'questions': [],
-                'question_count': 0,
-                'error': str(e)
-            }
+            raise
     
     def improve_questions(self, questions: Dict, feedback: Dict, article: Dict) -> Dict:
         """
-        Improve questions based on Agent 4 feedback.
+        Improve questions based on Agent 4 feedback, uploading DOCX to Gemini.
         
         Args:
-            questions: Original questions dict
-            feedback: Feedback from Agent 4
-            article: Original article dict
+            questions: Original questions dict from generate_questions
+            feedback: Feedback dict from Agent 4
+            article: Article dict with docx_path
         
         Returns:
             Dict with improved questions
         """
         article_id = article.get('article_id', 'T01')
-        print(f"[Agent 3] Improving questions based on feedback...")
+        docx_path = article.get('docx_path', '')
+        
+        print(f"[Agent 3] Improving questions for: {article_id}")
         
         try:
+            # Reuse PDF from generate_questions if available
+            pdf_path = questions.get('pdf_path')
+            
+            if not pdf_path or not os.path.exists(pdf_path):
+                # Fallback: check if PDF exists in data directory
+                pdf_filename = f"{article_id}_article.pdf"
+                pdf_path = os.path.join(config.BASE_DATA_PATH, pdf_filename)
+                
+                if not os.path.exists(pdf_path):
+                    # Last resort: convert DOCX to PDF
+                    from docx2pdf import convert
+                    print(f"[Agent 3] Converting DOCX to PDF for improvement...")
+                    convert(docx_path, pdf_path)
+                    print(f"[Agent 3] Conversion complete: {pdf_filename}")
+                else:
+                    print(f"[Agent 3] Reusing existing PDF: {pdf_filename}")
+            else:
+                print(f"[Agent 3] Reusing PDF from generate_questions: {os.path.basename(pdf_path)}")
+            
+            # Upload PDF to Gemini
+            uploaded_pdf = genai_legacy.upload_file(pdf_path,
+                                                   display_name=f"{article_id}_improve.pdf")
+            
+            # Wait for processing
+            while uploaded_pdf.state.name == "PROCESSING":
+                time.sleep(2)
+                uploaded_pdf = genai_legacy.get_file(uploaded_pdf.name)
+            
+            if uploaded_pdf.state.name != "ACTIVE":
+                raise ValueError(f"PDF processing failed: {uploaded_pdf.state.name}")
+            
+            print(f"[Agent 3] PDF ready for improvement")
+            
             # Build improvement prompt
             prompt = f"""Eres diseñador/a senior de preguntas PAES. Recibiste feedback sobre tus preguntas.
 
 ARTÍCULO: {article.get('title', 'Unknown')}
+
+TEXTO DEL ARTÍCULO:
+Lee el archivo PDF adjunto con el texto completo del artículo (incluye imágenes si hay).
 
 TUS PREGUNTAS ORIGINALES:
 {questions.get('raw_response', '')}
@@ -151,46 +239,45 @@ FEEDBACK RECIBIDO:
 
 INSTRUCCIONES:
 Revisa y mejora las preguntas incorporando el feedback. Mantén el formato PAES exacto:
-- Misma estructura (LECTURA, PREGUNTAS)
+- Misma estructura
 - Corrige los problemas mencionados
-- Mantén distribución 2-5-3
+- Mantén distribución
 - Mejora distractores si se indicó
 
 Entrega el set completo mejorado en el mismo formato que originalmente.
 """
             
-            # Generate improved version
-            interaction = self.client.interactions.create(
-                model=self.model_id,
-                input=prompt,
-                store=False
-            )
+            # Generate improved version with PDF file
+            response = self.model_legacy.generate_content([prompt, uploaded_pdf])
+            response_text = response.text
             
-            response_text = self._extract_interaction_text(interaction)
+            # Clean up Gemini upload (keep local PDF)
+            try:
+                genai_legacy.delete_file(uploaded_pdf.name)
+            except:
+                pass
             
-            # Save debug file for improved questions
+            # Save debug file
             self._save_debug_file(article_id, response_text, improved=True)
             
-            # Parse improved questions and article text
+            # Parse improved questions
             parsed_result = self._parse_paes_format(response_text)
             parsed_improved = parsed_result.get('questions', [])
-            article_text = parsed_result.get('article_text', '')
             
             print(f"[Agent 3] Improved {len(parsed_improved)} questions")
             
             return {
                 'article_id': article_id,
+                'docx_path': docx_path,
                 'raw_response': response_text,
-                'article_text': article_text,
                 'questions': parsed_improved,
                 'question_count': len(parsed_improved),
                 'improved': True
             }
         
         except Exception as e:
-            print(f"[Agent 3] ERROR improving questions: {e}")
-            # Return original questions on error
-            return questions
+            print(f"[Agent 3] ERROR improving: {e}")
+            raise
     
     def _build_metadata_section(self, article: Dict) -> str:
         """Build metadata section for prompt."""
@@ -213,9 +300,6 @@ Inicio_Fragmento: {article.get('fragment_start', '')}
 Fin_Fragmento: {article.get('fragment_end', '')}
 Recurso_Discontinuo: {tsv_row.get('Recurso_Discontinuo', 'No')}
 
-TEXTO_BASE:
-Debes acceder a la URL y extraer el texto completo del artículo.
-El fragmento debe estar entre Inicio_Fragmento y Fin_Fragmento (aproximadamente 650-900 palabras continuas).
 """
         return metadata
     
@@ -256,11 +340,13 @@ El fragmento debe estar entre Inicio_Fragmento y Fin_Fragmento (aproximadamente 
     def _save_debug_file(self, article_id: str, response_text: str, improved: bool = False):
         """Save raw response for debugging."""
         try:
+            # Save to data directory
+            debug_dir = config.BASE_DATA_PATH
             if improved:
-                debug_file = f"debug_questions_improved_{article_id}.txt"
+                debug_file = os.path.join(debug_dir, f"debug_questions_improved_{article_id}.txt")
                 header = "=== RAW RESPONSE FROM AGENT 3 (IMPROVED) ==="
             else:
-                debug_file = f"debug_questions_{article_id}.txt"
+                debug_file = os.path.join(debug_dir, f"debug_questions_{article_id}.txt")
                 header = "=== RAW RESPONSE FROM AGENT 3 ==="
             
             with open(debug_file, 'w', encoding='utf-8') as f:
@@ -298,15 +384,16 @@ El fragmento debe estar entre Inicio_Fragmento y Fin_Fragmento (aproximadamente 
         }
         
         # Extract article text from A) LECTURA section
-        lectura_match = re.search(r'A\)\s*LECTURA', response_text, re.IGNORECASE)
+        # Handle both "A) LECTURA" and "### A) LECTURA" (markdown headings)
+        lectura_match = re.search(r'(?:###\s*)?A\)\s*LECTURA', response_text, re.IGNORECASE)
         if lectura_match:
-            # Find TEXTO section within LECTURA
+            # Find TEXTO section within LECTURA (handle markdown like **TEXTO**)
             texto_match = re.search(r'\*{0,2}TEXTO\*{0,2}', response_text[lectura_match.start():], re.IGNORECASE)
             if texto_match:
                 texto_start = lectura_match.start() + texto_match.end()
                 
-                # Find where PREGUNTAS section starts
-                preguntas_match = re.search(r'B\)\s*PREGUNTAS', response_text, re.IGNORECASE)
+                # Find where PREGUNTAS section starts (handle markdown)
+                preguntas_match = re.search(r'(?:###\s*)?B\)\s*PREGUNTAS', response_text, re.IGNORECASE)
                 if preguntas_match:
                     texto_end = preguntas_match.start()
                     article_text = response_text[texto_start:texto_end].strip()
@@ -315,16 +402,16 @@ El fragmento debe estar entre Inicio_Fragmento y Fin_Fragmento (aproximadamente 
                     result['article_text'] = article_text
                     print(f"[Agent 3] Extracted article text ({len(article_text)} chars)")
         
-        # Find PREGUNTAS section
-        preguntas_match = re.search(r'B\)\s*PREGUNTAS', response_text, re.IGNORECASE)
+        # Find PREGUNTAS section (handle markdown headings)
+        preguntas_match = re.search(r'(?:###\s*)?B\)\s*PREGUNTAS', response_text, re.IGNORECASE)
         if not preguntas_match:
             print("[Agent 3] WARNING: PREGUNTAS section not found")
             return result
         
         preguntas_start = preguntas_match.end()
         
-        # Find CLAVES section (optional, might not exist)
-        claves_match = re.search(r'C\)\s*CLAVES', response_text, re.IGNORECASE)
+        # Find CLAVES section (optional, might not exist, handle markdown)
+        claves_match = re.search(r'(?:###\s*)?C\)\s*CLAVES', response_text, re.IGNORECASE)
         if claves_match:
             preguntas_section = response_text[preguntas_start:claves_match.start()]
             claves_section = response_text[claves_match.end():]
@@ -354,8 +441,8 @@ El fragmento debe estar entre Inicio_Fragmento y Fin_Fragmento (aproximadamente 
             if not line:
                 continue
             
-            # Match: "1. [Habilidad-tarea]" or "1. [Habilidad-tarea] ¿Pregunta?"
-            q_match = re.match(r'^(\d+)\.\s*\[([^\]]+)\]\s*(.*)$', line)
+            # Match: "1. [Habilidad-tarea]" or "**1. [Habilidad-tarea]**" (with markdown bold)
+            q_match = re.match(r'^\*{0,2}(\d+)\.\s*\[([^\]]+)\]\*{0,2}\s*(.*)$', line)
             if q_match:
                 # Save previous question
                 if current_q:
@@ -397,20 +484,20 @@ El fragmento debe estar entre Inicio_Fragmento y Fin_Fragmento (aproximadamente 
                 current_q['alternatives'][letter] = text
                 continue
             
-            # Match "Respuesta correcta: B" or "Respuesta correcta B" (with or without colon)
-            resp_match = re.match(r'^Respuesta\s+correcta\s*:?\s*([ABCD])', line, re.IGNORECASE)
+            # Match "Respuesta correcta: B" or "**Respuesta correcta B**" (with markdown bold)
+            resp_match = re.match(r'^\*{0,2}Respuesta\s+correcta\s*:?\s*\*{0,2}\s*([ABCD])\*{0,2}', line, re.IGNORECASE)
             if resp_match:
                 current_q['clave'] = resp_match.group(1)
                 continue
             
-            # Alternative format: just "Correcta: B"
-            resp_alt = re.match(r'^Correcta\s*:?\s*([ABCD])', line, re.IGNORECASE)
+            # Alternative format: just "Correcta: B" or "**Correcta B**"
+            resp_alt = re.match(r'^\*{0,2}Correcta\s*:?\s*\*{0,2}\s*([ABCD])\*{0,2}', line, re.IGNORECASE)
             if resp_alt:
                 current_q['clave'] = resp_alt.group(1)
                 continue
             
-            # Match "Justificación: texto"
-            just_match = re.match(r'^Justificaci[oó]n\s*:?\s*(.+)$', line, re.IGNORECASE)
+            # Match "Justificación: texto" or "**Justificación:** texto" (with markdown bold)
+            just_match = re.match(r'^\*{0,2}Justificaci[oó]n\s*:?\*{0,2}\s*(.+)$', line, re.IGNORECASE)
             if just_match:
                 current_q['justification'] = just_match.group(1).strip()
                 continue

@@ -4,7 +4,10 @@ B) ID_INICIAL (opcional): ej. C001 para seguir numeración.
 C) TEMAS_PRIORITARIOS (opcional): si se indica, prioriza; si no, diversidad.
 D) MODO_SALIDA (obligatorio): TSV o XLSX
 OBJETIVO
-Entregar EXACTAMENTE 30 candidatos listos para filtrar
+Entregar EXACTAMENTE 30 candidatos listos para filtrar, con distribución 10-10-10:
+- 10 literarios
+- 10 expositivos/divulgación
+- 10 argumentativos
 
 0) MODO_SALIDA=TSV:
 - Entrega EXACTAMENTE 30 filas en TSV en UN SOLO bloque de código.
@@ -82,7 +85,7 @@ POLÍTICA Y CONTINGENCIA (PERMITIDO SIN “AGENDA”, CON CUOTA Y NEUTRALIDAD)
   1) Registro analítico/explicativo (no panfleto).
   2) Debe presentar al menos 2 perspectivas o reconocer explícitamente una objeción/limitación.
   3) Evitar foco en “personalidades”; preferir procesos/instituciones/políticas públicas en abstracto.
-  4) Diversidad: no repetir el mismo país/actor/partido/gobierno.
+  4) Diversidad: no repetir el mismo país/actor/partido/gobierno dentro de los 6.
 - En Alertas registrar: Politica_Contingencia=Sí/No; Neutralidad=Alta/Media/Baja; Campana=Sí/No.
   Si Campana=Sí o Neutralidad=Baja, DESCARTAR (no incluir como candidato).
 
@@ -111,9 +114,12 @@ REGLAS DURAS DE SELECCIÓN (NO FLEXIBLES)
   - Debe permitir 10 preguntas (2 Localizar + 5 Interpretar + 3 Evaluar aprox.).
   - Debe contener al menos 8 anclajes preguntables.
 - A nivel pool de 30:
+  - 10/10/10 tipos.
+  - Máximo 6 Politica_Contingencia=Sí.
   - Preferir diversidad temática; evitar acumulación de un mismo país/actor/tema.
 
 REQUISITO DISCONTINUO EVALUABLE (EN EL POOL)
+- En los 30 candidatos, al menos 3 deben ser “Discontinuo referido y licenciado” (para asegurar que al filtrar siempre quede al menos 1).
 - Un candidato solo cuenta como discontinuo si el FRAGMENTO referencia explícitamente Tabla/Gráfico/Figura y se llena URL_Recurso + licencia del recurso con evidencia en el mismo dominio.
 
 FUENTES PRIORIZADAS (EN ESTE ORDEN)
@@ -152,7 +158,9 @@ Antes de entregar, confirma en el Resumen:
 - TheConversation: 0/30
 - Prohibidos_Chile_Dictadura_DDHH: 0/30
 - Desinformacion: 0/30
-- Campana 0/30; Neutralidad_Baja 0/30; sin repetición actor/país
+- Politica_Contingencia: <=6/30; Campana 0/30; Neutralidad_Baja 0/30; sin repetición actor/país
+- Distribución 10-10-10: OK
+- Discontinuo referido y licenciado: >=3/30
 Si cualquiera falla, reemplaza candidatos antes de imprimir.
 
 REPORTE (EN LAS MISMAS COLUMNAS)
@@ -172,10 +180,11 @@ SALIDA OBLIGATORIA
 - Prohibido tokens internos (oaicite, contentReference, etc.).
 
 1) RESUMEN (máx 10 líneas, SIN viñetas)
-- Conteo por tipo
+- Conteo por tipo (10/10/10)
 - Conteo por fuente
 - Conteo por licencia (PD / CC BY / CC BY-SA / PD_POR_PLAZO_CHILE)
-- Neutralidad_Baja: 0, Campana: 0
+- Politica_Contingencia: X/30 (<=6), Neutralidad_Baja: 0, Campana: 0
+- Discontinuo referido y licenciado: X/30 (>=3)
 - Validador interno (todas las métricas en una sola línea)
 
 2) MODO_SALIDA=TSV:

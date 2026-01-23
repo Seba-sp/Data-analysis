@@ -46,7 +46,7 @@ class ValidationAgent:
             tsv_data: TSV string with candidate texts from Agent 1
             
         Returns:
-            Tuple of (audit_tsv_string, list_of_approved_article_dicts)
+            Tuple of (enriched_audit_tsv_string, list_of_approved_article_dicts)
         """
         print(f"[Agent 2] Starting legal validation audit...")
         
@@ -73,11 +73,14 @@ class ValidationAgent:
                 print(f"[Agent 2] ERROR: No audit TSV found in response")
                 return ("", [])
             
+            # Create enriched audit TSV (includes all original data + validation columns)
+            enriched_audit_tsv = self._create_enriched_audit(audit_tsv, tsv_data)
+            
             # Parse audit results to get approved articles
-            approved_articles = self._parse_audit_results(audit_tsv, tsv_data)
+            approved_articles = self._parse_audit_results(enriched_audit_tsv, tsv_data)
             
             print(f"[Agent 2] Audit complete: {len(approved_articles)} texts APROBADO")
-            return (audit_tsv, approved_articles)
+            return (enriched_audit_tsv, approved_articles)
         
         except Exception as e:
             print(f"[Agent 2] Error during validation: {e}")
@@ -121,13 +124,87 @@ class ValidationAgent:
         
         return ""
     
-    def _parse_audit_results(self, audit_tsv: str, original_tsv: str) -> List[Dict]:
+    def _create_enriched_audit(self, audit_tsv: str, original_tsv: str) -> str:
+        """
+        Create enriched audit TSV that includes ALL original columns PLUS validation columns.
+        This makes the audit file self-contained - no need for candidatos file.
+        
+        Args:
+            audit_tsv: Basic audit TSV (ID, Estado, Decision, Motivo_Concreto, Accion_Recomendada)
+            original_tsv: Original candidatos TSV with all article data
+            
+        Returns:
+            Enriched TSV string with all original columns + validation columns
+        """
+        # Parse audit TSV
+        audit_lines = audit_tsv.strip().split('\n')
+        if len(audit_lines) < 2:
+            return original_tsv
+        
+        audit_header = audit_lines[0].split('\t')
+        audit_data = {}
+        
+        for line in audit_lines[1:]:
+            if not line.strip():
+                continue
+            values = line.split('\t')
+            row_dict = dict(zip(audit_header, values))
+            article_id = row_dict.get('ID', '')
+            if article_id:
+                audit_data[article_id] = row_dict
+        
+        # Parse original TSV
+        original_lines = original_tsv.strip().split('\n')
+        if len(original_lines) < 2:
+            return audit_tsv
+        
+        original_header = original_lines[0].split('\t')
+        
+        # Create enriched header: all original columns + validation columns (without ID duplicate)
+        validation_columns = ['Estado', 'Decision', 'Motivo_Concreto', 'Accion_Recomendada']
+        enriched_header = original_header + validation_columns
+        
+        # Build enriched rows
+        enriched_rows = ['\t'.join(enriched_header)]
+        
+        for line in original_lines[1:]:
+            if not line.strip():
+                continue
+            
+            values = line.split('\t')
+            # Pad with empty strings if needed
+            while len(values) < len(original_header):
+                values.append('')
+            
+            row_dict = dict(zip(original_header, values))
+            article_id = row_dict.get('ID', '')
+            
+            # Add validation data if available
+            if article_id in audit_data:
+                audit_row = audit_data[article_id]
+                values.extend([
+                    audit_row.get('Estado', ''),
+                    audit_row.get('Decision', ''),
+                    audit_row.get('Motivo_Concreto', ''),
+                    audit_row.get('Accion_Recomendada', '')
+                ])
+            else:
+                # No audit data for this article - add empty validation columns
+                values.extend(['', '', '', ''])
+            
+            enriched_rows.append('\t'.join(values))
+        
+        enriched_tsv = '\n'.join(enriched_rows)
+        print(f"[Agent 2] Created enriched audit TSV: {len(enriched_header)} columns, {len(enriched_rows)-1} rows")
+        return enriched_tsv
+    
+    def _parse_audit_results(self, audit_tsv: str, original_tsv: Optional[str] = None) -> List[Dict]:
         """
         Parse audit results to extract approved articles.
         
         Args:
-            audit_tsv: Audit TSV from Agent 2 response
-            original_tsv: Original TSV from Agent 1
+            audit_tsv: Enriched audit TSV (can be self-contained with all data)
+            original_tsv: Optional original TSV (for backward compatibility)
             
         Returns:
             List of approved article dictionaries
@@ -140,8 +217,59 @@ class ValidationAgent:
             return approved_articles
         
         audit_header = audit_lines[0].split('\t')
-        audit_rows = []
         
+        # Check if this is an enriched audit TSV (has original columns + validation columns)
+        is_enriched = 'Titulo' in audit_header or 'URL' in audit_header
+        
+        if is_enriched:
+            # NEW PATH: Parse from enriched audit TSV (self-contained)
+            print(f"[Agent 2] Parsing from enriched audit TSV ({len(audit_header)} columns)")
+            
+            for line in audit_lines[1:]:
+                if not line.strip():
+                    continue
+                
+                values = line.split('\t')
+                # Pad with empty strings if needed
+                while len(values) < len(audit_header):
+                    values.append('')
+                
+                row_dict = dict(zip(audit_header, values))
+                
+                # Check if approved
+                estado = row_dict.get('Estado', '').upper()
+                decision = row_dict.get('Decision', '').upper()
+                
+                if decision == 'OK' or estado in ['APROBADO', 'APROBADO_CONDICION']:
+                    # Create article dict for Agent 3
+                    article = {
+                        'article_id': row_dict.get('ID', ''),
+                        'title': row_dict.get('Titulo', ''),
+                        'author': row_dict.get('Autor', ''),
+                        'url': row_dict.get('URL_Canonica', row_dict.get('URL', '')),
+                        'source': row_dict.get('Fuente', ''),
+                        'date': row_dict.get('Ano', ''),
+                        'type': row_dict.get('Tipo', ''),
+                        'license': row_dict.get('Licencia', ''),
+                        'license_status': 'approved',
+                        'content': '',  # Will be populated if needed
+                        'fragment_start': row_dict.get('Inicio_Fragmento', ''),
+                        'fragment_end': row_dict.get('Fin_Fragmento', ''),
+                        'tsv_row': row_dict
+                    }
+                    
+                    approved_articles.append(article)
+            
+            return approved_articles
+        
+        # OLD PATH: Parse from basic audit + original TSV (backward compatibility)
+        if not original_tsv:
+            print(f"[Agent 2] ERROR: Basic audit TSV requires original_tsv parameter")
+            return approved_articles
+        
+        print(f"[Agent 2] Parsing from basic audit + original TSV (legacy mode)")
+        
+        audit_rows = []
         for line in audit_lines[1:]:
             if not line.strip():
                 continue
@@ -170,7 +298,6 @@ class ValidationAgent:
                 continue
             
             values = line.split('\t')
-            # Don't require exact column match - some TSV rows may have empty trailing columns
             # Pad with empty strings if needed
             while len(values) < len(original_header):
                 values.append('')

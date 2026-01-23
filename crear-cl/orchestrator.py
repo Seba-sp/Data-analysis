@@ -37,6 +37,7 @@ class PipelineOrchestrator:
         self.validation_agent = validation_agent
         self.question_agent = question_agent
         self.review_agent = review_agent
+        self.output_dir = config.BASE_DATA_PATH  # Output directory for generated documents
         
         print("[Orchestrator] Initialized with all agents")
     
@@ -47,7 +48,8 @@ class PipelineOrchestrator:
                      agent1_mode: Optional[str] = None,
                      start_from: str = 'agent1',
                      tsv_file: Optional[str] = None,
-                     candidatos_file: Optional[str] = None):
+                     candidatos_file: Optional[str] = None,
+                     reverse: bool = False):
         """
         Run the complete PAES question generation pipeline.
         
@@ -58,7 +60,8 @@ class PipelineOrchestrator:
             agent1_mode: Override Agent 1 mode ('agent' or 'model')
             start_from: Starting point ('agent1', 'agent2', or 'agent3')
             tsv_file: TSV file for agent2/agent3 start
-            candidatos_file: Candidatos TSV for agent3 start (required)
+            candidatos_file: Optional candidatos TSV for agent3 start (backward compatibility)
+            reverse: Process articles in reverse order (bottom to top)
         """
         # Override Agent 1 mode if specified
         if agent1_mode:
@@ -73,14 +76,9 @@ class PipelineOrchestrator:
         print(f"  Starting from: {start_from}")
         if topic:
             print(f"  Topic: {topic}")
+        if reverse:
+            print(f"  Order: REVERSE (bottom to top)")
         print(f"{'='*70}\n")
-        
-        # Validate start mode
-        if start_from == 'agent3' and not candidatos_file:
-            print(f"[Orchestrator] ERROR: --candidatos-file required for agent3 start")
-            print(f"[Orchestrator] Example: python main.py --start-from agent3 "
-                  f"--tsv-file data/auditoria_*.tsv --candidatos-file data/candidatos_*.tsv")
-            return
         
         try:
             for batch_num in range(1, num_batches + 1):
@@ -101,6 +99,11 @@ class PipelineOrchestrator:
                     if not validated_articles:
                         print(f"[Orchestrator] No validated articles in batch {batch_num}")
                         continue
+                    
+                    # Reverse order if requested (for parallel processing)
+                    if reverse:
+                        validated_articles = list(reversed(validated_articles))
+                        print(f"[Orchestrator] Processing in REVERSE order ({len(validated_articles)} articles)")
                     
                     # Process each validated article (Steps 3-6)
                     for i, article in enumerate(validated_articles, 1):
@@ -183,33 +186,103 @@ class PipelineOrchestrator:
         return validated_articles
     
     def _start_from_agent3(self, tsv_file: Optional[str], 
-                          candidatos_file: str) -> List[Dict]:
-        """Start pipeline from Agent 3 (load audit + candidatos TSV)."""
+                          candidatos_file: Optional[str] = None) -> List[Dict]:
+        """
+        Start pipeline from Agent 3 (load CSV with article data + DOCX paths).
+        
+        Args:
+            tsv_file: Path to CSV file with Docx_Path column (or TSV for backward compatibility)
+            candidatos_file: Ignored (backward compatibility)
+        """
+        import pandas as pd
+        
         print(f"[Orchestrator] Starting from Agent 3")
         
-        # Find or use provided audit TSV
+        # Find or use provided file
         if not tsv_file:
-            tsv_file = self._find_latest_file('auditoria_*.tsv')
+            # Try CSV first, then TSV for backward compatibility
+            csv_file = self._find_latest_file('*.csv')
+            if csv_file:
+                tsv_file = csv_file
+            else:
+                tsv_file = self._find_latest_file('auditoria_*.tsv')
+            
             if not tsv_file:
-                print(f"[Orchestrator] ERROR: No audit TSV found")
+                print(f"[Orchestrator] ERROR: No CSV or TSV found")
                 return []
         
-        print(f"[Orchestrator] Audit TSV: {os.path.basename(tsv_file)}")
-        print(f"[Orchestrator] Candidatos TSV: {os.path.basename(candidatos_file)}")
+        file_ext = os.path.splitext(tsv_file)[1].lower()
+        print(f"[Orchestrator] Input file: {os.path.basename(tsv_file)}")
         
-        # Load both files
-        with open(tsv_file, 'r', encoding='utf-8') as f:
-            audit_tsv = f.read()
+        # Handle CSV files (new DOCX-based approach)
+        if file_ext == '.csv':
+            print(f"[Orchestrator] Loading CSV with DOCX paths")
+            
+            # Load CSV with pandas (support both comma and semicolon delimiters)
+            try:
+                df = pd.read_csv(tsv_file)
+            except pd.errors.ParserError:
+                # Try semicolon delimiter (common in European locales)
+                df = pd.read_csv(tsv_file, sep=';')
+            
+            # Validate required columns
+            required_cols = ['ID', 'Titulo', 'Docx_Path', 'Estado']
+            missing = [col for col in required_cols if col not in df.columns]
+            if missing:
+                print(f"[Orchestrator] ERROR: Missing columns: {missing}")
+                return []
+            
+            # Filter for approved articles
+            approved_df = df[df['Estado'].str.upper().isin(['APROBADO', 'APROBADO_CONDICION'])]
+            print(f"[Orchestrator] Found {len(approved_df)} approved articles in CSV")
+            
+            # Convert to article dicts
+            validated_articles = []
+            for _, row in approved_df.iterrows():
+                docx_path = row.get('Docx_Path', '')
+                
+                # Handle relative paths - make absolute
+                if docx_path and not os.path.isabs(docx_path):
+                    docx_path = os.path.abspath(docx_path)
+                
+                article = {
+                    'article_id': row.get('ID', ''),
+                    'title': row.get('Titulo', ''),
+                    'author': row.get('Autor', ''),
+                    'url': row.get('URL_Canonica', row.get('URL', '')),
+                    'source': row.get('Fuente', ''),
+                    'date': row.get('Ano', ''),
+                    'type': row.get('Tipo', ''),
+                    'license': row.get('Licencia', ''),
+                    'docx_path': docx_path,  # Absolute path
+                    'license_status': 'approved'
+                }
+                
+                validated_articles.append(article)
+            
+            print(f"[Orchestrator] Loaded {len(validated_articles)} articles from CSV")
         
-        with open(candidatos_file, 'r', encoding='utf-8') as f:
-            candidatos_tsv = f.read()
-        
-        # Parse with Agent 2's method
-        validated_articles = self.validation_agent._parse_audit_results(
-            audit_tsv, candidatos_tsv
-        )
-        
-        print(f"[Orchestrator] Loaded {len(validated_articles)} validated articles")
+        # Handle TSV files (backward compatibility)
+        else:
+            print(f"[Orchestrator] Loading TSV (legacy mode)")
+            
+            # Load audit TSV
+            with open(tsv_file, 'r', encoding='utf-8') as f:
+                audit_tsv = f.read()
+            
+            # Load candidatos TSV if provided
+            candidatos_tsv = None
+            if candidatos_file:
+                print(f"[Orchestrator] Candidatos TSV: {os.path.basename(candidatos_file)}")
+                with open(candidatos_file, 'r', encoding='utf-8') as f:
+                    candidatos_tsv = f.read()
+            
+            # Parse with Agent 2's method
+            validated_articles = self.validation_agent._parse_audit_results(
+                audit_tsv, candidatos_tsv
+            )
+            
+            print(f"[Orchestrator] Loaded {len(validated_articles)} articles from TSV")
         
         # Add to state tracking
         for article in validated_articles:
@@ -218,7 +291,7 @@ class PipelineOrchestrator:
                     article_id=article['article_id'],
                     license_status='approved',
                     license_type=article.get('license', 'CC'),
-                    validation_reason='Pre-approved from audit TSV'
+                    validation_reason='Pre-approved from input file'
                 )
         
         return validated_articles
@@ -326,7 +399,12 @@ class PipelineOrchestrator:
             
             # Step 3: Generate questions
             print(f"\n[STEP 3] Question Generation - Agent 3")
-            questions = q_agent.generate_questions(article)
+            try:
+                questions = q_agent.generate_questions(article)
+            except FileNotFoundError as e:
+                print(f"[STEP 3] Skipping {article_id}: {e}")
+                self.state_manager.mark_error(article_id, f"DOCX file not found: {e}")
+                return
             
             if not questions or not questions.get('questions'):
                 print(f"[STEP 3] ERROR: No questions generated")
@@ -337,31 +415,88 @@ class PipelineOrchestrator:
             
             # Step 4: Review questions
             print(f"\n[STEP 4] Question Review - Agent 4")
-            feedback = r_agent.review_questions(article, questions)
+            try:
+                feedback = r_agent.review_questions(article, questions)
+            except Exception as e:
+                print(f"[STEP 4] ERROR: {e}")
+                import traceback
+                traceback.print_exc()
+                self.state_manager.mark_error(article_id, f"Review failed: {e}")
+                return
             
             # Step 5: Improve questions
             print(f"\n[STEP 5] Question Improvement - Agent 3")
-            improved = q_agent.improve_questions(questions, feedback, article)
+            try:
+                improved = q_agent.improve_questions(questions, feedback, article)
+            except Exception as e:
+                print(f"[STEP 5] ERROR: {e}")
+                import traceback
+                traceback.print_exc()
+                self.state_manager.mark_error(article_id, f"Improvement failed: {e}")
+                return
             
             self.state_manager.mark_questions_improved(article_id)
             
             # Step 6: Generate documents
             print(f"\n[STEP 6] Document Generation")
             
-            # Questions Word docs (include article_text)
-            questions_initial = self.doc_generator.generate_questions_word(
-                article, questions, f"questions_initial_{article_id}.docx", is_improved=False
-            )
+            # Generate merged Word documents (article text + questions)
+            try:
+                questions_initial_word = self.doc_generator.merge_text_and_questions_docx(
+                    source_docx_path=article.get('docx_path'),
+                    questions=questions,
+                    output_path=os.path.join(self.output_dir, f"questions_initial_{article_id}.docx"),
+                    title=article.get('title', '')
+                )
+                print(f"[STEP 6] Initial Word: {os.path.basename(questions_initial_word)}")
+            except Exception as e:
+                print(f"[STEP 6] ERROR generating initial Word: {e}")
+                questions_initial_word = None
             
-            questions_improved = self.doc_generator.generate_questions_word(
-                article, improved, f"questions_improved_{article_id}.docx", is_improved=True
-            )
+            try:
+                questions_improved_word = self.doc_generator.merge_text_and_questions_docx(
+                    source_docx_path=article.get('docx_path'),
+                    questions=improved,
+                    output_path=os.path.join(self.output_dir, f"questions_improved_{article_id}.docx"),
+                    title=article.get('title', '')
+                )
+                print(f"[STEP 6] Improved Word: {os.path.basename(questions_improved_word)}")
+            except Exception as e:
+                print(f"[STEP 6] ERROR generating improved Word: {e}")
+                questions_improved_word = None
+            
+            # Generate Excel files (with answers, justifications, etc.)
+            try:
+                questions_initial_excel = self.doc_generator.generate_questions_excel(
+                    questions, f"questions_initial_{article_id}.xlsx"
+                )
+                print(f"[STEP 6] Initial Excel: {os.path.basename(questions_initial_excel)}")
+            except Exception as e:
+                print(f"[STEP 6] ERROR generating initial Excel: {e}")
+                import traceback
+                traceback.print_exc()
+                questions_initial_excel = None
+            
+            try:
+                questions_improved_excel = self.doc_generator.generate_questions_excel(
+                    improved, f"questions_improved_{article_id}.xlsx"
+                )
+                print(f"[STEP 6] Improved Excel: {os.path.basename(questions_improved_excel)}")
+            except Exception as e:
+                print(f"[STEP 6] ERROR generating improved Excel: {e}")
+                import traceback
+                traceback.print_exc()
+                questions_improved_excel = None
             
             # Upload or save locally
             print(f"\n[STEP 6] Upload to Drive")
             try:
                 self.drive_manager.upload_article_package(
-                    article, questions_initial, questions_improved
+                    article, 
+                    questions_initial_word, 
+                    questions_improved_word,
+                    questions_initial_excel,
+                    questions_improved_excel
                 )
                 print(f"[Drive] Upload successful")
                 self.state_manager.mark_article_processed(article_id, uploaded=True)

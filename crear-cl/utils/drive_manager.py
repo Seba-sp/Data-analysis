@@ -188,15 +188,19 @@ class DriveManager:
             raise
     
     def upload_article_package(self, article: Dict,
-                              questions_initial_path: str, 
-                              questions_improved_path: str) -> Dict[str, str]:
+                              questions_initial_word_path: str, 
+                              questions_improved_word_path: str,
+                              questions_initial_excel_path: Optional[str] = None,
+                              questions_improved_excel_path: Optional[str] = None) -> Dict[str, str]:
         """
         Upload complete article package to Drive.
         
         Args:
             article: Article dictionary with metadata
-            questions_initial_path: Path to initial questions Word doc
-            questions_improved_path: Path to improved questions Word doc
+            questions_initial_word_path: Path to initial questions Word doc
+            questions_improved_word_path: Path to improved questions Word doc
+            questions_initial_excel_path: Path to initial questions Excel file (optional)
+            questions_improved_excel_path: Path to improved questions Excel file (optional)
             
         Returns:
             Dictionary with uploaded file IDs
@@ -207,18 +211,34 @@ class DriveManager:
         # Upload files
         uploaded_ids = {}
         
-        if os.path.exists(questions_initial_path):
-            uploaded_ids['questions_initial'] = self.upload_file(
-                questions_initial_path,
+        # Upload Word documents
+        if os.path.exists(questions_initial_word_path):
+            uploaded_ids['questions_initial_word'] = self.upload_file(
+                questions_initial_word_path,
                 article_folder_id,
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             )
         
-        if os.path.exists(questions_improved_path):
-            uploaded_ids['questions_improved'] = self.upload_file(
-                questions_improved_path,
+        if os.path.exists(questions_improved_word_path):
+            uploaded_ids['questions_improved_word'] = self.upload_file(
+                questions_improved_word_path,
                 article_folder_id,
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+        
+        # Upload Excel files
+        if questions_initial_excel_path and os.path.exists(questions_initial_excel_path):
+            uploaded_ids['questions_initial_excel'] = self.upload_file(
+                questions_initial_excel_path,
+                article_folder_id,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        
+        if questions_improved_excel_path and os.path.exists(questions_improved_excel_path):
+            uploaded_ids['questions_improved_excel'] = self.upload_file(
+                questions_improved_excel_path,
+                article_folder_id,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
         
         return uploaded_ids
@@ -287,6 +307,8 @@ class DriveManager:
             '.pdf': 'application/pdf',
             '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             '.doc': 'application/msword',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.xls': 'application/vnd.ms-excel',
             '.csv': 'text/csv',
             '.txt': 'text/plain',
             '.json': 'application/json'

@@ -74,6 +74,12 @@ SINC se acepta SOLO si cumple TODO:
   d) y en Alertas quede: Licencia_SINC=SiteWide; Uso_Plataforma=TEXT_ONLY; Imagenes_Terceros=Excluidas.
 Si no se cumple, RECHAZAR.
 
+FASE 7 — REGLAS DE PORTAFOLIO (A NIVEL SET)
+7.1 Debe haber 4/4/4 tipos.
+7.2 Máximo 2 por Fuente.
+7.3 Dedup por URL_Canonica o Clave_Dedup.
+7.4 Debe existir al menos 1 discontinuo evaluable SOLO si está licenciado; si no se logra, el set puede entregarse igual pero con “NO CUMPLIDO” y alternativas.
+
 SALIDA (OBLIGATORIA)
 
 0) CONTROL DE SALIDA (HARD FAIL)
