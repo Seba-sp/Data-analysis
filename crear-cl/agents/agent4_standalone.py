@@ -67,18 +67,36 @@ class StandaloneReviewAgent:
         if not os.path.exists(xlsx_path):
             raise FileNotFoundError(f"Excel file not found: {xlsx_path}")
             
+        # 3. Parse Metadata from Excel
+        metadata_df = pd.read_excel(xlsx_path)
+        
+        # Check for blank cells in 'Acción' column
+        if 'Acción' not in metadata_df.columns:
+             print(f"[Agent 4] 'Acción' column missing in {xlsx_path}. Skipping.")
+             return {'article_id': article_id, 'feedback': 'Skipped: Missing Acción column'}
+             
+        if metadata_df['Acción'].isnull().any() or (metadata_df['Acción'].astype(str).str.strip() == '').any():
+            print(f"[Agent 4] Blank cells found in 'Acción' column for {article_id}. Skipping set.")
+            return {'article_id': article_id, 'feedback': 'Skipped: Blank cells in Acción'}
+            
         # 2. Convert DOCX to PDF (for visual context)
         pdf_path = self._convert_docx_to_pdf(docx_path, article_id)
         
         try:
-            # 3. Parse Metadata from Excel
-            metadata_df = pd.read_excel(xlsx_path)
+            # Identify questions to review
+            # Rule: Review everything that is NOT 'ok' (case-insensitive) and NOT blank
+            # This captures 'editada', 'sustituida', 'corregida', etc.
             
-            # Identify questions to review (Acción == 'editada' or 'sustituida')
-            # Normalize to lowercase just in case
             if 'Acción' in metadata_df.columns:
+                # Normalize column: convert to string, lowercase, strip whitespace
+                accion_col = metadata_df['Acción'].astype(str).str.lower().str.strip()
+                
+                # Filter: Keep rows where Action is NOT 'ok' AND NOT 'nan'/'none'/empty
                 target_questions = metadata_df[
-                    metadata_df['Acción'].astype(str).str.lower().isin(['editada', 'sustituida'])
+                    (accion_col != 'ok') & 
+                    (accion_col != 'nan') & 
+                    (accion_col != 'none') & 
+                    (accion_col != '')
                 ]['Número de pregunta'].tolist()
             else:
                 # If column missing, maybe review all? Or warn?
@@ -86,9 +104,9 @@ class StandaloneReviewAgent:
                 target_questions = metadata_df['Número de pregunta'].tolist()
             
             if not target_questions:
-                print(f"[Agent 4] No questions marked as 'editada' or 'sustituida'. Skipping review.")
+                print(f"[Agent 4] No questions marked for review (all are 'ok' or blank). Skipping.")
                 # We can save a file saying "No review needed"
-                self._save_output(folder_path, article_id, "NO REVIEW NEEDED: No questions marked as 'editada' or 'sustituida'.")
+                self._save_output(folder_path, article_id, "NO REVIEW NEEDED: All questions are 'ok' or blank.")
                 return {'article_id': article_id, 'feedback': 'No review needed'}
             
             print(f"[Agent 4] Target questions for review: {target_questions}")

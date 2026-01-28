@@ -58,8 +58,8 @@ python main.py --test-mode
 # Process multiple batches
 python main.py --batches 5
 
-# Custom topic
-python main.py --batches 3 --topic "inteligencia artificial"
+# Start from Agent 2 (skip research, use existing candidatos TSV)
+python main.py --batches 1 --start-from agent2 --tsv-file data/candidatos_2.tsv
 
 # Validate configuration
 python main.py --validate-only
@@ -116,6 +116,10 @@ python batch_generate_documents.py <folder_path>
 
 # Example
 python batch_generate_documents.py data/Batch1/
+
+python main.py --start-from agent3 --batches 1 --tsv-file data/last-created.csv
+python main.py --start-from agent3 --batches 1 --tsv-file data/last-created.csv --reverse
+
 ```
 
 **Output:** 2 files per article (Word + Excel) for both initial and improved versions

@@ -19,28 +19,61 @@ from storage import storage
 from utils.state_manager import state_manager
 from utils.document_generator import doc_generator
 from utils.drive_manager import drive_manager
-from agents.agent1_research import research_agent, ResearchAgent
-from agents.agent2_validation import validation_agent
-from agents.agent3_questions import question_agent, QuestionAgent
-from agents.agent4_review import review_agent, ReviewAgent
+
+# Lazy imports for agents to avoid loading heavy dependencies when not needed
+# from agents.agent1_research import research_agent, ResearchAgent
+# from agents.agent2_validation import validation_agent
+# from agents.agent3_questions import question_agent, QuestionAgent
+# from agents.agent4_review import review_agent, ReviewAgent
 
 
 class PipelineOrchestrator:
     """Orchestrates the multi-agent PAES question generation pipeline."""
     
     def __init__(self):
-        """Initialize orchestrator with all components."""
+        """Initialize orchestrator with core components (agents loaded lazily)."""
         self.state_manager = state_manager
         self.doc_generator = doc_generator
         self.drive_manager = drive_manager
-        self.research_agent = research_agent
-        self.validation_agent = validation_agent
-        self.question_agent = question_agent
-        self.review_agent = review_agent
+        
+        # Initialize agents as None (lazy loading)
+        self._research_agent = None
+        self._validation_agent = None
+        self._question_agent = None
+        self._review_agent = None
+        
         self.output_dir = config.BASE_DATA_PATH  # Output directory for generated documents
         
-        print("[Orchestrator] Initialized with all agents")
+        print("[Orchestrator] Initialized (Agents lazy-loaded)")
     
+    @property
+    def research_agent(self):
+        if self._research_agent is None:
+            from agents.agent1_research import research_agent
+            self._research_agent = research_agent
+        return self._research_agent
+
+    @property
+    def validation_agent(self):
+        if self._validation_agent is None:
+            from agents.agent2_validation import validation_agent
+            self._validation_agent = validation_agent
+        return self._validation_agent
+
+    @property
+    def question_agent(self):
+        if self._question_agent is None:
+            from agents.agent3_questions import question_agent
+            self._question_agent = question_agent
+        return self._question_agent
+
+    @property
+    def review_agent(self):
+        if self._review_agent is None:
+            from agents.agent4_review import review_agent
+            self._review_agent = review_agent
+        return self._review_agent
+
     def run_pipeline(self, 
                      num_batches: int = 1, 
                      topic: Optional[str] = None, 
@@ -65,7 +98,8 @@ class PipelineOrchestrator:
         """
         # Override Agent 1 mode if specified
         if agent1_mode:
-            self.research_agent = ResearchAgent(mode=agent1_mode)
+            from agents.agent1_research import ResearchAgent
+            self._research_agent = ResearchAgent(mode=agent1_mode)
             print(f"[Orchestrator] Using Agent 1 mode: {agent1_mode}")
         
         print(f"\n{'='*70}")
@@ -130,8 +164,9 @@ class PipelineOrchestrator:
         
         finally:
             # Restore original research agent
-            if agent1_mode:
-                self.research_agent = research_agent
+            if agent1_mode and self._research_agent:
+                from agents.agent1_research import research_agent
+                self._research_agent = research_agent
         
         # Final statistics
         print(f"\n{'='*70}")
@@ -219,11 +254,16 @@ class PipelineOrchestrator:
             print(f"[Orchestrator] Loading CSV with DOCX paths")
             
             # Load CSV with pandas (support both comma and semicolon delimiters)
+            # Try semicolon first (common in European locales), then comma
             try:
-                df = pd.read_csv(tsv_file)
-            except pd.errors.ParserError:
-                # Try semicolon delimiter (common in European locales)
                 df = pd.read_csv(tsv_file, sep=';')
+                # Check if we actually got multiple columns (successful parse)
+                if len(df.columns) == 1:
+                    # Only got 1 column, try comma instead
+                    df = pd.read_csv(tsv_file, sep=',')
+            except pd.errors.ParserError:
+                # If semicolon failed, try comma
+                df = pd.read_csv(tsv_file, sep=',')
             
             # Validate required columns
             required_cols = ['ID', 'Titulo', 'Docx_Path', 'Estado']
@@ -394,6 +434,8 @@ class PipelineOrchestrator:
         try:
             # Create fresh agent instances
             print(f"[Orchestrator] Creating fresh Agent 3 & 4 instances...")
+            from agents.agent3_questions import QuestionAgent
+            from agents.agent4_review import ReviewAgent
             q_agent = QuestionAgent()
             r_agent = ReviewAgent()
             

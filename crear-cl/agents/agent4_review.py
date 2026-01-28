@@ -15,6 +15,7 @@ import os
 import time
 
 from config import config
+from utils.pdf_loader import get_pdf_context_loader
 
 
 class ReviewAgent:
@@ -54,6 +55,9 @@ class ReviewAgent:
         with open(prompt_path, 'r', encoding='utf-8') as f:
             self.prompt_template = f.read()
         print(f"[Agent 4] Loaded prompt template ({len(self.prompt_template)} chars)")
+        
+        # Initialize PDF Loader for Guidelines (same as Agent 3)
+        self.pdf_loader = get_pdf_context_loader()
     
     def review_questions(self, article: Dict, questions: Dict) -> Dict:
         """
@@ -106,13 +110,19 @@ class ReviewAgent:
             
             print(f"[Agent 4] PDF ready for review")
             
+            # Prepare Guideline PDFs (same as Agent 3)
+            guideline_files = []
+            if self.pdf_loader and self.pdf_loader.has_context():
+                guideline_files = self.pdf_loader.get_file_references()
+                print(f"[Agent 4] Including {len(guideline_files)} Guideline PDFs")
+            
             # Build review prompt
             questions_text = questions.get('raw_response', '')
             review_prompt = f"""Eres revisor/a senior de preguntas PAES de Competencia Lectora.
 
-ARTÍCULO ANALIZADO:
-Lee el archivo PDF adjunto con el texto completo del artículo.
-El archivo puede incluir imágenes, tablas y formato especial.
+DOCUMENTOS ADJUNTOS:
+1. PDFs de LINEAMIENTOS (Guidelines): Úsalos como referencia de estándar.
+2. PDF del ARTÍCULO (que incluye texto y preguntas): Úsalo para ver el formato visual y lectura.
 
 PREGUNTAS GENERADAS:
 ===================================================================
@@ -124,8 +134,11 @@ PREGUNTAS GENERADAS:
             
             print(f"[Agent 4] Review prompt: {len(review_prompt)} chars")
             
-            # Generate review with PDF file
-            response = self.model_legacy.generate_content([review_prompt, uploaded_pdf])
+            # Generate review with PDF file + guideline PDFs
+            files_to_send = guideline_files + [uploaded_pdf]
+            print(f"[Agent 4] Sending prompt + {len(files_to_send)} files")
+            
+            response = self.model_legacy.generate_content([review_prompt] + files_to_send)
             feedback_text = response.text
                 
             # Clean up Gemini upload (keep local PDF)

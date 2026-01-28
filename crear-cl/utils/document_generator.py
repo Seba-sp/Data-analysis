@@ -107,22 +107,61 @@ class DocumentGenerator:
         Returns:
             Full path to generated Word document
         """
+        from docx import Document
+        from docx.shared import Pt, Inches
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        
         doc = Document()
         
-        # Title
-        title = doc.add_heading(article.get('title', 'Article Questions'), 0)
-        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Style configuration - Default to Times New Roman 14
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = 'Times New Roman'
+        font.size = Pt(14)
+        
+        # Title (16pt, Bold, Centered)
+        title_para = doc.add_heading(article.get('title', 'Article Questions'), 0)
+        title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in title_para.runs:
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(16)
+            run.bold = True
+            run.font.color.rgb = None # Default color (black)
         
         # Add article text if available (from Agent 3 response)
         article_text = questions.get('article_text', '') if isinstance(questions, dict) else ''
         if article_text:
-            doc.add_heading('TEXTO DEL ARTÍCULO', level=1)
+            # TEXTO DEL ARTÍCULO Heading (match Title style roughly or 14pt bold)
+            text_heading = doc.add_paragraph('TEXTO DEL ARTÍCULO')
+            text_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            text_heading.runs[0].font.name = 'Times New Roman'
+            text_heading.runs[0].font.size = Pt(14)
+            text_heading.runs[0].bold = True
+            
+            doc.add_paragraph() # Spacer
+                
             # Add the full text in multiple paragraphs
             paragraphs = article_text.split('\n\n')
             for para in paragraphs:
                 if para.strip():
                     p = doc.add_paragraph(para.strip())
-                    p.style = 'Normal'
+                    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                    # Ensure font is applied explicitly
+                    for run in p.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+                    
+                    p.paragraph_format.space_after = Pt(12)
+            
+            # Source/Reference at the bottom (10pt as seen in analysis)
+            if article.get('source') or article.get('author'):
+                ref_text = f"{article.get('author', '')}. ({article.get('date', '')}). {article.get('title', '')}. {article.get('source', '')}."
+                p_ref = doc.add_paragraph(ref_text)
+                p_ref.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                for run in p_ref.runs:
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(10)
+            
             doc.add_page_break()  # Start questions on new page
         else:
             print("[Document Generator] WARNING: No article text found in questions dict")
@@ -143,21 +182,28 @@ class DocumentGenerator:
                 question_text = str(q)
                 alternatives = {}
             
-            # Question text only (no number, no habilidad label)
+            # Question text (14pt, Justified)
             p = doc.add_paragraph()
-            p.add_run(question_text)
-            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            run = p.add_run(question_text)
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(14)
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            p.paragraph_format.space_after = Pt(12)
             
-            # Add blank line between question and alternatives
-            doc.add_paragraph()
-            
-            # Alternatives (A-D) - plain format, no colors, no correct answer indication
+            # Alternatives (A-D) (14pt, Justified or Left)
             if alternatives:
                 for letter in ['A', 'B', 'C', 'D']:
                     if letter in alternatives:
                         p = doc.add_paragraph()
-                        p.add_run(f"{letter}) {alternatives[letter]}")
-                        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        # Hanging indent setup
+                        p.paragraph_format.left_indent = Inches(0.3)
+                        p.paragraph_format.first_line_indent = Inches(-0.3)
+                        
+                        run = p.add_run(f"{letter}) {alternatives[letter]}")
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
+                        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        p.paragraph_format.space_after = Pt(6)
             else:
                 # If no alternatives dict, add warning
                 p = doc.add_paragraph()
@@ -304,42 +350,15 @@ class DocumentGenerator:
             Path to created file
         """
         from docx import Document
-        from docx.shared import Pt, RGBColor
+        from docx.shared import Pt, Inches
         from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
         
-        # Read source DOCX
-        source_doc = Document(source_docx_path)
+        # Load the source document directly to preserve formatting
+        print(f"[DocGen] Loading source document: {source_docx_path}")
+        print(f"[DocGen] Source exists: {os.path.exists(source_docx_path)}")
         
-        # Create new doc and copy source content
-        merged_doc = Document()
-        
-        # Add title if provided
-        if title:
-            title_para = merged_doc.add_paragraph()
-            title_run = title_para.add_run(title)
-            title_run.bold = True
-            title_run.font.size = Pt(16)
-            title_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            merged_doc.add_paragraph()  # Blank line
-        
-        # Copy all paragraphs from source
-        for para in source_doc.paragraphs:
-            new_para = merged_doc.add_paragraph(para.text)
-            # Copy basic formatting
-            if para.runs:
-                new_para.style = para.style
-        
-        # Copy images and tables (if any)
-        for element in source_doc.element.body:
-            if element.tag.endswith('tbl'):  # Table
-                # Copy table (simplified - may need enhancement)
-                pass  # Tables are complex, skip for now
-        
-        # Add separator
-        merged_doc.add_paragraph()
-        separator = merged_doc.add_paragraph("="*50)
-        separator.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        merged_doc.add_paragraph()
+        merged_doc = Document(source_docx_path)
+        print(f"[DocGen] Source loaded: {len(merged_doc.paragraphs)} paragraphs")
         
         # Add page break before questions
         merged_doc.add_page_break()
@@ -349,10 +368,11 @@ class DocumentGenerator:
         for i, q in enumerate(questions_list, 1):
             # Question text only (no number, no enumeration)
             q_para = merged_doc.add_paragraph(q.get('question', ''))
-            q_para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-            
-            # Blank line after question
-            merged_doc.add_paragraph()
+            q_para.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+            q_para.paragraph_format.space_after = Pt(12)
+            for run in q_para.runs:
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(14)
             
             # Alternatives - dict format {'A': 'text', 'B': 'text', ...}
             alternatives_dict = q.get('alternatives', {})
@@ -360,7 +380,16 @@ class DocumentGenerator:
                 if letter in alternatives_dict:
                     alt_text = f"{letter}) {alternatives_dict[letter]}"
                     alt_para = merged_doc.add_paragraph(alt_text)
-                    alt_para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                    
+                    # Hanging indent
+                    alt_para.paragraph_format.left_indent = Inches(0.3)
+                    alt_para.paragraph_format.first_line_indent = Inches(-0.3)
+                    
+                    alt_para.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
+                    alt_para.paragraph_format.space_after = Pt(6)
+                    for run in alt_para.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(14)
             
             # Add page break after each question (except the last one)
             if i < len(questions_list):

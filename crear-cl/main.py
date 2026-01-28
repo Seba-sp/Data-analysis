@@ -9,8 +9,8 @@ import sys
 import os
 
 from config import config
-from orchestrator import orchestrator
-from agents.agent4_standalone import StandaloneReviewAgent
+# from orchestrator import orchestrator # Imported inside functions to avoid early initialization
+# from agents.agent4_standalone import StandaloneReviewAgent # Imported inside function
 import re
 
 
@@ -86,6 +86,7 @@ def test_mode(args):
     print("TEST MODE - Single Batch")
     print("="*70 + "\n")
     
+    from orchestrator import orchestrator
     orchestrator.run_pipeline(
         num_batches=1,
         topic=args.topic,
@@ -104,6 +105,7 @@ def batch_mode(args):
     print(f"PRODUCTION MODE - {args.batches} Batches")
     print("="*70 + "\n")
     
+    from orchestrator import orchestrator
     orchestrator.run_pipeline(
         num_batches=args.batches,
         topic=args.topic,
@@ -132,6 +134,7 @@ def review_standalone_mode(args):
     print("="*70 + "\n")
     
     # Initialize Agent
+    from agents.agent4_standalone import StandaloneReviewAgent
     agent = StandaloneReviewAgent()
     
     # Scan for files
@@ -143,6 +146,8 @@ def review_standalone_mode(args):
         return
         
     print(f"Found {len(excel_files)} articles to review")
+    
+    skipped_sets = []
     
     for xlsx_file in excel_files:
         try:
@@ -156,12 +161,28 @@ def review_standalone_mode(args):
             print(f"\nProcessing Article ID: {article_id}")
             
             # Run review
-            agent.review_standalone(folder_path, article_id)
+            result = agent.review_standalone(folder_path, article_id)
+            
+            # Check if skipped
+            if result and result.get('feedback', '').startswith('Skipped:'):
+                skipped_sets.append(article_id)
             
         except Exception as e:
             print(f"[Error] Failed to review {xlsx_file}: {e}")
             import traceback
             traceback.print_exc()
+
+    # Save skipped sets to file
+    if skipped_sets:
+        skipped_file = os.path.join(folder_path, "textos incompletos - no revisados.txt")
+        try:
+            with open(skipped_file, 'w', encoding='utf-8') as f:
+                f.write("=== TEXTOS OMITIDOS (columna acción incompleta) ===\n")
+                for item in skipped_sets:
+                    f.write(f"- {item}\n")
+            print(f"\n[Info] Saved list of {len(skipped_sets)} skipped texts to: {skipped_file}")
+        except Exception as e:
+            print(f"[Error] Failed to save skipped list: {e}")
 
 
 def main():
