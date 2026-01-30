@@ -2071,8 +2071,34 @@ def main():
             help="Número de habilidades diferentes"
         )
     
-    st.markdown("---")
     
+    # Check for NaN values in filter columns and warn user
+    filter_cols_to_check = {
+        EXCEL_COLUMNS.get('area_tematica'): 'Área Temática',
+        EXCEL_COLUMNS.get('conocimiento_subtema'): 'Unidad Temática',
+        EXCEL_COLUMNS.get('habilidad'): 'Habilidad',
+        EXCEL_COLUMNS.get('dificultad'): 'Dificultad'
+    }
+    
+    dirty_columns = []
+    for col, display_name in filter_cols_to_check.items():
+        if col and col in df.columns:
+            # Check for NaN/None values
+            if df[col].isnull().any():
+                dirty_columns.append(display_name)
+            # Check for mixed types (e.g. strings and floats) that can cause sorting errors
+            elif not df[col].apply(lambda x: isinstance(x, str)).all():
+                # If not all are strings, try converting to string and check if original was different
+                # or just check if we have any non-string non-null values
+                non_str_mask = df[col].apply(lambda x: not isinstance(x, str) and not pd.isna(x))
+                if non_str_mask.any():
+                    # We have numbers or other objects mixed with strings
+                    # dirty_columns.append(f"{display_name} (mixed types)")
+                    pass # We handle mixed types by converting to string, so maybe just NaN is the main issue for the user?
+    
+    if dirty_columns:
+        st.error(f"⚠️ **ATENCIÓN: El archivo maestro contiene filas con datos faltantes en las siguientes columnas:** {', '.join(dirty_columns)}. Por favor revise el archivo Excel original y corrija estos valores vacíos para evitar errores.")
+
     # Filters
     st.subheader("🎯 Filtrar Preguntas")
     
@@ -2092,7 +2118,11 @@ def main():
         with col_area:
             # Area filter
             if EXCEL_COLUMNS['area_tematica'] in df.columns:
-                areas = ['Todas'] + sorted(df[EXCEL_COLUMNS['area_tematica']].unique().tolist())
+                # Convert to string to avoid TypeError during sort, but don't filter out things silently
+                # Just take unique values and sort them as strings
+                unique_vals = df[EXCEL_COLUMNS['area_tematica']].unique().tolist()
+                # Sort safely by converting everything to string for the sort key
+                areas = ['Todas'] + sorted(unique_vals, key=lambda x: str(x))
                 selected_area = st.selectbox("Área Temática", areas)
                 area_filter = None if selected_area == 'Todas' else selected_area
             else:
@@ -2100,7 +2130,8 @@ def main():
     else:
         # For other subjects, just show Área Temática in full width
         if EXCEL_COLUMNS['area_tematica'] in df.columns:
-            areas = ['Todas'] + sorted(df[EXCEL_COLUMNS['area_tematica']].unique().tolist())
+            unique_vals = df[EXCEL_COLUMNS['area_tematica']].unique().tolist()
+            areas = ['Todas'] + sorted(unique_vals, key=lambda x: str(x))
             selected_area = st.selectbox("Área Temática", areas)
             area_filter = None if selected_area == 'Todas' else selected_area
         else:
@@ -2120,7 +2151,7 @@ def main():
         if area_filter is not None:
             filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema[EXCEL_COLUMNS['area_tematica']] == area_filter]
         
-        available_subtemas = sorted(filtered_df_for_subtema[EXCEL_COLUMNS['conocimiento_subtema']].unique().tolist())
+        available_subtemas = sorted(filtered_df_for_subtema[EXCEL_COLUMNS['conocimiento_subtema']].unique().tolist(), key=lambda x: str(x))
         subtemas = ['Todos'] + available_subtemas
         selected_subtema = st.selectbox("Unidad", subtemas)
         subtema_filter = None if selected_subtema == 'Todos' else selected_subtema
@@ -2144,7 +2175,8 @@ def main():
     with col_hab:
         # Skill filter
         if EXCEL_COLUMNS['habilidad'] in df.columns:
-            skills = ['Todas'] + sorted(df[EXCEL_COLUMNS['habilidad']].unique().tolist())
+            unique_vals = df[EXCEL_COLUMNS['habilidad']].unique().tolist()
+            skills = ['Todas'] + sorted(unique_vals, key=lambda x: str(x))
             selected_skill = st.selectbox("Habilidad", skills)
             skill_filter = None if selected_skill == 'Todas' else selected_skill
         else:
@@ -2153,7 +2185,9 @@ def main():
     with col_dif:
         # Difficulty filter
         if EXCEL_COLUMNS['dificultad'] in df.columns:
-            difficulties = ['Todas'] + sorted(df[EXCEL_COLUMNS['dificultad']].unique().tolist())
+            unique_diffs = df[EXCEL_COLUMNS['dificultad']].astype(str).dropna().unique().tolist()
+            unique_diffs = [d for d in unique_diffs if d.lower() != 'nan' and d.strip() != '']
+            difficulties = ['Todas'] + sorted(unique_diffs)
             selected_difficulty = st.selectbox("Dificultad", difficulties)
             difficulty_filter = None if selected_difficulty == 'Todas' else selected_difficulty
         else:
@@ -2238,7 +2272,15 @@ def main():
     
     st.markdown(f"**Preguntas encontradas: {len(filtered_df)}**")
     
-    if len(filtered_df) > 0:
+    # Pagination / Limit display to improve performance
+    MAX_DISPLAY_QUESTIONS = 200
+    display_df = filtered_df
+    
+    if len(filtered_df) > MAX_DISPLAY_QUESTIONS:
+        st.info(f"ℹ️ Se muestran las primeras {MAX_DISPLAY_QUESTIONS} preguntas de {len(filtered_df)} encontradas para optimizar el rendimiento. Usa los filtros para refinar la búsqueda.")
+        display_df = filtered_df.head(MAX_DISPLAY_QUESTIONS)
+    
+    if len(display_df) > 0:
         # Question selection
         st.subheader("📋 Seleccionar Preguntas")
         
@@ -2253,7 +2295,7 @@ def main():
             st.session_state['question_positions'] = {}
         
         # Display questions in a table
-        for idx, row in filtered_df.iterrows():
+        for idx, row in display_df.iterrows():
             pregunta_id = row.get(EXCEL_COLUMNS['pregunta_id'], f'Q{idx+1}')
             
             col1, col2, col3, col4 = st.columns([1, 1, 6, 1])
