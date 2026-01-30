@@ -2273,7 +2273,7 @@ def main():
     st.markdown(f"**Preguntas encontradas: {len(filtered_df)}**")
     
     # Pagination / Limit display to improve performance
-    MAX_DISPLAY_QUESTIONS = 200
+    MAX_DISPLAY_QUESTIONS = 150
     display_df = filtered_df
     
     if len(filtered_df) > MAX_DISPLAY_QUESTIONS:
