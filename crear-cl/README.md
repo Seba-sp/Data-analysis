@@ -21,7 +21,17 @@ Automated pipeline using Gemini API to discover, validate, and process news arti
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### 2. GUI Launcher (Optional)
+
+Instead of using command line arguments, you can use the graphical launcher:
+
+```bash
+python launcher.py
+```
+
+This provides a user-friendly interface to configure and run the pipeline, supporting all modes (Test, Batch, Resume, Review).
+
+### 3. Configure Environment
 
 Create a `.env` file:
 
@@ -52,9 +62,6 @@ Place PAES reference documents in `agent-3-context/` folder:
 ### 5. Run Pipeline
 
 ```bash
-# Process 1 batch of 10 articles
-python main.py --test-mode
-
 # Process multiple batches
 python main.py --batches 5
 
@@ -160,13 +167,13 @@ AGENT1_MODEL=gemini-3-flash-preview  # only for model mode
 
 ```bash
 # Start from Agent 1 (default - full pipeline)
-python main.py --test-mode
+python main.py --batches 1
 
 # Start from Agent 2 (skip research, use existing candidatos TSV)
-python main.py --test-mode --start-from agent2 --tsv-file data/candidatos_20260109.tsv
-
-# Start from Agent 3 (skip to question generation, only needs enriched audit file)
-python main.py --test-mode --start-from agent3 --tsv-file data/auditoria_20260109.tsv
+  python main.py --batches 1 --start-from agent2 --tsv-file data/candidatos_20260109.tsv
+  
+  # Start from Agent 3 (skip to question generation, only needs enriched audit file)
+  python main.py --batches 1 --start-from agent3 --tsv-file data/auditoria_20260109.tsv
 ```
 
 ## 🔧 Common Issues

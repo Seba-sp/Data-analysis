@@ -80,25 +80,6 @@ def validate_config() -> bool:
     return True
 
 
-def test_mode(args):
-    """Run single batch test mode."""
-    print("\n" + "="*70)
-    print("TEST MODE - Single Batch")
-    print("="*70 + "\n")
-    
-    from orchestrator import orchestrator
-    orchestrator.run_pipeline(
-        num_batches=1,
-        topic=args.topic,
-        count=args.count,
-        agent1_mode=args.agent1_mode,
-        start_from=args.start_from,
-        tsv_file=args.tsv_file,
-        candidatos_file=args.candidatos_file,
-        reverse=args.reverse
-    )
-
-
 def batch_mode(args):
     """Run multiple batch production mode."""
     print("\n" + "="*70)
@@ -199,9 +180,6 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Test mode (1 batch, 30 candidates)
-  python main.py --test-mode
-  
   # Production mode (5 batches)
   python main.py --batches 5
   
@@ -233,11 +211,6 @@ Examples:
     
     # Mode selection
     mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument(
-        '--test-mode',
-        action='store_true',
-        help='Run single batch test (30 candidates)'
-    )
     mode_group.add_argument(
         '--batches',
         type=int,
@@ -324,9 +297,7 @@ Examples:
     
     # Run appropriate mode
     try:
-        if args.test_mode:
-            test_mode(args)
-        elif args.batches:
+        if args.batches:
             batch_mode(args)
         elif args.review_standalone:
             review_standalone_mode(args)

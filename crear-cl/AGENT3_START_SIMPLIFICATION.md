@@ -153,7 +153,7 @@ The system auto-detects file format:
 
 ```bash
 # 1. Run full pipeline (generates enriched audit)
-python main.py --test-mode
+python main.py --batches 1
 
 # 2. Find the generated audit file
 cd data
