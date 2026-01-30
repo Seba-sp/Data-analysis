@@ -138,11 +138,22 @@ def review_standalone_mode(args):
     agent = StandaloneReviewAgent()
     
     # Scan for files
-    excel_files = [f for f in os.listdir(folder_path) if f.endswith('-Preguntas Datos.xlsx')]
+    # Robust discovery regex: ID + separator + Preguntas + separator + Datos + .xlsx
+    # Captures ID in group 1
+    discovery_pattern = re.compile(r"^(.*?)[\s\-_]*preguntas[\s\-_]*datos\.xlsx$", re.IGNORECASE)
+    
+    excel_files = []
+    file_to_id_map = {}
+    
+    for f in os.listdir(folder_path):
+        match = discovery_pattern.match(f)
+        if match:
+            excel_files.append(f)
+            file_to_id_map[f] = match.group(1)
     
     if not excel_files:
         print(f"[Warning] No matching Excel files found in {folder_path}")
-        print("Expected format: {id}-Preguntas Datos.xlsx")
+        print("Expected format: {id} Preguntas Datos.xlsx (case insensitive, flexible separators)")
         return
         
     print(f"Found {len(excel_files)} articles to review")
@@ -151,13 +162,9 @@ def review_standalone_mode(args):
     
     for xlsx_file in excel_files:
         try:
-            # Extract ID
-            # Format: "{id}-Preguntas Datos.xlsx"
-            match = re.match(r'^(.*)-Preguntas Datos\.xlsx$', xlsx_file)
-            if not match:
-                continue
-                
-            article_id = match.group(1)
+            # Extract ID using the map
+            article_id = file_to_id_map[xlsx_file]
+            
             print(f"\nProcessing Article ID: {article_id}")
             
             # Run review

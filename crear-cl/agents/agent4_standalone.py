@@ -40,7 +40,7 @@ class StandaloneReviewAgent:
             generation_config={
                 'temperature': 0.3,
                 'top_p': 0.95,
-                'max_output_tokens': 8000,
+                'max_output_tokens': 20000,
             }
         )
         
@@ -58,14 +58,14 @@ class StandaloneReviewAgent:
         """
         print(f"[Agent 4 Standalone] Processing {article_id} in {folder_path}")
         
-        # 1. Define file paths
-        docx_path = os.path.join(folder_path, f"{article_id}-Preguntas+Texto.docx")
-        xlsx_path = os.path.join(folder_path, f"{article_id}-Preguntas Datos.xlsx")
+        # 1. Define file paths with fuzzy matching
+        docx_path = self._find_file(folder_path, article_id, r"preguntas[\s\-_+]*texto\.docx")
+        xlsx_path = self._find_file(folder_path, article_id, r"preguntas[\s\-_]*datos\.xlsx")
         
-        if not os.path.exists(docx_path):
-            raise FileNotFoundError(f"Word file not found: {docx_path}")
-        if not os.path.exists(xlsx_path):
-            raise FileNotFoundError(f"Excel file not found: {xlsx_path}")
+        if not docx_path:
+            raise FileNotFoundError(f"Word file not found for ID {article_id} (pattern: Preguntas+Texto)")
+        if not xlsx_path:
+            raise FileNotFoundError(f"Excel file not found for ID {article_id} (pattern: Preguntas Datos)")
             
         # 3. Parse Metadata from Excel
         metadata_df = pd.read_excel(xlsx_path)
@@ -185,6 +185,20 @@ PREGUNTAS Y METADATA (Reconstruido):
             # Cleanup local temporary PDF if we created it just now
             # Actually, keeping it might be useful, but let's follow the pattern of cleanup if it's temp
             pass
+
+    def _find_file(self, folder: str, article_id: str, suffix_regex: str) -> Optional[str]:
+        """
+        Find a file that matches the article_id and suffix pattern (case-insensitive).
+        Handles variations in spaces, hyphens, etc.
+        """
+        # Create a regex that starts with article_id, followed by flexible separator, then suffix
+        # We escape the article_id just in case it has special regex chars
+        pattern = re.compile(re.escape(article_id) + r"[\s\-_]*" + suffix_regex + r"$", re.IGNORECASE)
+        
+        for filename in os.listdir(folder):
+            if pattern.match(filename):
+                return os.path.join(folder, filename)
+        return None
 
     def _convert_docx_to_pdf(self, docx_path: str, article_id: str) -> str:
         """Convert DOCX to PDF and return path."""
