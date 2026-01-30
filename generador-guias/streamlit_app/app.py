@@ -2436,7 +2436,7 @@ def main():
                 st.markdown("---")
             
             # Separator between questions
-            st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px; opacity: 0.3;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px; opacity: 1; border-top: 2px solid #555;'>", unsafe_allow_html=True)
         
         # Selected questions summary
         st.markdown("---")
