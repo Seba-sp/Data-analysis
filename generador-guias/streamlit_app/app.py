@@ -2434,6 +2434,9 @@ def main():
                         st.error("Ruta de archivo no disponible")
                 
                 st.markdown("---")
+            
+            # Separator between questions
+            st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px; opacity: 0.3;'>", unsafe_allow_html=True)
         
         # Selected questions summary
         st.markdown("---")
@@ -2569,6 +2572,9 @@ def main():
                             st.error("Ruta de archivo no disponible")
                     
                     st.markdown("---")
+                
+                # Separator between questions
+                st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px; opacity: 0.3;'>", unsafe_allow_html=True)
             
             # Summary Charts Section
             st.markdown("---")

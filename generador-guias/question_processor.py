@@ -67,7 +67,7 @@ class QuestionProcessor:
     def _find_question_boundaries(self, doc) -> List[tuple]:
         """
         Find the boundaries of each question in the document.
-        Handles both numbered questions and page-based questions.
+        Always uses page-based splitting (1 question per page).
         
         Args:
             doc: Document object
@@ -75,39 +75,8 @@ class QuestionProcessor:
         Returns:
             List of (start_index, end_index) tuples for each question
         """
-        boundaries = []
-        
-        # First, try to find numbered questions
-        question_starts = []
-        for i, element in enumerate(doc.element.body):
-            element_text = ""
-            for text_elem in element.iter():
-                if text_elem.text:
-                    element_text += text_elem.text
-            
-            # Check if this looks like a new question (starts with number)
-            if re.match(r'^\d+[\.\)]\s*', element_text.strip()) or re.match(r'^Pregunta\s+\d+', element_text.strip(), re.IGNORECASE):
-                question_starts.append(i)
-        
-        # If we found numbered questions, use that approach
-        if question_starts:
-            print("Found numbered questions, using number-based splitting")
-            for i, start_idx in enumerate(question_starts):
-                # Determine the end index
-                if i + 1 < len(question_starts):
-                    # End before the next question starts
-                    end_idx = question_starts[i + 1] - 1
-                else:
-                    # This is the last question, go to the end
-                    end_idx = len(doc.element.body) - 1
-                
-                # Make sure we have valid indices
-                if start_idx <= end_idx:
-                    boundaries.append((start_idx, end_idx))
-        else:
-            # No numbered questions found, try page-based splitting
-            print("No numbered questions found, trying page-based splitting")
-            boundaries = self._find_page_based_boundaries(doc)
+        print("Using page-based splitting (1 question per page)")
+        boundaries = self._find_page_based_boundaries(doc)
         
         return boundaries
     

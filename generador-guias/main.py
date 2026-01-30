@@ -404,6 +404,137 @@ def consolidate_subject(subject: str, storage: StorageClient, full: bool = False
         print(f"Error consolidating {subject}: {e}")
         return False
 
+def interactive_menu(storage: StorageClient):
+    """
+    Main interactive menu for the application.
+    """
+    while True:
+        print("\n" + "="*60)
+        print("  GENERADOR DE GUÍAS - MAIN MENU")
+        print("="*60)
+        print("  [1] Process file set (Word + Excel)")
+        print("  [2] Consolidate Excel files")
+        print("  [3] Exit")
+        print("="*60)
+        
+        try:
+            choice = input("\nEnter your choice (number): ").strip()
+            
+            if choice == '1':
+                # Process Set
+                subject = select_subject_interactive(storage)
+                if not subject:
+                    continue
+                
+                base_filename, docx_path, xlsx_path = select_file_pair_interactive(subject, storage)
+                if not base_filename:
+                    continue
+                
+                process_single_set(base_filename, subject, storage, docx_path, xlsx_path)
+                input("\nPress Enter to continue...")
+                
+            elif choice == '2':
+                # Consolidate
+                subjects = get_available_subjects(storage)
+                if not subjects:
+                    print("No subjects found.")
+                    continue
+
+                while True:
+                    print("\n" + "="*60)
+                    print("SELECT SUBJECT TO CONSOLIDATE")
+                    print("="*60)
+                    for idx, subject in enumerate(subjects, 1):
+                        print(f"  [{idx}] {subject}")
+                    print(f"  [{len(subjects)+1}] ALL SUBJECTS")
+                    print(f"  [0] Go back")
+                    print("="*60)
+                    
+                    sub_choice = input("\nEnter your choice (number): ").strip()
+                    
+                    if sub_choice == '0':
+                        break
+                        
+                    if not sub_choice.isdigit():
+                        print("Invalid input. Please enter a number.")
+                        continue
+                        
+                    try:
+                        sub_idx = int(sub_choice)
+                        if not (1 <= sub_idx <= len(subjects) + 1):
+                            print(f"Invalid choice. Please enter a number between 0 and {len(subjects)+1}")
+                            continue
+                            
+                        # Valid selection
+                        selected_subject = None
+                        is_all = False
+                        
+                        if sub_idx == len(subjects) + 1:
+                            is_all = True
+                        else:
+                            selected_subject = subjects[sub_idx-1]
+                        
+                        # Mode selection
+                        full = False
+                        back_to_subjects = False
+                        
+                        while True:
+                            print("\nConsolidation Mode:")
+                            print("  [1] Incremental (Only process new files)")
+                            print("  [2] Full (Reset master file and reprocess all)")
+                            print("  [0] Go back")
+                            
+                            mode_choice = input("Enter choice (number): ").strip()
+                            
+                            if mode_choice == '0':
+                                back_to_subjects = True
+                                break
+                            elif mode_choice == '1':
+                                full = False
+                                break
+                            elif mode_choice == '2':
+                                full = True
+                                break
+                            else:
+                                print("Invalid choice. Please enter 1, 2 or 0.")
+                        
+                        if back_to_subjects:
+                            continue
+                        
+                        if is_all:
+                            consolidator = MasterConsolidator(storage)
+                            if full:
+                                results = consolidator.consolidate_all_subjects()
+                            else:
+                                results = consolidator.consolidate_all_subjects_incremental()
+                                
+                            if results:
+                                print(f"\n[SUCCESS] Successfully consolidated {len(results)} subjects")
+                                for s, (df, path) in results.items():
+                                    lbl = "total questions" if full else "new questions"
+                                    print(f"   {s}: {len(df)} {lbl} -> {path}")
+                            else:
+                                print("No subjects to consolidate")
+                        else:
+                            consolidate_subject(selected_subject, storage, full=full)
+                        
+                        input("\nPress Enter to continue...")
+                        break
+                        
+                    except ValueError:
+                        print("Invalid input. Please enter a number.")
+                        
+            elif choice == '3':
+                print("Exiting...")
+                sys.exit(0)
+            
+            else:
+                print("Invalid choice. Please enter 1, 2 or 3.")
+                
+        except KeyboardInterrupt:
+            print("\nCancelled.")
+            continue
+
 def main():
     """Main CLI function."""
     parser = argparse.ArgumentParser(
@@ -464,15 +595,20 @@ Directory Structure:
     
     args = parser.parse_args()
     
-    if not args.command:
-        parser.print_help()
-        return
-    
     # Initialize storage
     storage = StorageClient()
     
     # Ensure directories exist
     ensure_directories()
+    
+    if not args.command:
+        # Launch main interactive menu
+        try:
+            interactive_menu(storage)
+        except KeyboardInterrupt:
+            print("\nCancelled.")
+            sys.exit(0)
+        return
     
     if args.command == 'init':
         print("[SUCCESS] Project directories initialized successfully!")

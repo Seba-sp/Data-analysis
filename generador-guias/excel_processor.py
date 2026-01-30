@@ -36,6 +36,26 @@ class ExcelProcessor:
         try:
             df = pd.read_excel(excel_path)
             print(f"Loaded Excel with {len(df)} rows and {len(df.columns)} columns")
+            
+            # Remove completely empty rows
+            df.dropna(how='all', inplace=True)
+            
+            # Clean Dificultad column (handle 1.0 -> "1")
+            dificultad_col = EXCEL_COLUMNS.get('dificultad')
+            if dificultad_col and dificultad_col in df.columns:
+                def clean_dificultad(val):
+                    if pd.isna(val) or val == '': 
+                        return val
+                    try:
+                        f_val = float(val)
+                        if f_val.is_integer():
+                            return str(int(f_val))
+                        return str(val)
+                    except (ValueError, TypeError):
+                        return val
+                
+                df[dificultad_col] = df[dificultad_col].apply(clean_dificultad)
+                
             return df
         except FileNotFoundError:
             print(f"Error: Excel file not found: {excel_path}")
