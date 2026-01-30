@@ -159,7 +159,7 @@ def load_ciencias_combined_data(storage, consolidator) -> pd.DataFrame:
     """
     try:
         combined_dfs = []
-        subjects_to_combine = ["F30M", "Q30M", "B30M"]
+        subjects_to_combine = ["F30M", "Q30M", "B30M", "Ciencias"]
         
         for subject in subjects_to_combine:
             try:
