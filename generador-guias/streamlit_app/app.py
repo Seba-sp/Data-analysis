@@ -426,7 +426,11 @@ def filter_questions(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     """
     filtered_df = df.copy()
     
-    # Apply filters
+    # Filter by Eje Temático (for Ciencias)
+    if filters.get('eje_tematico') and EXCEL_COLUMNS['eje_tematico'] in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['eje_tematico']] == filters['eje_tematico']]
+
+    # Filter by Área Temática
     if filters.get('area_tematica'):
         filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['area_tematica']] == filters['area_tematica']]
     
@@ -2102,9 +2106,9 @@ def main():
     # Filters
     st.subheader("🎯 Filtrar Preguntas")
     
-    # First row: Asignatura and Área Temática (for Ciencias) or just Área Temática (for others)
+    # First row: Asignatura and Eje Temático (for Ciencias)
     if current_subject == "Ciencias":
-        col_asig, col_area = st.columns(2)
+        col_asig, col_eje = st.columns(2)
         
         with col_asig:
             # Subject filter for Ciencias
@@ -2115,20 +2119,39 @@ def main():
             else:
                 subject_filter = None
         
-        with col_area:
-            # Area filter
-            if EXCEL_COLUMNS['area_tematica'] in df.columns:
-                # Convert to string to avoid TypeError during sort, but don't filter out things silently
-                # Just take unique values and sort them as strings
-                unique_vals = df[EXCEL_COLUMNS['area_tematica']].unique().tolist()
-                # Sort safely by converting everything to string for the sort key
-                areas = ['Todas'] + sorted(unique_vals, key=lambda x: str(x))
-                selected_area = st.selectbox("Área Temática", areas)
-                area_filter = None if selected_area == 'Todas' else selected_area
+        with col_eje:
+            # Eje Temático filter (Specific to Ciencias)
+            if EXCEL_COLUMNS['eje_tematico'] in df.columns:
+                unique_ejes = df[EXCEL_COLUMNS['eje_tematico']].astype(str).dropna().unique().tolist()
+                unique_ejes = [e for e in unique_ejes if e.lower() != 'nan' and e.strip() != '']
+                ejes = ['Todos'] + sorted(unique_ejes, key=lambda x: str(x))
+                selected_eje = st.selectbox("Eje Temático", ejes)
+                eje_filter = None if selected_eje == 'Todos' else selected_eje
             else:
-                area_filter = None
+                eje_filter = None
+        
+        # Second row for Ciencias: Área Temática (full width)
+        if EXCEL_COLUMNS['area_tematica'] in df.columns:
+            # Filter areas based on selected subject and eje
+            filtered_df_for_area = df.copy()
+            if subject_filter:
+                filtered_df_for_area = filtered_df_for_area[filtered_df_for_area[EXCEL_COLUMNS['subject_source']] == subject_filter]
+            if eje_filter:
+                filtered_df_for_area = filtered_df_for_area[filtered_df_for_area[EXCEL_COLUMNS['eje_tematico']] == eje_filter]
+                
+            unique_vals = filtered_df_for_area[EXCEL_COLUMNS['area_tematica']].astype(str).dropna().unique().tolist()
+            unique_vals = [a for a in unique_vals if a.lower() != 'nan' and a.strip() != '']
+            areas = ['Todas'] + sorted(unique_vals, key=lambda x: str(x))
+            selected_area = st.selectbox("Área Temática", areas)
+            area_filter = None if selected_area == 'Todas' else selected_area
+        else:
+            area_filter = None
+
     else:
-        # For other subjects, just show Área Temática in full width
+        # For other subjects (Not Ciencias)
+        eje_filter = None
+        
+        # Area Temática in full width
         if EXCEL_COLUMNS['area_tematica'] in df.columns:
             unique_vals = df[EXCEL_COLUMNS['area_tematica']].unique().tolist()
             areas = ['Todas'] + sorted(unique_vals, key=lambda x: str(x))
@@ -2138,20 +2161,26 @@ def main():
             area_filter = None
         
     
-    # Second row: Unidad (full width) - dynamic based on selected filters
+    # Next row: Unidad (full width) - dynamic based on selected filters
     if EXCEL_COLUMNS['conocimiento_subtema'] in df.columns:
-        # Filter unidades based on selected area and subject (for Ciencias)
+        # Filter unidades based on selected area, subject and eje (for Ciencias)
         filtered_df_for_subtema = df.copy()
         
         # Apply subject filter first (for Ciencias)
         if current_subject == "Ciencias" and 'subject_filter' in locals() and subject_filter is not None:
             filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema[EXCEL_COLUMNS['subject_source']] == subject_filter]
         
+        # Apply Eje filter (for Ciencias)
+        if current_subject == "Ciencias" and 'eje_filter' in locals() and eje_filter is not None:
+            filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema[EXCEL_COLUMNS['eje_tematico']] == eje_filter]
+        
         # Apply area filter
         if area_filter is not None:
             filtered_df_for_subtema = filtered_df_for_subtema[filtered_df_for_subtema[EXCEL_COLUMNS['area_tematica']] == area_filter]
         
-        available_subtemas = sorted(filtered_df_for_subtema[EXCEL_COLUMNS['conocimiento_subtema']].unique().tolist(), key=lambda x: str(x))
+        available_subtemas = filtered_df_for_subtema[EXCEL_COLUMNS['conocimiento_subtema']].astype(str).dropna().unique().tolist()
+        available_subtemas = [s for s in available_subtemas if s.lower() != 'nan' and s.strip() != '']
+        available_subtemas = sorted(available_subtemas, key=lambda x: str(x))
         subtemas = ['Todos'] + available_subtemas
         selected_subtema = st.selectbox("Unidad", subtemas)
         subtema_filter = None if selected_subtema == 'Todos' else selected_subtema
@@ -2254,6 +2283,7 @@ def main():
     # Add subject filter for Ciencias
     if current_subject == "Ciencias":
         filters['subject'] = subject_filter if 'subject_filter' in locals() else None
+        filters['eje_tematico'] = eje_filter if 'eje_filter' in locals() else None
     
     # Clear any open previews when filters change (this will be triggered by any filter interaction)
     if any([area_filter, difficulty_filter, skill_filter, subtema_filter, descripcion_filter, usage_filter, 
