@@ -12,7 +12,6 @@ PARÁMETROS
 
 - DIFICULTAD_GLOBAL: Media/alta
 - DISTRIBUCIÓN_HABILIDADES: 2-5-3  // Localizar-Interpretar-Evaluar
-- TAREA_CONDICIONAL: m // Obligatoria si el texto tiene Recurso_Discontinuo, si no hay Recurso_Discontinuo reemplaza por otra de la misma habilidad
 - TAREAS_PRIORITARIAS: a,b,c,d,e,f,g,h,i,j,k,l,n  // si el texto no permite alguna, reemplaza por otra de la misma habilidad
 - MODO_SALIDA: lectura+preguntas+claves
 - JUSTIFICACIÓN: breve (1–2 líneas) + microevidencia (cita máx. 12 palabras)
@@ -69,7 +68,6 @@ REGLAS CRÍTICAS PARA CADA PREGUNTA:
 ✓ SOLO 1 correcta por pregunta
 ✓ Dificultad alta
 ✓ Corrobora que la habilidad y la tarea lectora sea exactamente la misma indicada en el temario
-✓ No repetir tareas lectoras, 10 tareas diferentes en total
 ✓ Responder la pregunta se haga en base a evidencia del texto mismo sin información externa de éste
 
 REGLAS CRÍTICAS PARA CLAVES:
@@ -148,13 +146,11 @@ Antes de mostrar tu respuesta, verifica:
 ✓ Cada ítem tiene UNA sola correcta (no hay dos defendibles).
 ✓ Cada distractor es plausible y nace de una lectura parcial o confusión real del texto.
 ✓ Cada clave tiene microevidencia del texto (≤12 palabras).
-✓ La respuesta correcta debe estar distribuida de forma uniforme por letra de alternativa, por lo que deben haber al menos 2 de las 10 respuestas correctas para la alternativa A, 2 para la B, 2 para la C y 2 para la D y el resto al azar (NUNCA menos de 2 por letra).
-✓ Se cumple distribución 2-5-3.
-✓ Se cumple con 1 pregunta de la tarea m si el texto tiene Recurso_Discontinuo, si no hay Recurso_Discontinuo reemplaza por otra de la misma habilidad.
+✓ La respuesta correcta debe estar distribuida de forma uniforme por letra de alternativa, por lo que deben haber al menos 2 de las 10 respuestas correctas para la alternativa A, 2 para la B, 2 para la C y 2 para la D y el resto al azar (NUNCA menos de 2 por letra)
+✓ Se cumple distribución 2-5-3 y se marca el ítem integrado.
 ✓ El formato de salida coincide EXACTAMENTE con el formato especificado arriba.
-✓ Dificultad alta.
-✓ Corrobora que la habilidad y la tarea lectora sea exactamente la misma indicada en el temario.
-✓ No repetir tareas lectoras, 10 tareas diferentes en total.
-✓ Responder la pregunta se haga en base a evidencia del texto mismo sin información externa de éste.
-✓ Los 3 distractores sean competitivos entre sí.
+✓ Dificultad alta
+✓ Corrobora que la habilidad y la tarea lectora sea exactamente la misma indicada en el temario
+✓ Responder la pregunta se haga en base a evidencia del texto mismo sin información externa de éste
+✓ Los 3 distractores sean competitivos entre sí
 

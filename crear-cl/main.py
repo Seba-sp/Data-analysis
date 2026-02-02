@@ -94,7 +94,6 @@ def batch_mode(args):
         agent1_mode=args.agent1_mode,
         start_from=args.start_from,
         tsv_file=args.tsv_file,
-        candidatos_file=args.candidatos_file,
         reverse=args.reverse
     )
 
@@ -259,11 +258,6 @@ Examples:
         help='CSV file for agent3 start (with Docx_Path column), or TSV file for agent2 start'
     )
     parser.add_argument(
-        '--candidatos-file',
-        type=str,
-        help='Optional candidatos TSV file (for backward compatibility with old audit files when starting from agent3)'
-    )
-    parser.add_argument(
         '--reverse',
         action='store_true',
         help='Process articles in reverse order (bottom to top) - useful for parallel processing'
@@ -291,13 +285,23 @@ Examples:
         print("\n[Error] --tsv-file is required when starting from agent3")
         print("Example:")
         print("  python main.py --start-from agent3 --tsv-file data/articles_with_docx.csv")
-        if args.candidatos_file:
-            print("\nNote: --candidatos-file is optional (only for old audit files)")
         sys.exit(1)
     
     # Run appropriate mode
     try:
+        # Check if we should run pipeline mode
+        should_run_pipeline = False
+        
         if args.batches:
+            should_run_pipeline = True
+        elif args.start_from in ['agent2', 'agent3']:
+            # Implicitly run pipeline (1 batch) if starting from agent2/3
+            # But only if we have the required file
+            if args.tsv_file:
+                args.batches = 1
+                should_run_pipeline = True
+        
+        if should_run_pipeline:
             batch_mode(args)
         elif args.review_standalone:
             review_standalone_mode(args)

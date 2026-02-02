@@ -183,9 +183,13 @@ def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: Do
         
         # Generate filenames (save in same directory as input file)
         input_dir = os.path.dirname(os.path.abspath(filepath))
-        suffix = '_improved' if is_improved else '_initial'
-        word_filename = f"questions_{article_id}{suffix}.docx"
-        excel_filename = f"questions_{article_id}{suffix}.xlsx"
+        
+        if is_improved:
+            word_filename = f"{article_id}-Preguntas+Texto.docx"
+            excel_filename = f"{article_id}-Preguntas Datos.xlsx"
+        else:
+            word_filename = f"{article_id}-Preguntas+Texto (Inicial).docx"
+            excel_filename = f"{article_id}-Preguntas Datos (Inicial).xlsx"
         
         # Full paths including directory
         word_fullpath = os.path.join(input_dir, word_filename)

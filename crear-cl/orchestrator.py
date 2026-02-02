@@ -81,7 +81,6 @@ class PipelineOrchestrator:
                      agent1_mode: Optional[str] = None,
                      start_from: str = 'agent1',
                      tsv_file: Optional[str] = None,
-                     candidatos_file: Optional[str] = None,
                      reverse: bool = False):
         """
         Run the complete PAES question generation pipeline.
@@ -93,7 +92,6 @@ class PipelineOrchestrator:
             agent1_mode: Override Agent 1 mode ('agent' or 'model')
             start_from: Starting point ('agent1', 'agent2', or 'agent3')
             tsv_file: TSV file for agent2/agent3 start
-            candidatos_file: Optional candidatos TSV for agent3 start (backward compatibility)
             reverse: Process articles in reverse order (bottom to top)
         """
         # Override Agent 1 mode if specified
@@ -124,7 +122,7 @@ class PipelineOrchestrator:
                 try:
                     # Determine workflow based on start point
                     if start_from == 'agent3':
-                        validated_articles = self._start_from_agent3(tsv_file, candidatos_file)
+                        validated_articles = self._start_from_agent3(tsv_file)
                     elif start_from == 'agent2':
                         validated_articles = self._start_from_agent2(tsv_file)
                     else:  # agent1
@@ -220,14 +218,12 @@ class PipelineOrchestrator:
         validated_articles = self._step2_validate(articles)
         return validated_articles
     
-    def _start_from_agent3(self, tsv_file: Optional[str], 
-                          candidatos_file: Optional[str] = None) -> List[Dict]:
+    def _start_from_agent3(self, tsv_file: Optional[str]) -> List[Dict]:
         """
         Start pipeline from Agent 3 (load CSV with article data + DOCX paths).
         
         Args:
-            tsv_file: Path to CSV file with Docx_Path column (or TSV for backward compatibility)
-            candidatos_file: Ignored (backward compatibility)
+            tsv_file: Path to CSV file with Docx_Path column
         """
         import pandas as pd
         
@@ -235,15 +231,13 @@ class PipelineOrchestrator:
         
         # Find or use provided file
         if not tsv_file:
-            # Try CSV first, then TSV for backward compatibility
+            # Try CSV first
             csv_file = self._find_latest_file('*.csv')
             if csv_file:
                 tsv_file = csv_file
-            else:
-                tsv_file = self._find_latest_file('auditoria_*.tsv')
             
             if not tsv_file:
-                print(f"[Orchestrator] ERROR: No CSV or TSV found")
+                print(f"[Orchestrator] ERROR: No CSV file found")
                 return []
         
         file_ext = os.path.splitext(tsv_file)[1].lower()
@@ -302,27 +296,11 @@ class PipelineOrchestrator:
             
             print(f"[Orchestrator] Loaded {len(validated_articles)} articles from CSV")
         
-        # Handle TSV files (backward compatibility)
+        # Legacy TSV support removed - strict mode
         else:
-            print(f"[Orchestrator] Loading TSV (legacy mode)")
-            
-            # Load audit TSV
-            with open(tsv_file, 'r', encoding='utf-8') as f:
-                audit_tsv = f.read()
-            
-            # Load candidatos TSV if provided
-            candidatos_tsv = None
-            if candidatos_file:
-                print(f"[Orchestrator] Candidatos TSV: {os.path.basename(candidatos_file)}")
-                with open(candidatos_file, 'r', encoding='utf-8') as f:
-                    candidatos_tsv = f.read()
-            
-            # Parse with Agent 2's method
-            validated_articles = self.validation_agent._parse_audit_results(
-                audit_tsv, candidatos_tsv
-            )
-            
-            print(f"[Orchestrator] Loaded {len(validated_articles)} articles from TSV")
+            print(f"[Orchestrator] ERROR: Agent 3 start requires a CSV file with DOCX paths.")
+            print(f"[Orchestrator] Provided file: {tsv_file}")
+            return []
         
         # Add to state tracking
         for article in validated_articles:
@@ -487,7 +465,7 @@ class PipelineOrchestrator:
                 questions_initial_word = self.doc_generator.merge_text_and_questions_docx(
                     source_docx_path=article.get('docx_path'),
                     questions=questions,
-                    output_path=os.path.join(self.output_dir, f"questions_initial_{article_id}.docx"),
+                    output_path=os.path.join(self.output_dir, f"{article_id}-Preguntas+Texto (Inicial).docx"),
                     title=article.get('title', '')
                 )
                 print(f"[STEP 6] Initial Word: {os.path.basename(questions_initial_word)}")
@@ -499,7 +477,7 @@ class PipelineOrchestrator:
                 questions_improved_word = self.doc_generator.merge_text_and_questions_docx(
                     source_docx_path=article.get('docx_path'),
                     questions=improved,
-                    output_path=os.path.join(self.output_dir, f"questions_improved_{article_id}.docx"),
+                    output_path=os.path.join(self.output_dir, f"{article_id}-Preguntas+Texto.docx"),
                     title=article.get('title', '')
                 )
                 print(f"[STEP 6] Improved Word: {os.path.basename(questions_improved_word)}")
@@ -510,7 +488,7 @@ class PipelineOrchestrator:
             # Generate Excel files (with answers, justifications, etc.)
             try:
                 questions_initial_excel = self.doc_generator.generate_questions_excel(
-                    questions, f"questions_initial_{article_id}.xlsx"
+                    questions, f"{article_id}-Preguntas Datos (Inicial).xlsx"
                 )
                 print(f"[STEP 6] Initial Excel: {os.path.basename(questions_initial_excel)}")
             except Exception as e:
@@ -521,7 +499,7 @@ class PipelineOrchestrator:
             
             try:
                 questions_improved_excel = self.doc_generator.generate_questions_excel(
-                    improved, f"questions_improved_{article_id}.xlsx"
+                    improved, f"{article_id}-Preguntas Datos.xlsx"
                 )
                 print(f"[STEP 6] Improved Excel: {os.path.basename(questions_improved_excel)}")
             except Exception as e:
