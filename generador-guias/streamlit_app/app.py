@@ -121,19 +121,15 @@ def load_master_excel(subject: str) -> pd.DataFrame:
         storage = get_storage_client()
         consolidator = MasterConsolidator(storage)
         
-        # Special handling for Ciencias subject - combine F30M, Q30M, and B30M
-        if subject == "Ciencias":
-            df = load_ciencias_combined_data(storage, consolidator)
+        # Try to load existing master file
+        master_file = EXCELES_MAESTROS_DIR / f"excel_maestro_{subject.lower()}.xlsx"
+        
+        if storage.exists(str(master_file)):
+            df = pd.read_excel(master_file)
         else:
-            # Try to load existing master file
-            master_file = EXCELES_MAESTROS_DIR / f"excel_maestro_{subject.lower()}.xlsx"
-            
-            if storage.exists(str(master_file)):
-                df = pd.read_excel(master_file)
-            else:
-                # If master file doesn't exist, try to consolidate (using incremental - will create new master)
-                st.warning(f"Master file not found for {subject}. Attempting incremental consolidation...")
-                df, _ = consolidator.consolidate_and_append_new(subject)
+            # If master file doesn't exist, try to consolidate (using incremental - will create new master)
+            st.warning(f"Master file not found for {subject}. Attempting incremental consolidation...")
+            df, _ = consolidator.consolidate_and_append_new(subject)
         
         # Ensure usage tracking columns exist in the loaded DataFrame
         if not df.empty:
@@ -435,7 +431,12 @@ def filter_questions(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
         filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['area_tematica']] == filters['area_tematica']]
     
     if filters.get('dificultad'):
-        filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['dificultad']] == filters['dificultad']]
+        # Robust comparison for difficulty (handling int vs str vs float)
+        target_diff = str(filters['dificultad']).strip()
+        # Convert column to string, strip whitespace, and remove .0 if present (e.g. "1.0" -> "1")
+        filtered_df = filtered_df[
+            filtered_df[EXCEL_COLUMNS['dificultad']].astype(str).str.strip().str.replace(r'\.0$', '', regex=True) == target_diff
+        ]
     
     if filters.get('habilidad'):
         filtered_df = filtered_df[filtered_df[EXCEL_COLUMNS['habilidad']] == filters['habilidad']]
@@ -1757,155 +1758,78 @@ def main():
                 storage = get_storage_client()
                 usage_tracker = UsageTracker(storage)
                 
-                if current_subject == "Ciencias":
-                    # Show stats for all three subjects
-                    for subj in ["F30M", "Q30M", "B30M"]:
-                        stats = usage_tracker.get_question_usage_stats(subj)
-                        if "error" not in stats:
-                            st.markdown(f"### 📚 {subj}")
-                            
-                            # Create metrics for each subject
-                            col_total, col_used, col_unused, col_percent = st.columns(4)
-                            
-                            with col_total:
-                                st.metric(
-                                    label="📊 Total",
-                                    value=stats['total_questions'],
-                                    help="Total de preguntas disponibles"
-                                )
-                            
-                            with col_used:
-                                st.metric(
-                                    label="✅ Usadas",
-                                    value=stats['used_questions'],
-                                    help="Preguntas que han sido utilizadas"
-                                )
-                            
-                            with col_unused:
-                                st.metric(
-                                    label="🆕 Sin usar",
-                                    value=stats['unused_questions'],
-                                    help="Preguntas que no han sido utilizadas"
-                                )
-                            
-                            with col_percent:
-                                st.metric(
-                                    label="📈 % Uso",
-                                    value=f"{stats['usage_percentage']:.1f}%",
-                                    help="Porcentaje de uso de preguntas"
-                                )
-                            
-                            # Show usage distribution for each subject in Ciencias
-                            if stats['usage_distribution']:
-                                st.markdown("#### 📊 Distribución de Uso")
-                                
-                                # Create a container for the distribution
-                                with st.container():
-                                    for usage_count, count in stats['usage_distribution'].items():
-                                        if not pd.isna(usage_count):
-                                            usage_count_int = int(usage_count)
-                                            
-                                            # Create a progress bar for visual representation
-                                            if usage_count_int == 0:
-                                                label = "🆕 Sin usar"
-                                            elif usage_count_int == 1:
-                                                label = "1️⃣ Usada 1 vez"
-                                            elif usage_count_int == 2:
-                                                label = "2️⃣ Usada 2 veces"
-                                            elif usage_count_int == 3:
-                                                label = "3️⃣ Usada 3 veces"
-                                            else:
-                                                label = f"🔥 Usada {usage_count_int}+ veces"
-                                            
-                                            # Calculate percentage for progress bar - use the actual count from distribution
-                                            total_questions = stats['total_questions']
-                                            percentage = (count / total_questions) if total_questions > 0 else 0
-                                            
-                                        # Display with progress bar
-                                        st.markdown(f"**{label}:** {count} preguntas")
-                                        st.progress(percentage)
-                            
-                            # Add general statistics charts for this subject
-                            st.markdown("#### 📊 Estadísticas Generales")
-                            # Load data for this specific subject
-                            subject_df = load_master_excel(subj)
-                            if not subject_df.empty:
-                                create_general_statistics_charts(subject_df, subj)
-                            
-                            st.markdown("---")
+                stats = usage_tracker.get_question_usage_stats(current_subject)
+                if "error" not in stats:
+                    st.markdown(f"### 📚 {current_subject}")
+                    
+                    # Create metrics for the subject
+                    col_total, col_used, col_unused, col_percent = st.columns(4)
+                    
+                    with col_total:
+                        st.metric(
+                            label="📊 Total",
+                            value=stats['total_questions'],
+                            help="Total de preguntas disponibles"
+                        )
+                    
+                    with col_used:
+                        st.metric(
+                            label="✅ Usadas",
+                            value=stats['used_questions'],
+                            help="Preguntas que han sido utilizadas"
+                        )
+                    
+                    with col_unused:
+                        st.metric(
+                            label="🆕 Sin usar",
+                            value=stats['unused_questions'],
+                            help="Preguntas que no han sido utilizadas"
+                        )
+                    
+                    with col_percent:
+                        st.metric(
+                            label="📈 % Uso",
+                            value=f"{stats['usage_percentage']:.1f}%",
+                            help="Porcentaje de uso de preguntas"
+                        )
+                    
+                    # Show usage distribution in a prettier format
+                    if stats['usage_distribution']:
+                        st.markdown("#### 📊 Distribución de Uso")
+                        
+                        # Create a container for the distribution
+                        with st.container():
+                            for usage_count, count in stats['usage_distribution'].items():
+                                if not pd.isna(usage_count):
+                                    usage_count_int = int(usage_count)
+                                    
+                                    # Create a progress bar for visual representation
+                                    if usage_count_int == 0:
+                                        label = "🆕 Sin usar"
+                                    elif usage_count_int == 1:
+                                        label = "1️⃣ Usada 1 vez"
+                                    elif usage_count_int == 2:
+                                        label = "2️⃣ Usada 2 veces"
+                                    elif usage_count_int == 3:
+                                        label = "3️⃣ Usada 3 veces"
+                                    else:
+                                        label = f"🔥 Usada {usage_count_int}+ veces"
+                                    
+                                    # Calculate percentage for progress bar - use the actual count from distribution
+                                    total_questions = stats['total_questions']
+                                    percentage = (count / total_questions) if total_questions > 0 else 0
+                                    
+                                # Display with progress bar
+                                st.markdown(f"**{label}:** {count} preguntas")
+                                st.progress(percentage)
+                    
+                    # Add general statistics charts for this subject
+                    st.markdown("#### 📊 Estadísticas Generales")
+                    # Get the loaded questions DataFrame from session state
+                    if 'questions_df' in st.session_state:
+                        create_general_statistics_charts(st.session_state['questions_df'], current_subject)
                 else:
-                    stats = usage_tracker.get_question_usage_stats(current_subject)
-                    if "error" not in stats:
-                        st.markdown(f"### 📚 {current_subject}")
-                        
-                        # Create metrics for the subject
-                        col_total, col_used, col_unused, col_percent = st.columns(4)
-                        
-                        with col_total:
-                            st.metric(
-                                label="📊 Total",
-                                value=stats['total_questions'],
-                                help="Total de preguntas disponibles"
-                            )
-                        
-                        with col_used:
-                            st.metric(
-                                label="✅ Usadas",
-                                value=stats['used_questions'],
-                                help="Preguntas que han sido utilizadas"
-                            )
-                        
-                        with col_unused:
-                            st.metric(
-                                label="🆕 Sin usar",
-                                value=stats['unused_questions'],
-                                help="Preguntas que no han sido utilizadas"
-                            )
-                        
-                        with col_percent:
-                            st.metric(
-                                label="📈 % Uso",
-                                value=f"{stats['usage_percentage']:.1f}%",
-                                help="Porcentaje de uso de preguntas"
-                            )
-                        
-                        # Show usage distribution in a prettier format
-                        if stats['usage_distribution']:
-                            st.markdown("#### 📊 Distribución de Uso")
-                            
-                            # Create a container for the distribution
-                            with st.container():
-                                for usage_count, count in stats['usage_distribution'].items():
-                                    if not pd.isna(usage_count):
-                                        usage_count_int = int(usage_count)
-                                        
-                                        # Create a progress bar for visual representation
-                                        if usage_count_int == 0:
-                                            label = "🆕 Sin usar"
-                                        elif usage_count_int == 1:
-                                            label = "1️⃣ Usada 1 vez"
-                                        elif usage_count_int == 2:
-                                            label = "2️⃣ Usada 2 veces"
-                                        elif usage_count_int == 3:
-                                            label = "3️⃣ Usada 3 veces"
-                                        else:
-                                            label = f"🔥 Usada {usage_count_int}+ veces"
-                                        
-                                        # Calculate percentage for progress bar - use the actual count from distribution
-                                        total_questions = stats['total_questions']
-                                        percentage = (count / total_questions) if total_questions > 0 else 0
-                                        
-                                        # Display with progress bar
-                                        st.markdown(f"**{label}:** {count} preguntas")
-                                        st.progress(percentage)
-                        
-                        # Add general statistics charts for this subject
-                        st.markdown("#### 📊 Estadísticas Generales")
-                        # Get the loaded questions DataFrame from session state
-                        if 'questions_df' in st.session_state:
-                            create_general_statistics_charts(st.session_state['questions_df'], current_subject)
-                    else:
-                        st.error(f"❌ {stats['error']}")
+                    st.error(f"❌ {stats['error']}")
     
     with col_guides:
         st.markdown("**🗑️ Eliminar Guías**")
@@ -2215,8 +2139,22 @@ def main():
         # Difficulty filter
         if EXCEL_COLUMNS['dificultad'] in df.columns:
             unique_diffs = df[EXCEL_COLUMNS['dificultad']].astype(str).dropna().unique().tolist()
-            unique_diffs = [d for d in unique_diffs if d.lower() != 'nan' and d.strip() != '']
-            difficulties = ['Todas'] + sorted(unique_diffs)
+            
+            # Clean values: remove 'nan', empty, and convert '1.0' to '1'
+            cleaned_diffs = []
+            for d in unique_diffs:
+                d = d.strip()
+                if d.lower() == 'nan' or d == '':
+                    continue
+                # Remove .0 suffix
+                if d.endswith('.0'):
+                    cleaned_diffs.append(d[:-2])
+                else:
+                    cleaned_diffs.append(d)
+            
+            # De-duplicate and sort
+            unique_diffs = sorted(list(set(cleaned_diffs)))
+            difficulties = ['Todas'] + unique_diffs
             selected_difficulty = st.selectbox("Dificultad", difficulties)
             difficulty_filter = None if selected_difficulty == 'Todas' else selected_difficulty
         else:
@@ -2300,15 +2238,32 @@ def main():
     if len(filtered_df) > 0:
         filtered_df = sort_questions_for_display(filtered_df, current_subject)
     
-    st.markdown(f"**Preguntas encontradas: {len(filtered_df)}**")
+    # Pagination System
     
-    # Pagination / Limit display to improve performance
-    MAX_DISPLAY_QUESTIONS = 150
-    display_df = filtered_df
+    # Initialize pagination state
+    if 'current_page' not in st.session_state:
+        st.session_state['current_page'] = 1
+    if 'questions_per_page' not in st.session_state:
+        st.session_state['questions_per_page'] = 30
+        
+    # Reset page to 1 if filters might have changed the result set significantly
+    # We can detect this by checking if the total count changed or just reset on any filter change interaction
+    # For now, let's just keep the current page unless it's out of bounds
     
-    if len(filtered_df) > MAX_DISPLAY_QUESTIONS:
-        st.info(f"ℹ️ Se muestran las primeras {MAX_DISPLAY_QUESTIONS} preguntas de {len(filtered_df)} encontradas para optimizar el rendimiento. Usa los filtros para refinar la búsqueda.")
-        display_df = filtered_df.head(MAX_DISPLAY_QUESTIONS)
+    total_questions = len(filtered_df)
+    
+    # Calculate total pages
+    total_pages = max(1, (total_questions + st.session_state['questions_per_page'] - 1) // st.session_state['questions_per_page'])
+    
+    # Ensure current page is valid
+    if st.session_state['current_page'] > total_pages:
+        st.session_state['current_page'] = total_pages
+    
+    # Slice dataframe for current page
+    start_idx = (st.session_state['current_page'] - 1) * st.session_state['questions_per_page']
+    end_idx = min(start_idx + st.session_state['questions_per_page'], total_questions)
+    
+    display_df = filtered_df.iloc[start_idx:end_idx]
     
     if len(display_df) > 0:
         # Question selection
@@ -2509,6 +2464,39 @@ def main():
             
             # Separator between questions
             st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px; opacity: 1; border-top: 2px solid #555;'>", unsafe_allow_html=True)
+        
+        # Pagination controls (Moved to bottom)
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_pagination, col_per_page = st.columns([3, 1])
+        
+        with col_per_page:
+            questions_per_page = st.selectbox(
+                "Preguntas por página",
+                options=[10, 30, 50, 100, 200],
+                index=[10, 30, 50, 100, 200].index(st.session_state['questions_per_page']),
+                key='per_page_select_bottom'
+            )
+            if questions_per_page != st.session_state['questions_per_page']:
+                st.session_state['questions_per_page'] = questions_per_page
+                st.session_state['current_page'] = 1  # Reset to page 1 on page size change
+                st.rerun()
+                
+        with col_pagination:
+            # Navigation buttons
+            col_prev, col_info, col_next = st.columns([1, 2, 1])
+            
+            with col_prev:
+                if st.button("⬅️ Anterior", disabled=st.session_state['current_page'] <= 1, key="prev_btn_bottom"):
+                    st.session_state['current_page'] -= 1
+                    st.rerun()
+                    
+            with col_info:
+                st.markdown(f"<div style='text-align: center; padding-top: 5px;'>Página <b>{st.session_state['current_page']}</b> de <b>{total_pages}</b><br><small>Mostrando {start_idx + 1}-{end_idx} de {total_questions}</small></div>", unsafe_allow_html=True)
+                
+            with col_next:
+                if st.button("Siguiente ➡️", disabled=st.session_state['current_page'] >= total_pages, key="next_btn_bottom"):
+                    st.session_state['current_page'] += 1
+                    st.rerun()
         
         # Selected questions summary
         st.markdown("---")

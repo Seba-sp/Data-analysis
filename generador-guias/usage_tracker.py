@@ -32,26 +32,7 @@ class UsageTracker:
             print(f"DEBUG: Updating usage for subject '{subject}' with {len(question_ids)} questions")
             
             # Determine the master file path
-            if subject == "Ciencias":
-                # For Ciencias, we need to update all three subject files
-                subjects_to_update = ["F30M", "Q30M", "B30M"]
-                success_count = 0
-                total_subjects = len(subjects_to_update)
-                
-                for subj in subjects_to_update:
-                    print(f"DEBUG: Updating usage for {subj}")
-                    if self._update_single_subject_usage(subj, question_ids, guide_name):
-                        success_count += 1
-                        print(f"DEBUG: Successfully updated {subj}")
-                    else:
-                        print(f"DEBUG: Failed to update {subj}")
-                
-                # Return True if at least one subject was updated successfully
-                success = success_count > 0
-                print(f"DEBUG: Ciencias update result: {success_count}/{total_subjects} subjects updated successfully")
-                return success
-            else:
-                return self._update_single_subject_usage(subject, question_ids, guide_name)
+            return self._update_single_subject_usage(subject, question_ids, guide_name)
                 
         except Exception as e:
             print(f"Error updating question usage: {e}")
@@ -214,73 +195,7 @@ class UsageTracker:
             List of dictionaries with guide information
         """
         try:
-            if subject == "Ciencias":
-                # For Ciencias, we need to check all three subject files and aggregate properly
-                subjects_to_check = ["F30M", "Q30M", "B30M"]
-                all_guides = []
-                
-                for subj in subjects_to_check:
-                    guides = self._get_guides_from_single_subject(subj)
-                    # Add subject source to each guide
-                    for guide in guides:
-                        guide['subject_source'] = subj
-                    all_guides.extend(guides)
-                
-                # Create unique guides - each guide should be separate even if they have the same name and date
-                # We'll use a combination of name, date, subject_source, and questions to create uniqueness
-                unique_guides = {}
-                for guide in all_guides:
-                    # Create a unique key that includes subject source and questions to distinguish guides
-                    # Even if they have the same name and date, they should be separate if they have different questions
-                    questions_key = tuple(sorted(guide['questions']))
-                    unique_key = (guide['guide_name'], guide['date'], guide['subject_source'], questions_key)
-                    
-                    if unique_key not in unique_guides:
-                        # First time seeing this guide
-                        unique_guides[unique_key] = {
-                            'guide_name': guide['guide_name'],
-                            'date': guide['date'],
-                            'question_count': guide['question_count'],
-                            'questions': set(guide['questions']),
-                            'subject_sources': [guide['subject_source']],
-                            'usage_numbers': guide.get('usage_numbers', []),
-                            'unique_id': f"{guide['guide_name']}_{guide['date']}_{guide['subject_source']}_{len(guide['questions'])}"
-                        }
-                    else:
-                        # This should rarely happen now, but if it does, merge the data
-                        existing = unique_guides[unique_key]
-                        existing['questions'].update(guide['questions'])
-                        existing['question_count'] = len(existing['questions'])
-                        if guide['subject_source'] not in existing['subject_sources']:
-                            existing['subject_sources'].append(guide['subject_source'])
-                        # Merge usage numbers
-                        existing['usage_numbers'].extend(guide.get('usage_numbers', []))
-                        existing['usage_numbers'] = sorted(list(set(existing['usage_numbers'])))
-                
-                # Convert back to list format and add creation order
-                final_guides = []
-                for guide_data in unique_guides.values():
-                    final_guides.append({
-                        'guide_name': guide_data['guide_name'],
-                        'date': guide_data['date'],
-                        'question_count': guide_data['question_count'],
-                        'questions': list(guide_data['questions']),
-                        'subject_sources': guide_data['subject_sources'],
-                        'usage_numbers': guide_data['usage_numbers'],
-                        'unique_id': guide_data['unique_id']
-                    })
-                
-                # Sort by date (oldest first) to assign creation order numbers
-                sorted_by_creation = sorted(final_guides, key=lambda x: x['date'] if x['date'] else '', reverse=False)
-                
-                # Add creation order number to each guide
-                for i, guide in enumerate(sorted_by_creation, 1):
-                    guide['creation_order'] = i
-                
-                # Now sort by date (newest first) for display
-                return sorted(sorted_by_creation, key=lambda x: x['date'] if x['date'] else '', reverse=True)
-            else:
-                return self._get_guides_from_single_subject(subject)
+            return self._get_guides_from_single_subject(subject)
                 
         except Exception as e:
             print(f"Error getting guides for subject {subject}: {e}")
@@ -403,28 +318,7 @@ class UsageTracker:
             Dictionary with deletion results
         """
         try:
-            if subject == "Ciencias":
-                # For Ciencias, we need to update all three subject files
-                subjects_to_update = ["F30M", "Q30M", "B30M"]
-                total_deleted = 0
-                results = {}
-                
-                for subj in subjects_to_update:
-                    # Only process this subject if it's in the subject_sources or if no subject_sources specified
-                    if subject_sources is None or subj in subject_sources:
-                        result = self._delete_specific_guide_from_single_subject(subj, guide_name, guide_date, questions)
-                        results[subj] = result
-                        if result['success']:
-                            total_deleted += result['questions_deleted']
-                
-                return {
-                    'success': any(r['success'] for r in results.values()),
-                    'total_questions_deleted': total_deleted,
-                    'subject_results': results,
-                    'message': f"Deleted specific guide '{guide_name}' from {total_deleted} questions across all Ciencias subjects"
-                }
-            else:
-                return self._delete_specific_guide_from_single_subject(subject, guide_name, guide_date, questions)
+            return self._delete_specific_guide_from_single_subject(subject, guide_name, guide_date, questions)
                 
         except Exception as e:
             return {
