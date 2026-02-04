@@ -48,7 +48,61 @@ def normalize_text(text: str) -> str:
     """
     if pd.isna(text) or text is None:
         return ""
-    return unidecode(str(text).lower())
+    
+    # Check if text is a string
+    if not isinstance(text, str):
+        return str(text).lower()
+        
+    # Remove accents using unidecode
+    try:
+        text_normalized = unidecode(text)
+    except:
+        text_normalized = str(text)
+    
+    # Convert to lowercase
+    return text_normalized.lower().strip()
+
+def standardize_dataframe_text_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Standardize text columns in the DataFrame to ensure consistent filtering.
+    Converts to lowercase and removes accents/special characters.
+    Also standardizes 'Dificultad' to be consistent (removing .0 from floats).
+    """
+    # Columns to standardize if they exist
+    # Note: We prioritize columns that are used for filtering
+    text_columns = [
+        EXCEL_COLUMNS.get('eje_tematico'),
+        EXCEL_COLUMNS.get('area_tematica'), 
+        EXCEL_COLUMNS.get('conocimiento_subtema'),
+        EXCEL_COLUMNS.get('habilidad'),
+        EXCEL_COLUMNS.get('subject_source')
+    ]
+    
+    # Filter out None values
+    text_columns = [col for col in text_columns if col]
+    
+    # Standardize text columns
+    for col in text_columns:
+        if col in df.columns:
+            # Apply normalize_text to the column
+            df[col] = df[col].apply(lambda x: normalize_text(x) if pd.notna(x) else x)
+            
+    # Special handling for Dificultad to handle mixed types (1, 1.0, "1", "Media")
+    diff_col = EXCEL_COLUMNS.get('dificultad')
+    if diff_col and diff_col in df.columns:
+        def standardize_diff(val):
+            if pd.isna(val):
+                return val
+            try:
+                # Try to convert to float then int to handle "1.0" -> "1"
+                return str(int(float(str(val))))
+            except:
+                # If numeric conversion fails, standard text normalization
+                return normalize_text(val)
+                
+        df[diff_col] = df[diff_col].apply(standardize_diff)
+            
+    return df
 
 def preserve_scroll_with_events():
     """Use proper event timing for scroll preservation."""
@@ -135,6 +189,9 @@ def load_master_excel(subject: str) -> pd.DataFrame:
         if not df.empty:
             usage_tracker = UsageTracker(storage)
             df = usage_tracker._ensure_usage_columns(df)
+            
+            # Standardize text columns for consistent filtering
+            df = standardize_dataframe_text_columns(df)
         
         return df
             

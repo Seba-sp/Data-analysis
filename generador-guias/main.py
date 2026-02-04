@@ -5,6 +5,7 @@ Main CLI entry point for the Generador de Guías Escolares system.
 import argparse
 import sys
 from pathlib import Path
+from datetime import datetime
 from storage import StorageClient
 from config import ensure_directories, SUBJECT_FOLDERS, INPUT_DIR, EXCELS_ACTUALIZADOS_DIR
 from question_processor import QuestionProcessor
@@ -53,13 +54,21 @@ def get_file_pairs_in_subject(subject: str, storage: StorageClient) -> list:
     
     for file_path in all_files:
         filename = Path(file_path).name
-        if filename.endswith('.docx'):
+        # Skip temporary files
+        if filename.startswith('~$'):
+            continue
+            
+        if filename.lower().endswith('.docx'):
             docx_files[Path(filename).stem] = filename
-        elif filename.endswith('.xlsx'):
+        elif filename.lower().endswith('.xlsx'):
             xlsx_files[Path(filename).stem] = filename
     
     # Find matching pairs
     pairs = []
+    
+    # Create lowercase map for xlsx to allow case-insensitive matching
+    xlsx_lower = {k.lower(): k for k in xlsx_files.keys()}
+    
     for base_name in docx_files.keys():
         if base_name in xlsx_files:
             pairs.append((
@@ -67,8 +76,71 @@ def get_file_pairs_in_subject(subject: str, storage: StorageClient) -> list:
                 str(subject_path / docx_files[base_name]),
                 str(subject_path / xlsx_files[base_name])
             ))
+        elif base_name.lower() in xlsx_lower:
+            # Case-insensitive match found
+            xlsx_real_name = xlsx_files[xlsx_lower[base_name.lower()]]
+            pairs.append((
+                base_name,
+                str(subject_path / docx_files[base_name]),
+                str(subject_path / xlsx_real_name)
+            ))
     
     return sorted(pairs)
+
+def get_incomplete_sets_in_subject(subject: str, storage: StorageClient) -> list:
+    """
+    Get list of incomplete file sets (missing docx or xlsx) in a subject folder.
+    
+    Args:
+        subject: Subject folder name
+        storage: Storage client
+        
+    Returns:
+        List of tuples: (base_filename, reason)
+    """
+    subject_path = INPUT_DIR / subject
+    
+    if not storage.exists(str(subject_path)):
+        return []
+    
+    # Get all .docx and .xlsx files
+    try:
+        all_files = storage.list_files(str(subject_path))
+    except:
+        return []
+    
+    # Extract just the filename from full path
+    docx_files = set()
+    xlsx_files = set()
+    
+    for file_path in all_files:
+        filename = Path(file_path).name
+        # Skip temporary files
+        if filename.startswith('~$'):
+            continue
+            
+        if filename.lower().endswith('.docx'):
+            docx_files.add(Path(filename).stem)
+        elif filename.lower().endswith('.xlsx'):
+            xlsx_files.add(Path(filename).stem)
+    
+    incomplete = []
+    
+    # Create lowercase sets for case-insensitive checking
+    docx_lower = {b.lower() for b in docx_files}
+    xlsx_lower = {b.lower() for b in xlsx_files}
+    
+    # Check docx without xlsx
+    for base in docx_files:
+        if base not in xlsx_files and base.lower() not in xlsx_lower:
+            incomplete.append((base, "Missing .xlsx file"))
+            
+    # Check xlsx without docx
+    for base in xlsx_files:
+        if base not in docx_files and base.lower() not in docx_lower:
+            incomplete.append((base, "Missing .docx file"))
+            
+    return sorted(incomplete)
 
 def select_subject_interactive(storage: StorageClient) -> str:
     """
@@ -170,7 +242,7 @@ def select_file_pair_interactive(subject: str, storage: StorageClient) -> tuple:
             print("\nGoing back...")
             return None, None, None
 
-def process_single_set(base_filename: str, subject: str, storage: StorageClient, docx_path: str = None, xlsx_path: str = None) -> bool:
+def process_single_set(base_filename: str, subject: str, storage: StorageClient, docx_path: str = None, xlsx_path: str = None) -> tuple:
     """
     Process a single set of Word and Excel files with the same base name.
     
@@ -182,7 +254,7 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
         xlsx_path: Optional full path to Excel file (if not provided, uses old structure)
         
     Returns:
-        True if successful, False otherwise
+        tuple: (success (bool), message (str))
     """
     # Use provided paths or construct using new structure (input/{subject}/)
     if docx_path is None:
@@ -204,12 +276,14 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
     
     # Check if files exist
     if not storage.exists(str(docx_path)):
-        print(f"Error: Word document not found: {docx_path}")
-        return False
+        msg = f"Error: Word document not found: {docx_path}"
+        print(msg)
+        return False, msg
     
     if not storage.exists(str(excel_path)):
-        print(f"Error: Excel file not found: {excel_path}")
-        return False
+        msg = f"Error: Excel file not found: {excel_path}"
+        print(msg)
+        return False, msg
     
     # Check if this file set has already been processed
     subject_folder = SUBJECT_FOLDERS.get(subject, subject.upper())
@@ -231,7 +305,7 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
         print(f"\n⚠️  Warning: Reprocessing will create new PreguntaIDs and may cause")
         print(f"   duplicates in the master Excel file.")
         print(f"{'='*60}\n")
-        return False
+        return False, "File already processed"
     
     try:
         # Initialize processors
@@ -243,31 +317,52 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
         df = excel_processor.read_excel_metadata(str(excel_path))
         
         if df.empty:
-            print("Error: Could not read Excel file")
-            return False
+            msg = "Error: Could not read Excel file"
+            print(msg)
+            return False, msg
         
         print(f"   Found {len(df)} questions in Excel")
         
         # Validate Excel structure
         issues = excel_processor.validate_excel_structure(df)
         
-        # Check for critical errors (invalid values) - these should stop processing
-        if issues['invalid_values']:
-            print("   [ERROR] CRITICAL ERROR: Invalid values found in Excel:")
-            for issue in issues['invalid_values']:
-                print(f"     {issue}")
-            print(f"\n[STOP] Processing stopped. Fix invalid values before continuing.")
-            return False
-        
-        # Check for warnings (missing columns, empty values) - these should continue
+        # Check for critical errors (invalid values or missing columns) - these should stop processing
         if issues['missing_columns']:
-            print("   [WARNING] Excel has missing columns:")
+            print("   [ERROR] CRITICAL ERROR: Excel is missing required columns:")
             for issue in issues['missing_columns']:
                 print(f"     {issue}")
-            print("   Continuing with processing...")
+            print(f"\n[STOP] Processing stopped. Add missing columns before continuing.")
+            return False, f"Missing columns in Excel: {', '.join(issues['missing_columns'])}"
+
+        if issues['invalid_values']:
+            print("   [ERROR] CRITICAL ERROR: Invalid values found in Excel:")
+            error_details = []
+            for issue in issues['invalid_values']:
+                print(f"     {issue}")
+                error_details.append(issue)
+            print(f"\n[STOP] Processing stopped. Fix invalid values before continuing.")
+            return False, f"Invalid values in Excel: {'; '.join(error_details[:3])}..."
         
+        # Check for empty values
+        # "Instrumento" and "N pregunta instrumento" are STRICTLY REQUIRED (cannot be empty)
+        # Other columns generate warnings but allow processing to continue
         if issues['empty_values']:
-            print("   [WARNING] Excel has empty values:")
+            critical_empty_cols = ["Instrumento", "N pregunta instrumento"]
+            critical_errors = []
+            
+            for issue in issues['empty_values']:
+                for crit_col in critical_empty_cols:
+                    if issue.startswith(f"{crit_col}:"):
+                        critical_errors.append(issue)
+            
+            if critical_errors:
+                print("   [ERROR] CRITICAL ERROR: Mandatory columns have empty values:")
+                for error in critical_errors:
+                    print(f"     {error}")
+                print(f"\n[STOP] Processing stopped. Fill in missing values for mandatory columns before continuing.")
+                return False, f"Empty mandatory values in Excel: {', '.join(critical_errors)}"
+
+            print("   [WARNING] Excel has empty values (non-critical columns):")
             for issue in issues['empty_values']:
                 print(f"     {issue}")
             print("   Continuing with processing...")
@@ -281,8 +376,9 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
         page_docs = question_processor.split_document_by_pages(str(docx_path))
         
         if not page_docs:
-            print("Error: Could not split Word document into pages")
-            return False
+            msg = "Error: Could not split Word document into pages"
+            print(msg)
+            return False, msg
         
         print(f"   Split Word document into {len(page_docs)} pages")
         
@@ -296,7 +392,7 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
             print(f"   Word has {word_questions} questions")
             print(f"   These numbers must match for processing to continue.")
             print(f"\n[STOP] Processing stopped. No files will be saved.")
-            return False
+            return False, f"Mismatch: Excel ({excel_questions}) vs Word ({word_questions})"
         
         print(f"   [OK] Validation passed: {excel_questions} questions in both Excel and Word")
         
@@ -317,7 +413,7 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
             if len(failed_files) > 0:
                 print(f"\n[ERROR] CRITICAL ERROR: {len(failed_files)} files failed to create!")
                 print(f"[STOP] Processing stopped. No files will be saved.")
-                return False
+                return False, f"Failed to create {len(failed_files)} question files"
         
         # Step 4: Update Excel with file paths
         print("\n4. Updating Excel with file paths...")
@@ -330,18 +426,20 @@ def process_single_set(base_filename: str, subject: str, storage: StorageClient,
         if output_path:
             print(f"   Updated Excel saved to: {output_path}")
         else:
-            print("   Error: Could not save updated Excel")
-            return False
+            msg = "Error: Could not save updated Excel"
+            print(msg)
+            return False, msg
         
         print(f"\n[SUCCESS] Set processing completed successfully!")
         print(f"   Individual files: {len(successful_files)}")
         print(f"   Updated Excel: {output_path}")
         
-        return True
+        return True, "Success"
         
     except Exception as e:
-        print(f"Error processing set: {e}")
-        return False
+        msg = f"Error processing set: {str(e)}"
+        print(msg)
+        return False, msg
 
 def consolidate_subject(subject: str, storage: StorageClient, full: bool = False) -> bool:
     """
@@ -404,6 +502,235 @@ def consolidate_subject(subject: str, storage: StorageClient, full: bool = False
         print(f"Error consolidating {subject}: {e}")
         return False
 
+def save_processing_report(subject: str, total: int, processed: int, failed: int, failed_details: list, storage: StorageClient, mode: str, other_incomplete: list = None):
+    """Save processing report to a text file."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"resultados_procesar_{subject}_{timestamp}.txt"
+    report_path = INPUT_DIR / subject / filename
+    
+    report_content = [
+        "="*60,
+        f"PROCESSING REPORT - {subject}",
+        f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Mode: {mode}",
+        "="*60,
+        f"Total sets: {total}",
+        f"Successfully processed: {processed}",
+        f"Failed to process: {failed}",
+        "="*60,
+        ""
+    ]
+    
+    if failed_details:
+        report_content.append("FAILED SETS DETAILS:")
+        report_content.append("-" * 56)
+        for name, reason in failed_details:
+            report_content.append(f"❌ {name}: {reason}")
+    else:
+        report_content.append("All sets processed successfully!")
+
+    if other_incomplete:
+        report_content.append("")
+        report_content.append("="*60)
+        report_content.append("⚠️  OTHER INCOMPLETE SETS FOUND (Not in procesar.txt)")
+        report_content.append("="*60)
+        report_content.append(f"Found {len(other_incomplete)} other incomplete sets in the folder:")
+        for name, reason in other_incomplete:
+            report_content.append(f"   • {name}: {reason}")
+        report_content.append("="*60)
+        
+    try:
+        storage.write_bytes(str(report_path), "\n".join(report_content).encode('utf-8'))
+        print(f"\n📄 Report saved to: {report_path}")
+    except Exception as e:
+        print(f"\n[WARNING] Could not save report file: {e}")
+
+def process_multiple_files_from_list(subject: str, storage: StorageClient) -> bool:
+    """
+    Process multiple file sets listed in 'procesar.txt' file in the subject folder.
+    
+    Args:
+        subject: Subject area
+        storage: Storage client
+        
+    Returns:
+        True if at least one file was processed, False otherwise
+    """
+    list_path = INPUT_DIR / subject / "procesar.txt"
+    
+    if not storage.exists(str(list_path)):
+        print(f"\n[ERROR] List file not found: {list_path}")
+        print("Please create a file named 'procesar.txt' in the subject folder with one set name per line.")
+        return False
+    
+    try:
+        content = storage.read_text(str(list_path))
+        lines = [line.strip() for line in content.splitlines() if line.strip()]
+        
+        if not lines:
+            print(f"\n[WARNING] 'procesar.txt' is empty.")
+            return False
+        
+        print(f"\nFound {len(lines)} sets to process in 'procesar.txt'")
+        
+        # Get available file pairs to match paths
+        available_pairs = get_file_pairs_in_subject(subject, storage)
+        # Create a dictionary mapping base_name to (docx_path, xlsx_path)
+        pairs_map = {pair[0]: (pair[1], pair[2]) for pair in available_pairs}
+        # Create case-insensitive lookup
+        pairs_map_lower = {k.lower(): k for k in pairs_map.keys()}
+        
+        # Get incomplete sets to identify partial matches
+        incomplete_sets = dict(get_incomplete_sets_in_subject(subject, storage))
+        # Create case-insensitive lookup
+        incomplete_sets_lower = {k.lower(): k for k in incomplete_sets.keys()}
+        
+        processed_count = 0
+        failed_count = 0
+        missing_count = 0
+        
+        failed_sets = []  # List to store failed sets info: (name, reason)
+        
+        for base_name in lines:
+            target_name = base_name
+            # Try exact match first, then case-insensitive
+            if target_name not in pairs_map and target_name.lower() in pairs_map_lower:
+                target_name = pairs_map_lower[target_name.lower()]
+                
+            if target_name in pairs_map:
+                docx_path, xlsx_path = pairs_map[target_name]
+                success, msg = process_single_set(target_name, subject, storage, docx_path, xlsx_path)
+                if success:
+                    processed_count += 1
+                else:
+                    failed_count += 1
+                    failed_sets.append((base_name, msg))
+            else:
+                missing_count += 1
+                failed_count += 1 # Count missing as failed for the report
+                
+                # Check incomplete sets with case-insensitivity
+                incomplete_name = base_name
+                if incomplete_name not in incomplete_sets and incomplete_name.lower() in incomplete_sets_lower:
+                    incomplete_name = incomplete_sets_lower[incomplete_name.lower()]
+                
+                if incomplete_name in incomplete_sets:
+                    reason = incomplete_sets[incomplete_name]
+                    print(f"\n[WARNING] Incomplete set: {base_name}" + (f" (found as {incomplete_name})" if base_name != incomplete_name else ""))
+                    print(f"Reason: {reason}")
+                    failed_sets.append((base_name, reason))
+                else:
+                    print(f"\n[WARNING] Set not found: {base_name}")
+                    print(f"Make sure both {base_name}.docx and {base_name}.xlsx exist in {INPUT_DIR / subject}")
+                    failed_sets.append((base_name, "Files not found"))
+        
+        # Check for other incomplete sets in the folder that were not in the list
+        all_incomplete = set(incomplete_sets.keys())
+        processed_bases_lower = {b.lower() for b in lines}
+        
+        other_incomplete = []
+        for inc_base in all_incomplete:
+            if inc_base.lower() not in processed_bases_lower:
+                other_incomplete.append(inc_base)
+                
+        print(f"\n{'='*60}")
+        print(f"Batch Processing Summary for {subject}")
+        print(f"{'='*60}")
+        print(f"   Total requested: {len(lines)}")
+        print(f"   Successfully processed: {processed_count}")
+        print(f"   Failed to process: {failed_count}")
+        
+        if failed_sets:
+            print(f"\n   FAILED SETS DETAILS:")
+            print(f"   {'-'*56}")
+            for name, reason in failed_sets:
+                print(f"   ❌ {name}: {reason}")
+        
+        # Prepare other_incomplete list with reasons for reporting
+        other_incomplete_with_reasons = []
+        if other_incomplete:
+            print(f"\n{'='*60}")
+            print(f"⚠️  OTHER INCOMPLETE SETS FOUND (Not in procesar.txt)")
+            print(f"{'='*60}")
+            print(f"Found {len(other_incomplete)} other incomplete sets in the folder:")
+            for name in sorted(other_incomplete):
+                reason = incomplete_sets[name]
+                print(f"   • {name}: {reason}")
+                other_incomplete_with_reasons.append((name, reason))
+            print(f"{'='*60}")
+        
+        print(f"{'='*60}")
+        
+        # Save report
+        save_processing_report(subject, len(lines), processed_count, failed_count, failed_sets, storage, "Batch List (procesar.txt)", other_incomplete_with_reasons)
+        
+        return processed_count > 0
+        
+    except Exception as e:
+        print(f"Error reading list file: {e}")
+        return False
+
+def process_all_in_subject(subject: str, storage: StorageClient) -> bool:
+    """
+    Process all available file sets in the subject folder.
+    
+    Args:
+        subject: Subject area
+        storage: Storage client
+        
+    Returns:
+        True if at least one file was processed, False otherwise
+    """
+    pairs = get_file_pairs_in_subject(subject, storage)
+    
+    if not pairs:
+        print(f"\n[WARNING] No file pairs found in {subject}")
+        return False
+    
+    print(f"\nFound {len(pairs)} sets to process in {subject}")
+    
+    processed_count = 0
+    failed_count = 0
+    failed_sets = [] # List to store failed sets info: (name, reason)
+    
+    # Process valid pairs
+    for base_name, docx_path, xlsx_path in pairs:
+        success, msg = process_single_set(base_name, subject, storage, docx_path, xlsx_path)
+        if success:
+            processed_count += 1
+        else:
+            failed_count += 1
+            failed_sets.append((base_name, msg))
+    
+    # Check for incomplete sets (orphans)
+    incomplete_sets = get_incomplete_sets_in_subject(subject, storage)
+    if incomplete_sets:
+        for base_name, reason in incomplete_sets:
+            failed_count += 1
+            failed_sets.append((base_name, reason))
+            
+    print(f"\n{'='*60}")
+    print(f"All Files Processing Summary for {subject}")
+    print(f"{'='*60}")
+    # Total found is pairs + orphans
+    total_found = len(pairs) + len(incomplete_sets)
+    print(f"   Total found: {total_found}")
+    print(f"   Successfully processed: {processed_count}")
+    print(f"   Failed to process: {failed_count}")
+    
+    if failed_sets:
+        print(f"\n   FAILED SETS DETAILS:")
+        print(f"   {'-'*56}")
+        for name, reason in failed_sets:
+            print(f"   ❌ {name}: {reason}")
+            
+    print(f"{'='*60}")
+    
+    # Save report
+    save_processing_report(subject, total_found, processed_count, failed_count, failed_sets, storage, "All Files in Folder")
+    
+    return processed_count > 0
+
 def interactive_menu(storage: StorageClient):
     """
     Main interactive menu for the application.
@@ -426,12 +753,41 @@ def interactive_menu(storage: StorageClient):
                 if not subject:
                     continue
                 
-                base_filename, docx_path, xlsx_path = select_file_pair_interactive(subject, storage)
-                if not base_filename:
-                    continue
+                print("\n" + "="*60)
+                print(f"PROCESS FILES IN {subject}")
+                print("="*60)
+                print("  [1] Process single file")
+                print("  [2] Process multiple files (from procesar.txt)")
+                print("  [3] Process all files in folder")
+                print("  [0] Go back")
+                print("="*60)
                 
-                process_single_set(base_filename, subject, storage, docx_path, xlsx_path)
-                input("\nPress Enter to continue...")
+                try:
+                    mode_choice = input("\nEnter your choice (number): ").strip()
+                    
+                    if mode_choice == '1':
+                        base_filename, docx_path, xlsx_path = select_file_pair_interactive(subject, storage)
+                        if not base_filename:
+                            continue
+                        
+                        process_single_set(base_filename, subject, storage, docx_path, xlsx_path)
+                        input("\nPress Enter to continue...")
+                        
+                    elif mode_choice == '2':
+                        process_multiple_files_from_list(subject, storage)
+                        input("\nPress Enter to continue...")
+                        
+                    elif mode_choice == '3':
+                        process_all_in_subject(subject, storage)
+                        input("\nPress Enter to continue...")
+                        
+                    elif mode_choice == '0':
+                        continue
+                    else:
+                        print("Invalid choice.")
+                        
+                except ValueError:
+                    print("Invalid input.")
                 
             elif choice == '2':
                 # Consolidate
@@ -630,7 +986,7 @@ Directory Structure:
                 sys.exit(1)
             
             # Step 3: Process the selected pair
-            success = process_single_set(base_filename, subject, storage, docx_path, xlsx_path)
+            success, _ = process_single_set(base_filename, subject, storage, docx_path, xlsx_path)
             sys.exit(0 if success else 1)
         else:
             # Legacy mode with arguments
@@ -638,8 +994,8 @@ Directory Structure:
                 print("Error: --subject is required when providing base_filename")
                 sys.exit(1)
             
-        success = process_single_set(args.base_filename, args.subject, storage)
-        sys.exit(0 if success else 1)
+            success, _ = process_single_set(args.base_filename, args.subject, storage)
+            sys.exit(0 if success else 1)
     
     elif args.command == 'consolidate':
         if args.all_subjects:

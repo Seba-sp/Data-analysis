@@ -44,6 +44,8 @@ EXCEL_COLUMNS = {
     "descripcion": "Descripción BREVE",
     "enlace_video": "Enlace video",
     "fecha_creacion": "Fecha creacion",
+    "instrumento": "Instrumento",
+    "n_pregunta_instrumento": "N pregunta instrumento",
     "pregunta_id": "PreguntaID",
     "ruta_relativa": "Ruta relativa",
     "ruta_absoluta": "Ruta absoluta",
@@ -62,7 +64,9 @@ REQUIRED_INPUT_COLUMNS = [
     "Dificultad",
     "Clave",
     "Descripción BREVE",
-    "Fecha creacion"
+    "Fecha creacion",
+    "Instrumento",
+    "N pregunta instrumento"
 ]
 
 # Valid values for different columns

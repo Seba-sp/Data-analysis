@@ -113,7 +113,7 @@ def extract_article_metadata(raw_response: str) -> dict:
     return metadata
 
 
-def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: DocumentGenerator) -> bool:
+def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: DocumentGenerator, source_docx: str = None) -> bool:
     """
     Process a single debug file and generate Word + Excel documents.
     
@@ -144,15 +144,18 @@ def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: Do
         print(f"  [2/4] Parsing questions...")
         parsed_data = question_agent._parse_paes_format(raw_response)
         
-        if not parsed_data or 'questions' not in parsed_data:
-            print(f"  [ERROR] Parsing failed")
+        if not parsed_data:
+            print(f"  [ERROR] Parsing failed (no data returned)")
             return False
-        
-        questions_list = parsed_data['questions']
+            
+        questions_list = parsed_data.get('questions', [])
         article_text = parsed_data.get('article_text', '')
         
         print(f"  [OK] Parsed {len(questions_list)} questions")
         print(f"  [OK] Article text: {len(article_text):,} characters")
+        
+        if not questions_list:
+            print("  [WARNING] No questions found in the file! Generated documents will be empty of questions.")
         
         # Count complete questions
         complete = sum(1 for q in questions_list 
@@ -181,9 +184,14 @@ def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: Do
             'question_count': len(questions_list)
         }
         
-        # Generate filenames (save in same directory as input file)
+        # Generate filenames (save in same directory as input file unless output_dir is set)
         input_dir = os.path.dirname(os.path.abspath(filepath))
+        output_dir = doc_generator.output_dir if hasattr(doc_generator, 'output_dir') and doc_generator.output_dir else input_dir
         
+        # Ensure output directory exists
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            
         if is_improved:
             word_filename = f"{article_id}-Preguntas+Texto.docx"
             excel_filename = f"{article_id}-Preguntas Datos.xlsx"
@@ -192,17 +200,27 @@ def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: Do
             excel_filename = f"{article_id}-Preguntas Datos (Inicial).xlsx"
         
         # Full paths including directory
-        word_fullpath = os.path.join(input_dir, word_filename)
-        excel_fullpath = os.path.join(input_dir, excel_filename)
+        word_fullpath = os.path.join(output_dir, word_filename)
+        excel_fullpath = os.path.join(output_dir, excel_filename)
         
         # Generate Word document
         print(f"  [3/4] Generating Word document...")
-        word_path = doc_generator.generate_questions_word(
-            article=article,
-            questions=questions_dict,
-            filename=word_fullpath,  # Pass full path
-            is_improved=is_improved
-        )
+        
+        if source_docx and os.path.exists(source_docx):
+            print(f"  Using source DOCX: {source_docx}")
+            word_path = doc_generator.merge_text_and_questions_docx(
+                source_docx_path=source_docx,
+                questions=questions_dict,
+                output_path=word_fullpath,
+                title=article.get('title', '')
+            )
+        else:
+            word_path = doc_generator.generate_questions_word(
+                article=article,
+                questions=questions_dict,
+                filename=word_fullpath,  # Pass full path
+                is_improved=is_improved
+            )
         print(f"  [OK] Word: {word_filename} ({os.path.getsize(word_path):,} bytes)")
         
         # Generate Excel file
@@ -223,12 +241,64 @@ def process_file(filepath: str, question_agent: QuestionAgent, doc_generator: Do
         return False
 
 
-def scan_and_generate(folder_path: str):
+def main():
+    """Main entry point."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Batch document generation script.')
+    parser.add_argument('path', help='File or folder path to process')
+    parser.add_argument('--output-dir', help='Optional output directory for generated files')
+    parser.add_argument('--docx', help='Optional path to source DOCX file (for single file processing)')
+    
+    args = parser.parse_args()
+    
+    path_arg = args.path
+    output_dir = args.output_dir
+    source_docx = args.docx
+    
+    # Check if path exists
+    if not os.path.exists(path_arg):
+        print(f"ERROR: Path not found: {path_arg}")
+        sys.exit(1)
+
+    # Check if it is a file or directory
+    if os.path.isfile(path_arg):
+        # Single file processing
+        print("="*80)
+        print(f"SINGLE DOCUMENT GENERATION")
+        print("="*80)
+        print(f"File: {os.path.abspath(path_arg)}")
+        if output_dir:
+            print(f"Output Directory: {os.path.abspath(output_dir)}")
+        if source_docx:
+            print(f"Source DOCX: {os.path.abspath(source_docx)}")
+        print("="*80)
+        
+        print("\nInitializing agents...")
+        question_agent = QuestionAgent()
+        doc_generator = DocumentGenerator()
+        if output_dir:
+            doc_generator.output_dir = output_dir # Override output dir
+        
+        process_file(path_arg, question_agent, doc_generator, source_docx)
+        
+    else:
+        # Directory processing
+        if output_dir:
+             print(f"Output Directory override: {os.path.abspath(output_dir)}")
+        
+        if source_docx:
+            print("WARNING: --docx argument ignored for directory processing. Only supported for single file.")
+            
+        scan_and_generate(path_arg, output_dir)
+
+def scan_and_generate(folder_path: str, output_dir: str = None):
     """
     Scan folder for debug_questions*.txt files and generate documents.
     
     Args:
         folder_path: Path to folder containing debug files
+        output_dir: Optional output directory
     """
     # Validate folder
     if not os.path.exists(folder_path):
@@ -259,6 +329,8 @@ def scan_and_generate(folder_path: str):
     print("="*80)
     print(f"Folder: {os.path.abspath(folder_path)}")
     print(f"Files found: {len(files)}")
+    if output_dir:
+        print(f"Output Directory: {os.path.abspath(output_dir)}")
     print("="*80)
     
     # List files
@@ -270,6 +342,8 @@ def scan_and_generate(folder_path: str):
     print("\nInitializing agents...")
     question_agent = QuestionAgent()
     doc_generator = DocumentGenerator()
+    if output_dir:
+        doc_generator.output_dir = output_dir
     
     # Process each file
     print("\nProcessing files...")
@@ -291,29 +365,9 @@ def scan_and_generate(folder_path: str):
     print(f"Failed: {results['failed']}")
     print("="*80)
     
+    save_path = output_dir if output_dir else folder_path
     if results['success'] > 0:
-        print(f"\nGenerated files saved to: {os.path.abspath(folder_path)}")
-
-
-def main():
-    """Main entry point."""
-    # Check arguments
-    if len(sys.argv) < 2:
-        print("ERROR: Missing folder path argument")
-        print()
-        print("Usage:")
-        print(f"  python {os.path.basename(__file__)} <folder_path>")
-        print()
-        print("Examples:")
-        print(f"  python {os.path.basename(__file__)} .")
-        print(f"  python {os.path.basename(__file__)} data/")
-        print(f"  python {os.path.basename(__file__)} C:/path/to/folder")
-        sys.exit(1)
-    
-    folder_path = sys.argv[1]
-    
-    # Run batch generation
-    scan_and_generate(folder_path)
+        print(f"\nGenerated files saved to: {os.path.abspath(save_path)}")
 
 
 if __name__ == '__main__':

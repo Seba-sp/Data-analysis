@@ -1,0 +1,29 @@
+============================================================
+PROCESSING REPORT - Ciencias
+Date: 2026-02-03 22:45:42
+Mode: Batch List (procesar.txt)
+============================================================
+Total sets: 17
+Successfully processed: 0
+Failed to process: 17
+============================================================
+
+FAILED SETS DETAILS:
+--------------------------------------------------------
+❌ C30M-N1-GA19: Invalid values in Excel: Invalid clave values: [nan, nan]; Invalid dificultad values: [nan, nan]...
+❌ C30M-N1-GA21: Invalid values in Excel: Invalid clave values: [nan]; Invalid dificultad values: [nan]...
+❌ C30M-N1-GA29: Mismatch: Excel (35) vs Word (31)
+❌ C30M-N3-MC1: Mismatch: Excel (45) vs Word (44)
+❌ C30M-N3-MC2: Mismatch: Excel (45) vs Word (44)
+❌ C30M-N3-MEB2: Mismatch: Excel (25) vs Word (6)
+❌ C30M-N3-MEB3: Mismatch: Excel (25) vs Word (2)
+❌ C30M-N3-MEB4: Mismatch: Excel (25) vs Word (3)
+❌ C30M-N3-MEB5: Mismatch: Excel (25) vs Word (21)
+❌ C30M-N3-MEB6: Mismatch: Excel (25) vs Word (1)
+❌ C30M-N3-MEF2: Mismatch: Excel (25) vs Word (24)
+❌ C30M-N3-MEQ4: Mismatch: Excel (25) vs Word (24)
+❌ C30M-N3-MEQ5: Mismatch: Excel (25) vs Word (4)
+❌ C30M-N3-MEQ6: Mismatch: Excel (25) vs Word (1)
+❌ UIM-C30M-SM-GA3: Invalid values in Excel: Invalid clave values: [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]...
+❌ UIM-C30M-SM-GA4: Invalid values in Excel: Invalid clave values: [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]...
+❌ UIM-C30M-SM-GA5: Invalid values in Excel: Invalid clave values: [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]...

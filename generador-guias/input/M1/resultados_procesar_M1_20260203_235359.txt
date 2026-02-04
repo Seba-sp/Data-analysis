@@ -1,0 +1,27 @@
+============================================================
+PROCESSING REPORT - M1
+Date: 2026-02-03 23:53:59
+Mode: Batch List (procesar.txt)
+============================================================
+Total sets: 6
+Successfully processed: 0
+Failed to process: 6
+============================================================
+
+FAILED SETS DETAILS:
+--------------------------------------------------------
+❌ N2-GA5: Mismatch: Excel (35) vs Word (34)
+❌ N2-GA6: Invalid values in Excel: Invalid clave values: [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]...
+❌ UIM-M1-SM-GA10: Mismatch: Excel (35) vs Word (34)
+❌ UIM-M1-SM-GA5: Mismatch: Excel (35) vs Word (34)
+❌ UIM-M1-SM-GA7: Mismatch: Excel (35) vs Word (34)
+❌ UIM-M1-SM-GA9: Mismatch: Excel (35) vs Word (33)
+
+============================================================
+⚠️  OTHER INCOMPLETE SETS FOUND (Not in procesar.txt)
+============================================================
+Found 3 other incomplete sets in the folder:
+   • N1-GA13: Missing .xlsx file
+   • N1-GA14: Missing .xlsx file
+   • N2-GA4: Missing .xlsx file
+============================================================

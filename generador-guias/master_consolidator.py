@@ -35,7 +35,7 @@ class MasterConsolidator:
             
             # List all Excel files in the directory
             files = self.storage.list_files(str(excel_dir))
-            excel_files = [f for f in files if f.endswith(('.xlsx', '.xls'))]
+            excel_files = [f for f in files if f.lower().endswith(('.xlsx', '.xls'))]
             
             return excel_files
             
