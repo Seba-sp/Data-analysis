@@ -205,6 +205,9 @@ Examples:
   
   # Standalone Review Mode
   python main.py --review-standalone --folder "data/my_questions"
+
+  # Batch from debug TXT + DOCX
+  python main.py --batch-debug --txt-folder "data/debug_txt" --docx-folder "data/source_docx"
         """
     )
     
@@ -225,6 +228,16 @@ Examples:
         '--review-standalone',
         action='store_true',
         help='Run standalone Agent 4 review on local files'
+    )
+    mode_group.add_argument(
+        '--batch-debug',
+        action='store_true',
+        help='Generate Word/Excel from debug TXT + DOCX folders'
+    )
+    mode_group.add_argument(
+        '--single-debug',
+        action='store_true',
+        help='Generate Word/Excel from one debug TXT + one DOCX file'
     )
     
     # Pipeline parameters
@@ -267,6 +280,31 @@ Examples:
         type=str,
         help='Input folder for standalone review mode'
     )
+    parser.add_argument(
+        '--txt-folder',
+        type=str,
+        help='Folder containing debug_questions_improved_{id}.txt files'
+    )
+    parser.add_argument(
+        '--docx-folder',
+        type=str,
+        help='Folder containing {id}.docx source files'
+    )
+    parser.add_argument(
+        '--output-folder',
+        type=str,
+        help='Optional output folder for generated documents (defaults to DOCX folder)'
+    )
+    parser.add_argument(
+        '--txt-file',
+        type=str,
+        help='Debug TXT file: debug_questions_improved_{id}.txt'
+    )
+    parser.add_argument(
+        '--docx-file',
+        type=str,
+        help='Source DOCX file: {id}.docx'
+    )
     
     args = parser.parse_args()
     
@@ -303,6 +341,20 @@ Examples:
         
         if should_run_pipeline:
             batch_mode(args)
+        elif args.batch_debug:
+            if not args.txt_folder or not args.docx_folder:
+                print("\n[Error] --txt-folder and --docx-folder are required for --batch-debug")
+                sys.exit(1)
+            from batch_generate_documents import run_batch_from_debug
+            run_batch_from_debug(args.txt_folder, args.docx_folder, args.output_folder)
+        elif args.single_debug:
+            if not args.txt_file or not args.docx_file:
+                print("\n[Error] --txt-file and --docx-file are required for --single-debug")
+                sys.exit(1)
+            from batch_generate_documents import run_single_from_debug
+            ok = run_single_from_debug(args.txt_file, args.docx_file, args.output_folder)
+            if not ok:
+                sys.exit(1)
         elif args.review_standalone:
             review_standalone_mode(args)
         else:

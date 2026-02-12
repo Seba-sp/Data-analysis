@@ -60,6 +60,7 @@ Justificación [explicación 1-2 líneas]. Microevidencia: "[cita máx. 12 palab
  
 ... (hasta 10)
 
+No agregues símbolos como *{}* o == para marcar separaciones entre preguntas o partes de preguntas
 REGLAS CRÍTICAS PARA CADA PREGUNTA:
 ✓ Número de pregunta (1., 2., etc.)
 ✓ En la MISMA línea: [Habilidad-tarea]
@@ -157,4 +158,5 @@ Antes de mostrar tu respuesta, verifica:
 ✓ No repetir tareas lectoras, 10 tareas diferentes en total.
 ✓ Responder la pregunta se haga en base a evidencia del texto mismo sin información externa de éste.
 ✓ Los 3 distractores sean competitivos entre sí.
+✓ No se incluyen símbolos adicionales en el formato.
 

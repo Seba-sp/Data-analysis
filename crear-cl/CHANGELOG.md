@@ -4,6 +4,21 @@ Complete history of improvements, fixes, and changes to the pipeline.
 
 ---
 
+## February 2026 - Documentation Sync
+
+### Summary
+
+Aligned documentation with current code behavior across root Python files and pipeline entrypoints.
+
+### Updates
+
+- Updated `README.md` to match current CLI modes and filenames
+- Updated `DOCUMENTATION.md` with current Agent 3 CSV start requirements (`Docx_Path`)
+- Documented DOCX->PDF upload requirement for Agents 3 and 4
+- Clarified standalone review and debug batch/single workflows
+
+---
+
 ## January 2026 - Complete System Overhaul
 
 ### Summary

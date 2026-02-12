@@ -10,6 +10,8 @@ class PAESLauncher:
         self.root = root
         self.root.title("PAES Pipeline Launcher")
         self.root.geometry("900x800")
+        self.root.minsize(700, 600)
+        self.root.resizable(True, True)
         
         # Variables
         self.mode_var = tk.StringVar(value="batch")
@@ -20,6 +22,12 @@ class PAESLauncher:
         self.start_from_var = tk.StringVar(value="agent1")
         self.tsv_file_path = tk.StringVar()
         self.folder_path = tk.StringVar()
+        self.txt_folder_path = tk.StringVar()
+        self.docx_folder_path = tk.StringVar()
+        self.output_folder_path = tk.StringVar()
+        self.txt_file_path = tk.StringVar()
+        self.docx_file_path = tk.StringVar()
+        self.output_file_folder_path = tk.StringVar()
         self.reverse_var = tk.BooleanVar(value=False)
         
         self.process = None
@@ -27,8 +35,36 @@ class PAESLauncher:
         self._create_ui()
 
     def _create_ui(self):
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Scrollable container
+        container = ttk.Frame(self.root)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        canvas = tk.Canvas(container, highlightthickness=0)
+        v_scroll = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        h_scroll = ttk.Scrollbar(container, orient="horizontal", command=canvas.xview)
+        canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+
+        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        main_frame = ttk.Frame(canvas, padding="10")
+        canvas_window = canvas.create_window((0, 0), window=main_frame, anchor="nw")
+
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event):
+            canvas.itemconfigure(canvas_window, width=event.width)
+
+        main_frame.bind("<Configure>", _on_frame_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        # Mouse wheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
         # --- Section 1: Primary Mode Selection ---
         mode_frame = ttk.LabelFrame(main_frame, text="Select Primary Mode", padding="10")
@@ -36,6 +72,8 @@ class PAESLauncher:
 
         ttk.Radiobutton(mode_frame, text="Pipeline (Agents 1-3)", variable=self.mode_var, value="batch", command=self._update_state).pack(anchor=tk.W)
         ttk.Radiobutton(mode_frame, text="Standalone Review (Agent 4)", variable=self.mode_var, value="review", command=self._update_state).pack(anchor=tk.W)
+        ttk.Radiobutton(mode_frame, text="Debug TXT + DOCX Batch", variable=self.mode_var, value="debug", command=self._update_state).pack(anchor=tk.W)
+        ttk.Radiobutton(mode_frame, text="Debug TXT + DOCX Single", variable=self.mode_var, value="debug_single", command=self._update_state).pack(anchor=tk.W)
 
         # --- Section 2: Pipeline Configuration ---
         self.pipeline_frame = ttk.LabelFrame(main_frame, text="Pipeline Configuration", padding="10")
@@ -93,7 +131,55 @@ class PAESLauncher:
         self.folder_btn = ttk.Button(self.review_frame, text="Browse...", command=lambda: self._browse_folder(self.folder_path))
         self.folder_btn.grid(row=0, column=2, padx=5)
 
-        # --- Section 4: Execution & Output ---
+        # --- Section 4: Debug TXT + DOCX Configuration (Side-by-Side) ---
+        self.debug_container = ttk.Frame(main_frame, padding="0")
+        self.debug_container.pack(fill=tk.X, pady=5)
+
+        self.debug_frame = ttk.LabelFrame(self.debug_container, text="Debug TXT + DOCX Batch", padding="10")
+        self.debug_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        self.debug_container.columnconfigure(0, weight=1)
+
+        ttk.Label(self.debug_frame, text="TXT Folder:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        self.txt_folder_entry = ttk.Entry(self.debug_frame, textvariable=self.txt_folder_path, width=50)
+        self.txt_folder_entry.grid(row=0, column=1, sticky=tk.W, padx=5)
+        self.txt_folder_btn = ttk.Button(self.debug_frame, text="Browse...", command=lambda: self._browse_folder(self.txt_folder_path))
+        self.txt_folder_btn.grid(row=0, column=2, padx=5)
+
+        ttk.Label(self.debug_frame, text="DOCX Folder:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        self.docx_folder_entry = ttk.Entry(self.debug_frame, textvariable=self.docx_folder_path, width=50)
+        self.docx_folder_entry.grid(row=1, column=1, sticky=tk.W, padx=5)
+        self.docx_folder_btn = ttk.Button(self.debug_frame, text="Browse...", command=lambda: self._browse_folder(self.docx_folder_path))
+        self.docx_folder_btn.grid(row=1, column=2, padx=5)
+
+        ttk.Label(self.debug_frame, text="Output Folder (optional):").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        self.output_folder_entry = ttk.Entry(self.debug_frame, textvariable=self.output_folder_path, width=50)
+        self.output_folder_entry.grid(row=2, column=1, sticky=tk.W, padx=5)
+        self.output_folder_btn = ttk.Button(self.debug_frame, text="Browse...", command=lambda: self._browse_folder(self.output_folder_path))
+        self.output_folder_btn.grid(row=2, column=2, padx=5)
+
+        self.debug_single_frame = ttk.LabelFrame(self.debug_container, text="Debug TXT + DOCX Single", padding="10")
+        self.debug_single_frame.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        self.debug_container.columnconfigure(1, weight=1)
+
+        ttk.Label(self.debug_single_frame, text="TXT File:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        self.txt_file_entry = ttk.Entry(self.debug_single_frame, textvariable=self.txt_file_path, width=50)
+        self.txt_file_entry.grid(row=0, column=1, sticky=tk.W, padx=5)
+        self.txt_file_btn = ttk.Button(self.debug_single_frame, text="Browse...", command=lambda: self._browse_file(self.txt_file_path))
+        self.txt_file_btn.grid(row=0, column=2, padx=5)
+
+        ttk.Label(self.debug_single_frame, text="DOCX File:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        self.docx_file_entry = ttk.Entry(self.debug_single_frame, textvariable=self.docx_file_path, width=50)
+        self.docx_file_entry.grid(row=1, column=1, sticky=tk.W, padx=5)
+        self.docx_file_btn = ttk.Button(self.debug_single_frame, text="Browse...", command=lambda: self._browse_file(self.docx_file_path))
+        self.docx_file_btn.grid(row=1, column=2, padx=5)
+
+        ttk.Label(self.debug_single_frame, text="Output Folder (optional):").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        self.output_file_folder_entry = ttk.Entry(self.debug_single_frame, textvariable=self.output_file_folder_path, width=50)
+        self.output_file_folder_entry.grid(row=2, column=1, sticky=tk.W, padx=5)
+        self.output_file_folder_btn = ttk.Button(self.debug_single_frame, text="Browse...", command=lambda: self._browse_folder(self.output_file_folder_path))
+        self.output_file_folder_btn.grid(row=2, column=2, padx=5)
+
+        # --- Section 5: Execution & Output ---
         action_frame = ttk.Frame(main_frame, padding="10")
         action_frame.pack(fill=tk.X, pady=5)
 
@@ -141,6 +227,8 @@ class PAESLauncher:
 
             # Disable Standalone Section
             set_frame_state(self.review_frame, tk.DISABLED)
+            set_frame_state(self.debug_frame, tk.DISABLED)
+            set_frame_state(self.debug_single_frame, tk.DISABLED)
             
         elif mode == "review":
             # Disable Pipeline Section
@@ -150,6 +238,30 @@ class PAESLauncher:
             
             # Enable Standalone Section
             set_frame_state(self.review_frame, tk.NORMAL)
+            set_frame_state(self.debug_frame, tk.DISABLED)
+            set_frame_state(self.debug_single_frame, tk.DISABLED)
+
+        elif mode == "debug":
+            # Disable Pipeline and Review Sections
+            set_frame_state(self.pipeline_frame, tk.DISABLED)
+            set_frame_state(self.agent1_frame, tk.DISABLED)
+            set_frame_state(self.files_frame, tk.DISABLED)
+            set_frame_state(self.review_frame, tk.DISABLED)
+
+            # Enable Debug Section
+            set_frame_state(self.debug_frame, tk.NORMAL)
+            set_frame_state(self.debug_single_frame, tk.DISABLED)
+
+        elif mode == "debug_single":
+            # Disable Pipeline and Review Sections
+            set_frame_state(self.pipeline_frame, tk.DISABLED)
+            set_frame_state(self.agent1_frame, tk.DISABLED)
+            set_frame_state(self.files_frame, tk.DISABLED)
+            set_frame_state(self.review_frame, tk.DISABLED)
+            set_frame_state(self.debug_frame, tk.DISABLED)
+
+            # Enable Single Debug Section
+            set_frame_state(self.debug_single_frame, tk.NORMAL)
 
     def _set_widgets_state(self, widgets, state):
         pass # Not used anymore, replaced by set_frame_state logic inside _update_state
@@ -207,6 +319,24 @@ class PAESLauncher:
                 messagebox.showerror("Error", "Folder path is required for Review Mode")
                 return None
             cmd.extend(["--folder", self.folder_path.get()])
+        elif mode == "debug":
+            cmd.append("--batch-debug")
+            if not self.txt_folder_path.get() or not self.docx_folder_path.get():
+                messagebox.showerror("Error", "TXT folder and DOCX folder are required for Debug Mode")
+                return None
+            cmd.extend(["--txt-folder", self.txt_folder_path.get()])
+            cmd.extend(["--docx-folder", self.docx_folder_path.get()])
+            if self.output_folder_path.get():
+                cmd.extend(["--output-folder", self.output_folder_path.get()])
+        elif mode == "debug_single":
+            cmd.append("--single-debug")
+            if not self.txt_file_path.get() or not self.docx_file_path.get():
+                messagebox.showerror("Error", "TXT file and DOCX file are required for Single Debug Mode")
+                return None
+            cmd.extend(["--txt-file", self.txt_file_path.get()])
+            cmd.extend(["--docx-file", self.docx_file_path.get()])
+            if self.output_file_folder_path.get():
+                cmd.extend(["--output-folder", self.output_file_folder_path.get()])
 
         return cmd
 

@@ -213,8 +213,8 @@ class DocumentGenerator:
             if i < len(questions_list):
                 doc.add_page_break()
         
-        # Save document
-        full_path = os.path.join(self.output_dir, filename)
+        # Save document (support absolute paths)
+        full_path = filename if os.path.isabs(filename) else os.path.join(self.output_dir, filename)
         os.makedirs(os.path.dirname(full_path) if os.path.dirname(full_path) else self.output_dir, exist_ok=True)
         doc.save(full_path)
         
@@ -271,8 +271,8 @@ class DocumentGenerator:
         # Create DataFrame
         df = pd.DataFrame(excel_data)
         
-        # Save to Excel
-        full_path = os.path.join(self.output_dir, filename)
+        # Save to Excel (support absolute paths)
+        full_path = filename if os.path.isabs(filename) else os.path.join(self.output_dir, filename)
         os.makedirs(os.path.dirname(full_path) if os.path.dirname(full_path) else self.output_dir, exist_ok=True)
         
         # Use storage abstraction for consistency
@@ -404,4 +404,3 @@ class DocumentGenerator:
 
 # Global document generator instance
 doc_generator = DocumentGenerator()
-

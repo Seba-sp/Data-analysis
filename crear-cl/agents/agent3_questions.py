@@ -134,6 +134,7 @@ Analiza TODO el contenido del archivo para generar las preguntas.
             # Generate with legacy API (supports file uploads)
             response = self.model_legacy.generate_content([full_prompt] + files_to_send)
             response_text = response.text
+            response_text = self._sanitize_response_text(response_text)
             
             # Clean up uploaded PDF from Gemini
             try:
@@ -243,13 +244,14 @@ Revisa y mejora las preguntas incorporando el feedback. Mantén el formato PAES 
 - Corrige los problemas mencionados
 - Mantén distribución
 - Mejora distractores si se indicó
-
+- Mantén el formato completo, no agregues símbolos, texto o explicaciones adicionales
 Entrega el set completo mejorado en el mismo formato que originalmente.
 """
             
             # Generate improved version with PDF file
             response = self.model_legacy.generate_content([prompt, uploaded_pdf])
             response_text = response.text
+            response_text = self._sanitize_response_text(response_text)
             
             # Clean up Gemini upload (keep local PDF)
             try:
@@ -331,11 +333,19 @@ Recurso_Discontinuo: {tsv_row.get('Recurso_Discontinuo', 'No')}
         last_output = interaction.outputs[-1]
         
         if hasattr(last_output, 'text'):
-            return last_output.text
+            return self._sanitize_response_text(last_output.text)
         elif isinstance(last_output, str):
-            return last_output
+            return self._sanitize_response_text(last_output)
         else:
-            return str(last_output)
+            return self._sanitize_response_text(str(last_output))
+
+    def _sanitize_response_text(self, text: str) -> str:
+        """Normalize model output for downstream parsing."""
+        if not text:
+            return ""
+        if "**" in text:
+            text = text.replace("**", "")
+        return text
     
     def _save_debug_file(self, article_id: str, response_text: str, improved: bool = False):
         """Save raw response for debugging."""
@@ -384,8 +394,8 @@ Recurso_Discontinuo: {tsv_row.get('Recurso_Discontinuo', 'No')}
         }
         
         # Extract article text from A) LECTURA section
-        # Handle both "A) LECTURA" and "### A) LECTURA" (markdown headings), also "A. LECTURA", "I. LECTURA", "LECTURA"
-        lectura_match = re.search(r'(?:###\s*)?(?:A[).]\s*|I\.\s*)?LECTURA', response_text, re.IGNORECASE)
+        # Handle both "A) LECTURA" and "### A) LECTURA" (markdown headings)
+        lectura_match = re.search(r'(?:###\s*)?A\)\s*LECTURA', response_text, re.IGNORECASE)
         if lectura_match:
             # Find TEXTO section within LECTURA (handle markdown like **TEXTO**)
             texto_match = re.search(r'\*{0,2}TEXTO\*{0,2}', response_text[lectura_match.start():], re.IGNORECASE)
@@ -393,7 +403,7 @@ Recurso_Discontinuo: {tsv_row.get('Recurso_Discontinuo', 'No')}
                 texto_start = lectura_match.start() + texto_match.end()
                 
                 # Find where PREGUNTAS section starts (handle markdown)
-                preguntas_match = re.search(r'(?:###\s*)?(?:B[).]\s*|II\.\s*)?PREGUNTAS', response_text, re.IGNORECASE)
+                preguntas_match = re.search(r'(?:###\s*)?B\)\s*PREGUNTAS', response_text, re.IGNORECASE)
                 if preguntas_match:
                     texto_end = preguntas_match.start()
                     article_text = response_text[texto_start:texto_end].strip()
@@ -403,8 +413,7 @@ Recurso_Discontinuo: {tsv_row.get('Recurso_Discontinuo', 'No')}
                     print(f"[Agent 3] Extracted article text ({len(article_text)} chars)")
         
         # Find PREGUNTAS section (handle markdown headings)
-        # Try various formats: "B) PREGUNTAS", "B. PREGUNTAS", "PREGUNTAS", "II. PREGUNTAS"
-        preguntas_match = re.search(r'(?:###\s*)?(?:B[).]\s*|II\.\s*)?PREGUNTAS', response_text, re.IGNORECASE)
+        preguntas_match = re.search(r'(?:###\s*)?B\)\s*PREGUNTAS', response_text, re.IGNORECASE)
         if not preguntas_match:
             print("[Agent 3] WARNING: PREGUNTAS section not found")
             return result
@@ -412,8 +421,7 @@ Recurso_Discontinuo: {tsv_row.get('Recurso_Discontinuo', 'No')}
         preguntas_start = preguntas_match.end()
         
         # Find CLAVES section (optional, might not exist, handle markdown)
-        # Try: "C) CLAVES", "C. CLAVES", "CLAVES", "III. CLAVES", "RESPUESTAS"
-        claves_match = re.search(r'(?:###\s*)?(?:C[).]\s*|III\.\s*)?(?:CLAVES|RESPUESTAS)', response_text, re.IGNORECASE)
+        claves_match = re.search(r'(?:###\s*)?C\)\s*CLAVES', response_text, re.IGNORECASE)
         if claves_match:
             preguntas_section = response_text[preguntas_start:claves_match.start()]
             claves_section = response_text[claves_match.end():]

@@ -43,7 +43,7 @@ Sistema automatizado para la creación de guías escolares filtradas por tema, h
 - **Estadísticas generales**: Gráficos de barras y pie charts para ver distribución por área, habilidad y dificultad de todas las preguntas
 - **Gestión de guías**: Lista todas las guías creadas con detalles de preguntas y fechas
 - **Eliminación selectiva**: Elimina guías específicas y actualiza contadores de uso
-
+    
 ### 🎓 Asignaturas Combinadas
 - **Soporte para Ciencias**: Combina Física (F30M), Química (Q30M) y Biología (B30M) en una sola vista
 - **Identificación de origen**: Columna `Subject_Source` para identificar la asignatura original

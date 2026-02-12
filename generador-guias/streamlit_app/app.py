@@ -2088,6 +2088,7 @@ def main():
     st.subheader("🎯 Filtrar Preguntas")
     
     # First row: Asignatura and Eje Temático (for Ciencias)
+    subject_filter = None
     if current_subject == "Ciencias":
         col_asig, col_eje = st.columns(2)
         
@@ -2280,14 +2281,22 @@ def main():
         filters['subject'] = subject_filter if 'subject_filter' in locals() else None
         filters['eje_tematico'] = eje_filter if 'eje_filter' in locals() else None
     
-    # Clear any open previews when filters change (this will be triggered by any filter interaction)
-    if any([area_filter, difficulty_filter, skill_filter, subtema_filter, descripcion_filter, usage_filter, 
-            ('subject_filter' in locals() and subject_filter)]):
-        # Only clear if we're not in the initial load
-        if 'preview_question' in st.session_state or 'show_usage_history' in st.session_state:
-            st.session_state['preview_question'] = None
-            st.session_state['preview_file_path'] = None
-            st.session_state['show_usage_history'] = None
+    # Clear any open previews when filters actually change
+    current_filters = (
+        tuple(area_filter) if area_filter else (),
+        tuple(difficulty_filter) if difficulty_filter else (),
+        tuple(skill_filter) if skill_filter else (),
+        tuple(subtema_filter) if subtema_filter else (),
+        tuple(descripcion_filter) if descripcion_filter else (),
+        usage_filter,
+        subject_filter,
+    )
+    previous_filters = st.session_state.get('_previous_filters', None)
+    if previous_filters is not None and current_filters != previous_filters:
+        st.session_state['preview_question'] = None
+        st.session_state['preview_file_path'] = None
+        st.session_state['show_usage_history'] = None
+    st.session_state['_previous_filters'] = current_filters
     
     filtered_df = filter_questions(df, filters)
     
@@ -2362,14 +2371,14 @@ def main():
                             st.session_state['selected_questions_ordered'].remove(pregunta_id)
                         # Remove position and renumber
                         remove_question_and_renumber(pregunta_id)
-                    
+
+                    # Update is_selected so the rest of this iteration sees the correct state
+                    is_selected = new_selection
+
                     # Clear any open previews when selection changes
                     st.session_state['preview_question'] = None
                     st.session_state['preview_file_path'] = None
                     st.session_state['show_usage_history'] = None
-                    
-                    # Rerun to immediately show/hide position selector
-                    st.rerun()
             
             with col2:
                 # Position selector (only show if selected)
@@ -2398,8 +2407,6 @@ def main():
                         st.session_state['preview_question'] = None
                         st.session_state['preview_file_path'] = None
                         st.session_state['show_usage_history'] = None
-                        # Rerun to immediately update all position selectors
-                        st.rerun()
                 else:
                     st.write("")  # Empty space for alignment
             
@@ -2440,7 +2447,6 @@ def main():
                         st.session_state['preview_file_path'] = row.get(EXCEL_COLUMNS['ruta_relativa'], '')
                         # Clear any other preview states
                         st.session_state['show_usage_history'] = None
-                        st.rerun()
                 
                 with col_history:
                     # Show usage history button if question has been used
@@ -2450,7 +2456,6 @@ def main():
                             # Clear any other preview states
                             st.session_state['preview_question'] = None
                             st.session_state['preview_file_path'] = None
-                            st.rerun()
             
             # Show usage history below this question if it's the one being viewed
             if st.session_state.get('show_usage_history') == pregunta_id:
@@ -2648,7 +2653,6 @@ def main():
                         st.session_state['preview_file_path'] = row.get(EXCEL_COLUMNS['ruta_relativa'], '')
                         # Clear any other preview states
                         st.session_state['show_usage_history'] = None
-                        st.rerun()
                 
                 with col_unselect:
                     if st.button("❌", key=f"summary_unselect_{pregunta_id}", help="Deseleccionar pregunta"):
@@ -2664,7 +2668,6 @@ def main():
                         st.session_state['preview_file_path'] = None
                         st.session_state['show_usage_history'] = None
                         st.success(f"✅ Pregunta {pregunta_id} deseleccionada")
-                        st.rerun()
                 
                 # Show preview below this question if it's the one being previewed from summary
                 if st.session_state.get('preview_question') == pregunta_id and st.session_state.get('preview_file_path'):
