@@ -94,7 +94,8 @@ def batch_mode(args):
         agent1_mode=args.agent1_mode,
         start_from=args.start_from,
         tsv_file=args.tsv_file,
-        reverse=args.reverse
+        reverse=args.reverse,
+        agent3_prompt=args.agent3_prompt
     )
 
 
@@ -186,7 +187,7 @@ Examples:
   python main.py --batches 3 --topic "inteligencia artificial" --count 30
   
   # Start from Agent 2 (skip research)
-  python main.py --start-from agent2 --tsv-file data/candidatos_20260110.tsv
+  python main.py --start-from agent2 --tsv-file data/candidatos_20260110.csv
   
   # Start from Agent 3 (skip research and validation) - with CSV file containing DOCX paths
   python main.py --start-from agent3 --tsv-file data/articles_with_docx.csv
@@ -268,12 +269,17 @@ Examples:
     parser.add_argument(
         '--tsv-file',
         type=str,
-        help='CSV file for agent3 start (with Docx_Path column), or TSV file for agent2 start'
+        help='CSV file for agent2 start (candidatos) or agent3 start (with Docx_Path column)'
     )
     parser.add_argument(
         '--reverse',
         action='store_true',
         help='Process articles in reverse order (bottom to top) - useful for parallel processing'
+    )
+    parser.add_argument(
+        '--agent3-prompt',
+        type=str,
+        help='Agent 3 prompt filename (e.g., "agent3_prompt - localizar.txt"). Default: agent3_prompt.txt'
     )
     parser.add_argument(
         '--folder',

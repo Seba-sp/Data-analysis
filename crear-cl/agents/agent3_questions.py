@@ -17,7 +17,7 @@ from utils.pdf_loader import get_pdf_context_loader
 class QuestionAgent:
     """Agent for generating PAES-format comprehension questions."""
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, agent3_prompt: Optional[str] = None):
         """Initialize question generation agent with PDF context."""
         self.api_key = api_key or config.GEMINI_API_KEY
         os.environ['GEMINI_API_KEY'] = self.api_key
@@ -40,10 +40,11 @@ class QuestionAgent:
         )
         
         # Load prompt template
-        prompt_path = config.get_prompt_path('agent3_prompt.txt')
+        prompt_filename = agent3_prompt or 'agent3_prompt.txt'
+        prompt_path = config.get_prompt_path(prompt_filename)
         with open(prompt_path, 'r', encoding='utf-8') as f:
             self.prompt_template = f.read()
-        print(f"[Agent 3] Loaded prompt template ({len(self.prompt_template)} chars)")
+        print(f"[Agent 3] Loaded prompt: {prompt_filename} ({len(self.prompt_template)} chars)")
         
         # Load PDF context
         self.pdf_loader = get_pdf_context_loader()

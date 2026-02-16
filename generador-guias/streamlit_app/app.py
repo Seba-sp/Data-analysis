@@ -1222,30 +1222,32 @@ def merge_document_xml_with_relationships(target_extract_dir: str, source_extrac
 
 def add_question_number_to_first_text(paragraph, question_number: int):
     """
-    Add question number to the first text element in a paragraph.
-    This preserves all formatting by only modifying the text content.
-    
+    Add question number as a separate run inserted before the first content in a paragraph.
+    This prevents the number from being injected into equations or formatted text.
+
     Args:
         paragraph: XML paragraph element
         question_number: Current question number
     """
     try:
         import xml.etree.ElementTree as ET
-        # Find the first text element in the paragraph
-        for elem in paragraph.iter():
-            if elem.tag.endswith('t') and elem.text:
-                # Prepend the question number to the existing text
-                elem.text = f"{question_number}. {elem.text}"
-                break  # Only modify the first text element
-        else:
-            # If no text element found, find the first run and add text
-            for elem in paragraph.iter():
-                if elem.tag.endswith('r'):
-                    # Create a text element in the first run
-                    text_elem = ET.SubElement(elem, '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
-                    text_elem.text = f"{question_number}. "
-                    break
-        
+        ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+
+        # Create a new run with the question number
+        new_run = ET.Element(f'{{{ns}}}r')
+        text_elem = ET.SubElement(new_run, f'{{{ns}}}t')
+        text_elem.text = f"{question_number}. "
+        text_elem.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+
+        # Insert the new run at the beginning of the paragraph, after any pPr (paragraph properties)
+        insert_index = 0
+        for i, child in enumerate(paragraph):
+            if child.tag.endswith('pPr'):
+                insert_index = i + 1
+                break
+
+        paragraph.insert(insert_index, new_run)
+
     except Exception as e:
         st.error(f"Error adding question number to text: {e}")
 
@@ -2430,9 +2432,10 @@ def main():
                 st.write(f"**{pregunta_id}**{subject_info} | "
                         f"Área: **{row.get(EXCEL_COLUMNS['area_tematica'], 'N/A')}** | "
                         f"Dificultad: **{row.get(EXCEL_COLUMNS['dificultad'], 'N/A')}** | "
-                        f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}**{usage_info}")
+                        f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}** | "
+                        f"Instrumento: **{row.get(EXCEL_COLUMNS['instrumento'], 'N/A')}**{usage_info}")
                 st.write(f"{row.get(EXCEL_COLUMNS['conocimiento_subtema'], 'Sin subtema')}")
-                
+
                 # Show description if available
                 if EXCEL_COLUMNS['descripcion'] in row and row[EXCEL_COLUMNS['descripcion']] and not pd.isna(row[EXCEL_COLUMNS['descripcion']]):
                     st.markdown(f"<div style='margin-top: -10px; font-size: 0.9em;'>📝 {row[EXCEL_COLUMNS['descripcion']]}</div>", unsafe_allow_html=True)
@@ -2639,9 +2642,10 @@ def main():
                     st.write(f"**{position}.** {pregunta_id}{subject_info} | "
                             f"Área: **{row.get(EXCEL_COLUMNS['area_tematica'], 'N/A')}** | "
                             f"Dificultad: **{row.get(EXCEL_COLUMNS['dificultad'], 'N/A')}** | "
-                            f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}**")
+                            f"Habilidad: **{row.get(EXCEL_COLUMNS['habilidad'], 'N/A')}** | "
+                            f"Instrumento: **{row.get(EXCEL_COLUMNS['instrumento'], 'N/A')}**")
                     st.write(f"{row.get(EXCEL_COLUMNS['conocimiento_subtema'], 'Sin subtema')}")
-                    
+
                     # Show description if available
                     if EXCEL_COLUMNS['descripcion'] in row and row[EXCEL_COLUMNS['descripcion']] and not pd.isna(row[EXCEL_COLUMNS['descripcion']]):
                         st.markdown(f"<div style='margin-top: -10px; font-size: 0.9em;'>📝 {row[EXCEL_COLUMNS['descripcion']]}</div>", unsafe_allow_html=True)

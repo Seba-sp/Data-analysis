@@ -29,7 +29,12 @@ class PAESLauncher:
         self.docx_file_path = tk.StringVar()
         self.output_file_folder_path = tk.StringVar()
         self.reverse_var = tk.BooleanVar(value=False)
-        
+        self.agent3_prompt_var = tk.StringVar()
+
+        # Scan for Agent 3 prompt files
+        self.agent3_prompts = self._scan_agent3_prompts()
+        self.agent3_prompt_var.set(self.agent3_prompts[0] if self.agent3_prompts else "agent3_prompt.txt")
+
         self.process = None
 
         self._create_ui()
@@ -120,6 +125,10 @@ class PAESLauncher:
         self.tsv_entry.grid(row=0, column=1, sticky=tk.W, padx=5)
         self.tsv_btn = ttk.Button(self.files_frame, text="Browse...", command=lambda: self._browse_file(self.tsv_file_path))
         self.tsv_btn.grid(row=0, column=2, padx=5)
+
+        ttk.Label(self.files_frame, text="Agent 3 Prompt:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        self.agent3_prompt_combo = ttk.Combobox(self.files_frame, textvariable=self.agent3_prompt_var, values=self.agent3_prompts, state="readonly", width=37)
+        self.agent3_prompt_combo.grid(row=1, column=1, sticky=tk.W, padx=5)
 
         # --- Section 3: Standalone Review Configuration ---
         self.review_frame = ttk.LabelFrame(main_frame, text="Standalone Review Configuration", padding="10")
@@ -225,6 +234,12 @@ class PAESLauncher:
                 set_frame_state(self.agent1_frame, tk.DISABLED)
                 set_frame_state(self.files_frame, tk.NORMAL)
 
+            # Agent 3 prompt dropdown only available when starting from agent3
+            if start_from == "agent3":
+                self.agent3_prompt_combo.configure(state="readonly")
+            else:
+                self.agent3_prompt_combo.configure(state=tk.DISABLED)
+
             # Disable Standalone Section
             set_frame_state(self.review_frame, tk.DISABLED)
             set_frame_state(self.debug_frame, tk.DISABLED)
@@ -265,6 +280,17 @@ class PAESLauncher:
 
     def _set_widgets_state(self, widgets, state):
         pass # Not used anymore, replaced by set_frame_state logic inside _update_state
+
+    def _scan_agent3_prompts(self):
+        """Scan prompts/ directory for agent3_prompt*.txt files."""
+        prompts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prompts')
+        if not os.path.isdir(prompts_dir):
+            return ["agent3_prompt.txt"]
+        files = sorted(
+            f for f in os.listdir(prompts_dir)
+            if f.lower().startswith('agent3_prompt') and f.lower().endswith('.txt')
+        )
+        return files if files else ["agent3_prompt.txt"]
 
     def _browse_file(self, var):
         filename = filedialog.askopenfilename(filetypes=[("Data Files", "*.tsv *.csv *.txt"), ("All Files", "*.*")])
@@ -312,6 +338,12 @@ class PAESLauncher:
             
             if self.reverse_var.get():
                 cmd.append("--reverse")
+
+            # Agent 3 prompt selection (only when starting from agent3)
+            if start_from == "agent3":
+                prompt = self.agent3_prompt_var.get()
+                if prompt and prompt != "agent3_prompt.txt":
+                    cmd.extend(["--agent3-prompt", prompt])
 
         elif mode == "review":
             cmd.append("--review-standalone")

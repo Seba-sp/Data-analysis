@@ -2,8 +2,6 @@
 Agent 2: License Validation Agent
 Validates Creative Commons licensing for news articles using Gemini.
 """
-import csv
-import io
 import google.generativeai as genai
 from typing import List, Dict, Optional, Tuple
 import re
@@ -40,84 +38,50 @@ class ValidationAgent:
             self.prompt_template = f.read()
         print(f"[Agent 2] Loaded prompt template ({len(self.prompt_template)} chars)")
     
-    @staticmethod
-    def _detect_delimiter(first_line: str) -> str:
-        """Auto-detect CSV delimiter from header line."""
-        semicolons = first_line.count(';')
-        commas = first_line.count(',')
-        return ';' if semicolons > commas else ','
-
-    @staticmethod
-    def csv_to_tsv(csv_data: str) -> str:
+    def validate_articles(self, tsv_data: str) -> Tuple[str, List[Dict]]:
         """
-        Convert CSV data to TSV (tab-separated).
-        Handles semicolon or comma delimiters, quoted fields, and embedded newlines.
-
+        Validate articles from TSV data using legal audit prompt.
+        
         Args:
-            csv_data: CSV string with header and rows
-
-        Returns:
-            TSV string with the same data, tab-separated (newlines inside fields removed)
-        """
-        first_line = csv_data.split('\n', 1)[0]
-        delimiter = ValidationAgent._detect_delimiter(first_line)
-
-        reader = csv.reader(io.StringIO(csv_data), delimiter=delimiter, quotechar='"')
-        tsv_lines = []
-        for row in reader:
-            # Strip whitespace and replace any embedded newlines with spaces
-            cleaned = [v.strip().replace('\n', ' ').replace('\r', '') for v in row]
-            tsv_lines.append('\t'.join(cleaned))
-        return '\n'.join(tsv_lines)
-
-    def validate_articles(self, csv_data: str) -> Tuple[str, List[Dict]]:
-        """
-        Validate articles from CSV data using legal audit prompt.
-        Converts CSV to TSV before sending to Gemini.
-
-        Args:
-            csv_data: CSV string with candidate texts from Agent 1 (21 columns)
-
+            tsv_data: TSV string with candidate texts from Agent 1
+            
         Returns:
             Tuple of (enriched_audit_tsv_string, list_of_approved_article_dicts)
         """
         print(f"[Agent 2] Starting legal validation audit...")
-
+        
         try:
-            # Convert CSV to TSV for Agent 2
-            tsv_data = self.csv_to_tsv(csv_data)
-
             # Check TSV format
             lines = tsv_data.strip().split('\n')
             if len(lines) < 2:
-                print(f"[Agent 2] ERROR: Data has insufficient rows")
+                print(f"[Agent 2] ERROR: TSV has insufficient data")
                 return ("", [])
-
+            
             header = lines[0].split('\t')
             print(f"[Agent 2] TSV has {len(header)} columns, {len(lines)-1} rows")
-
+            
             # Prepare prompt with TSV data
             prompt = self.prompt_template + "\n\nTABLA A VALIDAR:\n\n" + tsv_data
-
+            
             print(f"[Agent 2] Calling Gemini for legal audit...")
             response = self.model.generate_content(prompt)
-
+            
             # Extract audit TSV from response
             audit_tsv = self._extract_audit_tsv(response.text)
-
+            
             if not audit_tsv:
                 print(f"[Agent 2] ERROR: No audit TSV found in response")
                 return ("", [])
-
+            
             # Create enriched audit TSV (includes all original data + validation columns)
             enriched_audit_tsv = self._create_enriched_audit(audit_tsv, tsv_data)
-
+            
             # Parse audit results to get approved articles
             approved_articles = self._parse_audit_results(enriched_audit_tsv, tsv_data)
-
+            
             print(f"[Agent 2] Audit complete: {len(approved_articles)} texts APROBADO")
             return (enriched_audit_tsv, approved_articles)
-
+        
         except Exception as e:
             print(f"[Agent 2] Error during validation: {e}")
             import traceback
@@ -126,95 +90,60 @@ class ValidationAgent:
     
     def _extract_audit_tsv(self, response_text: str) -> str:
         """
-        Extract audit table from Gemini response and normalize to TSV.
-        Handles code blocks and plain text; converts comma/semicolon delimiters to tabs.
-
+        Extract audit TSV table from response.
+        
         Args:
             response_text: Raw response from Gemini
-
+            
         Returns:
-            Audit TSV string (tab-separated), or empty string if not found
+            Audit TSV string with ID, Estado, Decision, Motivo_Concreto, Accion_Recomendada
         """
-        raw = ""
-
-        # Method 1: Look for code block
-        tsv_match = re.search(r'```(?:tsv|csv|text)?\s*\n(.*?)\n```', response_text, re.DOTALL | re.IGNORECASE)
+        # Look for TSV code block
+        tsv_match = re.search(r'```(?:tsv)?\s*\n(.*?)\n```', response_text, re.DOTALL | re.IGNORECASE)
+        
         if tsv_match:
-            raw = tsv_match.group(1).strip()
-
-        # Method 2: Look for header line with ID + Estado + Decision
-        if not raw:
-            lines = response_text.split('\n')
-            tsv_start = -1
-            tsv_end = -1
-
-            for i, line in enumerate(lines):
-                if 'ID' in line and 'Estado' in line and 'Decision' in line:
-                    tsv_start = i
-                elif tsv_start != -1 and line.strip():
-                    tsv_end = i
-                elif tsv_start != -1 and tsv_end != -1 and not line.strip():
-                    break
-
-            if tsv_start != -1:
-                if tsv_end == -1:
-                    tsv_end = len(lines) - 1
-                raw = '\n'.join(lines[tsv_start:tsv_end + 1])
-
-        if not raw:
-            return ""
-
-        # Normalize to TSV: detect delimiter and convert
-        first_line = raw.split('\n', 1)[0]
-        tabs = first_line.count('\t')
-        semicolons = first_line.count(';')
-        commas = first_line.count(',')
-
-        # If already tab-separated (most tabs), return as-is
-        if tabs >= semicolons and tabs >= commas and tabs > 5:
-            print(f"[Agent 2] Extracted audit: already TSV ({tabs} tabs in header)")
-            return raw
-
-        # Otherwise convert using csv module
-        delimiter = ';' if semicolons > commas else ','
-        print(f"[Agent 2] Extracted audit: converting from '{delimiter}'-separated to TSV")
-        reader = csv.reader(io.StringIO(raw), delimiter=delimiter, quotechar='"')
-        tsv_lines = []
-        for row in reader:
-            cleaned = [v.strip().replace('\n', ' ').replace('\r', '') for v in row]
-            tsv_lines.append('\t'.join(cleaned))
-        return '\n'.join(tsv_lines)
+            return tsv_match.group(1).strip()
+        
+        # Look for lines that start with "ID\tEstado" (audit header)
+        lines = response_text.split('\n')
+        tsv_start = -1
+        tsv_end = -1
+        
+        for i, line in enumerate(lines):
+            if 'ID' in line and 'Estado' in line and 'Decision' in line:
+                tsv_start = i
+            elif tsv_start != -1 and line.strip() and '\t' in line:
+                tsv_end = i
+            elif tsv_start != -1 and tsv_end != -1 and not line.strip():
+                break
+        
+        if tsv_start != -1:
+            if tsv_end == -1:
+                tsv_end = len(lines) - 1
+            return '\n'.join(lines[tsv_start:tsv_end+1])
+        
+        return ""
     
     def _create_enriched_audit(self, audit_tsv: str, original_tsv: str) -> str:
         """
         Create enriched audit TSV that includes ALL original columns PLUS validation columns.
-        If the audit already contains all columns (from the new prompt format), returns it as-is.
-
+        This makes the audit file self-contained - no need for candidatos file.
+        
         Args:
-            audit_tsv: Audit TSV from Gemini (may already have all 25 columns)
+            audit_tsv: Basic audit TSV (ID, Estado, Decision, Motivo_Concreto, Accion_Recomendada)
             original_tsv: Original candidatos TSV with all article data
-
+            
         Returns:
             Enriched TSV string with all original columns + validation columns
         """
+        # Parse audit TSV
         audit_lines = audit_tsv.strip().split('\n')
         if len(audit_lines) < 2:
             return original_tsv
-
+        
         audit_header = audit_lines[0].split('\t')
-
-        # If the audit already has both original columns AND validation columns,
-        # it's already enriched (new prompt format returns all 25 columns)
-        has_original = 'Titulo' in audit_header or 'Fuente' in audit_header
-        has_validation = 'Estado' in audit_header and 'Decision' in audit_header
-
-        if has_original and has_validation:
-            print(f"[Agent 2] Audit already enriched ({len(audit_header)} columns, {len(audit_lines)-1} rows)")
-            return audit_tsv
-
-        # Legacy path: audit only has basic columns, merge with original
-        print(f"[Agent 2] Merging basic audit with original data (legacy mode)")
         audit_data = {}
+        
         for line in audit_lines[1:]:
             if not line.strip():
                 continue
@@ -223,29 +152,34 @@ class ValidationAgent:
             article_id = row_dict.get('ID', '')
             if article_id:
                 audit_data[article_id] = row_dict
-
+        
+        # Parse original TSV
         original_lines = original_tsv.strip().split('\n')
         if len(original_lines) < 2:
             return audit_tsv
-
+        
         original_header = original_lines[0].split('\t')
-
+        
+        # Create enriched header: all original columns + validation columns (without ID duplicate)
         validation_columns = ['Estado', 'Decision', 'Motivo_Concreto', 'Accion_Recomendada']
         enriched_header = original_header + validation_columns
-
+        
+        # Build enriched rows
         enriched_rows = ['\t'.join(enriched_header)]
-
+        
         for line in original_lines[1:]:
             if not line.strip():
                 continue
-
+            
             values = line.split('\t')
+            # Pad with empty strings if needed
             while len(values) < len(original_header):
                 values.append('')
-
+            
             row_dict = dict(zip(original_header, values))
             article_id = row_dict.get('ID', '')
-
+            
+            # Add validation data if available
             if article_id in audit_data:
                 audit_row = audit_data[article_id]
                 values.extend([
@@ -255,10 +189,11 @@ class ValidationAgent:
                     audit_row.get('Accion_Recomendada', '')
                 ])
             else:
+                # No audit data for this article - add empty validation columns
                 values.extend(['', '', '', ''])
-
+            
             enriched_rows.append('\t'.join(values))
-
+        
         enriched_tsv = '\n'.join(enriched_rows)
         print(f"[Agent 2] Created enriched audit TSV: {len(enriched_header)} columns, {len(enriched_rows)-1} rows")
         return enriched_tsv
@@ -284,45 +219,45 @@ class ValidationAgent:
         audit_header = audit_lines[0].split('\t')
         
         # Check if this is an enriched audit TSV (has original columns + validation columns)
-        is_enriched = 'Titulo' in audit_header or 'Fuente' in audit_header
-
+        is_enriched = 'Titulo' in audit_header or 'URL' in audit_header
+        
         if is_enriched:
             # NEW PATH: Parse from enriched audit TSV (self-contained)
             print(f"[Agent 2] Parsing from enriched audit TSV ({len(audit_header)} columns)")
-
+            
             for line in audit_lines[1:]:
                 if not line.strip():
                     continue
-
+                
                 values = line.split('\t')
                 # Pad with empty strings if needed
                 while len(values) < len(audit_header):
                     values.append('')
-
+                
                 row_dict = dict(zip(audit_header, values))
-
+                
                 # Check if approved
                 estado = row_dict.get('Estado', '').upper()
                 decision = row_dict.get('Decision', '').upper()
-
+                
                 if decision == 'OK' or estado in ['APROBADO', 'APROBADO_CONDICION']:
                     # Create article dict for Agent 3
                     article = {
                         'article_id': row_dict.get('ID', ''),
                         'title': row_dict.get('Titulo', ''),
                         'author': row_dict.get('Autor', ''),
-                        'url': row_dict.get('URL', ''),
+                        'url': row_dict.get('URL_Canonica', row_dict.get('URL', '')),
                         'source': row_dict.get('Fuente', ''),
                         'date': row_dict.get('Ano', ''),
                         'type': row_dict.get('Tipo', ''),
                         'license': row_dict.get('Licencia', ''),
                         'license_status': 'approved',
-                        'content': '',
+                        'content': '',  # Will be populated if needed
                         'fragment_start': row_dict.get('Inicio_Fragmento', ''),
                         'fragment_end': row_dict.get('Fin_Fragmento', ''),
                         'tsv_row': row_dict
                     }
-
+                    
                     approved_articles.append(article)
             
             return approved_articles
@@ -376,13 +311,13 @@ class ValidationAgent:
                     'article_id': article_id,
                     'title': row_dict.get('Titulo', ''),
                     'author': row_dict.get('Autor', ''),
-                    'url': row_dict.get('URL', ''),
+                    'url': row_dict.get('URL_Canonica', row_dict.get('URL', '')),
                     'source': row_dict.get('Fuente', ''),
                     'date': row_dict.get('Ano', ''),
                     'type': row_dict.get('Tipo', ''),
                     'license': row_dict.get('Licencia', ''),
                     'license_status': 'approved',
-                    'content': '',
+                    'content': '',  # Will be populated if needed
                     'fragment_start': row_dict.get('Inicio_Fragmento', ''),
                     'fragment_end': row_dict.get('Fin_Fragmento', ''),
                     'tsv_row': row_dict

@@ -26,6 +26,8 @@ Recent improvements:
 """
 from google import genai
 from typing import List, Dict, Optional
+import csv
+import io
 import json
 import re
 import os
@@ -454,73 +456,82 @@ INSTRUCCIONES COMPLETAS:
         Returns:
             Empty TSV string with header (matches prompt specification)
         """
-        # Header matches the exact specification from agent1_prompt.txt
-        header = "ID, ID_RANDOM, Tipo, Tema, Autor, Titulo, Ano, Fuente, URL, URL_Canonica, Licencia, Tipo_Evidencia_Licencia, Evidencia_Licencia_Quote, Evidencia_Licencia_Ubicacion, Palabras_Fragmento_Estimadas, Palabras_Fragmento_Real, Inicio_Fragmento, Fin_Fragmento, Alertas, Recurso_Discontinuo, URL_Recurso, Licencia_Recurso, Tipo_Evidencia_Recurso, Evidencia_Recurso_Quote, Evidencia_Recurso_Ubicacion, Linea_Cita_PAES, Clave_Dedup, Riesgos"
+        # Header matches the exact specification from agent1_prompt.txt (21 columns)
+        header = "ID, ID_RANDOM, Tipo, Género textual, Tema, Autor, Titulo, Ano, Fuente, URL, Licencia, Tipo_Evidencia_Licencia, Evidencia_Licencia_Ubicacion, Palabras_Fragmento_Real, Inicio_Fragmento, Fin_Fragmento, Recurso_Discontinuo, URL_Recurso, Licencia_Recurso, Tipo_Evidencia_Recurso, Evidencia_Recurso_Ubicacion"
         return header
     
-    def tsv_to_article_list(self, tsv_data: str) -> List[Dict]:
+    def tsv_to_article_list(self, csv_data: str) -> List[Dict]:
         """
-        Convert TSV data to list of article dictionaries for processing.
-        
+        Convert CSV data to list of article dictionaries for processing.
+        Handles semicolon or comma delimiters, quoted fields, and embedded newlines.
+
         Args:
-            tsv_data: TSV string with header and rows
-            
+            csv_data: CSV string with header and rows (21 columns)
+
         Returns:
             List of article dictionaries with standardized fields
         """
         articles = []
-        lines = tsv_data.strip().split('\n')
-        
-        if len(lines) < 2:
-            print(f"[Agent 1] WARNING: TSV has insufficient data (only {len(lines)} lines)")
+
+        if not csv_data or not csv_data.strip():
+            print(f"[Agent 1] WARNING: CSV data is empty")
             return articles
-        
+
+        # Auto-detect delimiter from header line
+        first_line = csv_data.split('\n', 1)[0]
+        delimiter = ';' if first_line.count(';') > first_line.count(',') else ','
+
+        reader = csv.reader(io.StringIO(csv_data), delimiter=delimiter, quotechar='"')
+        rows = list(reader)
+
+        if len(rows) < 2:
+            print(f"[Agent 1] WARNING: CSV has insufficient data (only {len(rows)} rows)")
+            return articles
+
         # Parse header
-        header = lines[0].split(',')
-        print(f"[Agent 1] TSV header: {len(header)} columns")
-        
-        # Parse rows
-        for line_num, line in enumerate(lines[1:], start=2):
-            if not line.strip():
+        header = [h.strip() for h in rows[0]]
+        print(f"[Agent 1] CSV header: {len(header)} columns (delimiter='{delimiter}')")
+
+        # Parse data rows
+        for line_num, row in enumerate(rows[1:], start=2):
+            # Skip empty rows
+            if not row or all(v.strip() == '' for v in row):
                 continue
-            
-            values = line.split(',')
+
+            # Clean values: strip whitespace and remove embedded newlines
+            values = [v.strip().replace('\n', ' ').replace('\r', '') for v in row]
+
             if len(values) != len(header):
                 print(f"[Agent 1] WARNING: Row {line_num} has {len(values)} columns, expected {len(header)}")
-                # Try to process anyway with available data
                 if len(values) < len(header):
-                    # Pad with empty strings
                     values.extend([''] * (len(header) - len(values)))
                 else:
-                    # Truncate excess columns
                     values = values[:len(header)]
-            
-            # Create article dict from TSV row
+
+            # Create article dict from CSV row
             row_dict = dict(zip(header, values))
-            
-            # Map TSV columns to article format for downstream processing
+
+            # Map CSV columns to article format for downstream processing
             article = {
                 'article_id': row_dict.get('ID', ''),
-                'id_random': row_dict.get('ID_RANDOM', ''),  # New field from prompt
+                'id_random': row_dict.get('ID_RANDOM', ''),
                 'title': row_dict.get('Titulo', ''),
                 'author': row_dict.get('Autor', ''),
-                'url': row_dict.get('URL_Canonica', row_dict.get('URL', '')),
+                'url': row_dict.get('URL', ''),
                 'source': row_dict.get('Fuente', ''),
                 'date': row_dict.get('Ano', ''),
                 'type': row_dict.get('Tipo', ''),
                 'license': row_dict.get('Licencia', ''),
-                'license_status': 'pending',  # Will be validated by Agent 2
-                'content': '',  # TSV doesn't include full content, will need to be fetched
-                'tsv_row': row_dict,  # Keep original TSV data for Agent 2
+                'license_status': 'pending',
+                'content': '',
+                'tsv_row': row_dict,
                 'fragment_start': row_dict.get('Inicio_Fragmento', ''),
                 'fragment_end': row_dict.get('Fin_Fragmento', ''),
-                'alertas': row_dict.get('Alertas', ''),  # Important for validation
-                'riesgos': row_dict.get('Riesgos', '')
             }
-            
+
             articles.append(article)
-        
-        print(f"[Agent 1] Parsed {len(articles)} articles from TSV")
+
+        print(f"[Agent 1] Parsed {len(articles)} articles from CSV")
         return articles
     
     def get_tsv_data(self) -> str:

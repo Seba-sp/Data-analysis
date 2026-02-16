@@ -1,0 +1,29 @@
+============================================================
+PROCESSING REPORT - H30M
+Date: 2026-02-04 11:05:12
+Mode: All Files in Folder
+============================================================
+Total sets: 35
+Successfully processed: 18
+Failed to process: 17
+============================================================
+
+FAILED SETS DETAILS:
+--------------------------------------------------------
+❌ H30M-NG-GA1: Empty mandatory values in Excel: Instrumento: 14 empty values
+❌ H30M-NG-GA10: Empty mandatory values in Excel: Instrumento: 29 empty values
+❌ H30M-NG-GA11: Empty mandatory values in Excel: Instrumento: 29 empty values
+❌ H30M-NG-GA12: Empty mandatory values in Excel: Instrumento: 29 empty values
+❌ H30M-NG-GA13: Empty mandatory values in Excel: Instrumento: 34 empty values
+❌ H30M-NG-GA14: Empty mandatory values in Excel: Instrumento: 34 empty values
+❌ H30M-NG-GA15: Empty mandatory values in Excel: Instrumento: 34 empty values
+❌ H30M-NG-GA16: Empty mandatory values in Excel: Instrumento: 44 empty values
+❌ H30M-NG-GA2: Empty mandatory values in Excel: Instrumento: 14 empty values
+❌ H30M-NG-GA3: Empty mandatory values in Excel: Instrumento: 14 empty values
+❌ H30M-NG-GA4: Missing columns in Excel: Instrumento
+❌ H30M-NG-GA5: Empty mandatory values in Excel: Instrumento: 19 empty values
+❌ H30M-NG-GA6: Empty mandatory values in Excel: Instrumento: 19 empty values
+❌ H30M-NG-GA7: Empty mandatory values in Excel: Instrumento: 24 empty values
+❌ H30M-NG-GA8: Empty mandatory values in Excel: Instrumento: 24 empty values
+❌ H30M-NG-GA9: Empty mandatory values in Excel: Instrumento: 24 empty values
+❌ H30M-NA-ME1: Missing .xlsx file

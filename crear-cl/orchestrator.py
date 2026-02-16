@@ -74,14 +74,15 @@ class PipelineOrchestrator:
             self._review_agent = review_agent
         return self._review_agent
 
-    def run_pipeline(self, 
-                     num_batches: int = 1, 
-                     topic: Optional[str] = None, 
+    def run_pipeline(self,
+                     num_batches: int = 1,
+                     topic: Optional[str] = None,
                      count: int = 30,
                      agent1_mode: Optional[str] = None,
                      start_from: str = 'agent1',
                      tsv_file: Optional[str] = None,
-                     reverse: bool = False):
+                     reverse: bool = False,
+                     agent3_prompt: Optional[str] = None):
         """
         Run the complete PAES question generation pipeline.
         
@@ -94,6 +95,9 @@ class PipelineOrchestrator:
             tsv_file: TSV file for agent2/agent3 start
             reverse: Process articles in reverse order (bottom to top)
         """
+        # Store Agent 3 prompt choice for _process_article
+        self._agent3_prompt = agent3_prompt
+
         # Override Agent 1 mode if specified
         if agent1_mode:
             from agents.agent1_research import ResearchAgent
@@ -124,19 +128,22 @@ class PipelineOrchestrator:
                     if start_from == 'agent3':
                         validated_articles = self._start_from_agent3(tsv_file)
                     elif start_from == 'agent2':
-                        validated_articles = self._start_from_agent2(tsv_file)
+                        # Agent 2 only: validate and save enriched audit, then stop
+                        self._start_from_agent2(tsv_file)
+                        print(f"\n[Orchestrator] Agent 2 validation complete. Enriched audit TSV saved.")
+                        continue
                     else:  # agent1
                         validated_articles = self._run_full_pipeline(topic, count)
-                    
+
                     if not validated_articles:
                         print(f"[Orchestrator] No validated articles in batch {batch_num}")
                         continue
-                    
+
                     # Reverse order if requested (for parallel processing)
                     if reverse:
                         validated_articles = list(reversed(validated_articles))
                         print(f"[Orchestrator] Processing in REVERSE order ({len(validated_articles)} articles)")
-                    
+
                     # Process each validated article (Steps 3-6)
                     for i, article in enumerate(validated_articles, 1):
                         print(f"\n{'='*60}")
@@ -189,32 +196,32 @@ class PipelineOrchestrator:
         return validated_articles
     
     def _start_from_agent2(self, tsv_file: Optional[str]) -> List[Dict]:
-        """Start pipeline from Agent 2 (load candidatos TSV)."""
+        """Start pipeline from Agent 2 (load candidatos CSV)."""
         print(f"[Orchestrator] Starting from Agent 2")
-        
-        # Find or use provided TSV file
+
+        # Find or use provided file
         if not tsv_file:
-            tsv_file = self._find_latest_file('candidatos_*.tsv')
+            tsv_file = self._find_latest_file('candidatos_*.csv')
             if not tsv_file:
-                print(f"[Orchestrator] ERROR: No candidatos TSV found")
+                print(f"[Orchestrator] ERROR: No candidatos CSV found")
                 return []
             print(f"[Orchestrator] Using: {os.path.basename(tsv_file)}")
-        
-        # Load TSV data
+
+        # Load CSV data
         with open(tsv_file, 'r', encoding='utf-8') as f:
-            tsv_data = f.read()
-        
-        # Convert TSV to articles
-        articles = self.research_agent.tsv_to_article_list(tsv_data)
-        print(f"[Orchestrator] Loaded {len(articles)} candidates from TSV")
-        
+            csv_data = f.read()
+
+        # Convert CSV to articles
+        articles = self.research_agent.tsv_to_article_list(csv_data)
+        print(f"[Orchestrator] Loaded {len(articles)} candidates from CSV")
+
         # Add to state tracking
         article_ids = self.state_manager.add_articles(articles)
         for article, aid in zip(articles, article_ids):
             article['article_id'] = article.get('article_id', aid)
-        
+
         # Validate with Agent 2
-        self._last_tsv = tsv_data
+        self._last_csv = csv_data
         validated_articles = self._step2_validate(articles)
         return validated_articles
     
@@ -283,7 +290,7 @@ class PipelineOrchestrator:
                     'article_id': row.get('ID', ''),
                     'title': row.get('Titulo', ''),
                     'author': row.get('Autor', ''),
-                    'url': row.get('URL_Canonica', row.get('URL', '')),
+                    'url': row.get('URL', ''),
                     'source': row.get('Fuente', ''),
                     'date': row.get('Ano', ''),
                     'type': row.get('Tipo', ''),
@@ -324,31 +331,31 @@ class PipelineOrchestrator:
         # Get last ID for continuation
         last_id = self.state_manager.get_last_id()
         
-        # Generate TSV with Agent 1
-        tsv_data = self.research_agent.find_articles(
+        # Generate CSV with Agent 1
+        csv_data = self.research_agent.find_articles(
             topic=topic,
             count=count,
             exclude_urls=exclude_urls,
             last_id=last_id
         )
         
-        if not tsv_data or len(tsv_data.strip().split('\n')) < 2:
+        if not csv_data or len(csv_data.strip().split('\n')) < 2:
             print("[STEP 1] ERROR: No candidates generated")
             return []
-        
-        # Save TSV
+
+        # Save CSV
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        tsv_path = storage.save_text(tsv_data, f"candidatos_{timestamp}.tsv")
-        print(f"[STEP 1] Saved TSV: {tsv_path}")
-        
+        csv_path = storage.save_text(csv_data, f"candidatos_{timestamp}.csv")
+        print(f"[STEP 1] Saved CSV: {csv_path}")
+
         # Store for Agent 2
-        self._last_tsv = tsv_data
-        
+        self._last_csv = csv_data
+
         # Convert to article list
-        articles = self.research_agent.tsv_to_article_list(tsv_data)
-        
+        articles = self.research_agent.tsv_to_article_list(csv_data)
+
         if not articles:
-            print(f"[STEP 1] ERROR: Failed to parse TSV")
+            print(f"[STEP 1] ERROR: Failed to parse CSV")
             return []
         
         # Add to state tracking
@@ -365,14 +372,14 @@ class PipelineOrchestrator:
         print(f"[STEP 2] Legal Validation - Agent 2")
         print(f"{'='*70}")
         
-        # Get TSV data
-        tsv_data = getattr(self, '_last_tsv', '')
-        if not tsv_data:
-            print("[STEP 2] ERROR: No TSV data available")
+        # Get CSV data from Agent 1
+        csv_data = getattr(self, '_last_csv', '')
+        if not csv_data:
+            print("[STEP 2] ERROR: No CSV data available")
             return []
-        
-        # Validate
-        audit_tsv, approved_articles = self.validation_agent.validate_articles(tsv_data)
+
+        # Validate (Agent 2 converts CSV to TSV internally)
+        audit_tsv, approved_articles = self.validation_agent.validate_articles(csv_data)
         
         if not audit_tsv:
             print("[STEP 2] WARNING: No audit results")
@@ -414,7 +421,7 @@ class PipelineOrchestrator:
             print(f"[Orchestrator] Creating fresh Agent 3 & 4 instances...")
             from agents.agent3_questions import QuestionAgent
             from agents.agent4_review import ReviewAgent
-            q_agent = QuestionAgent()
+            q_agent = QuestionAgent(agent3_prompt=self._agent3_prompt)
             r_agent = ReviewAgent()
             
             # Step 3: Generate questions
