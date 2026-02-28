@@ -9,7 +9,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 
 ### Core Package
 
-- [ ] **CORE-01**: Developer can run a diff audit that documents all diverged functions across 6 copies of `assessment_downloader.py` and `assessment_analyzer.py`, producing a merge decision document before any canonical version is written
+- [x] **CORE-01**: Developer can run a diff audit that documents all diverged functions across 6 copies of `assessment_downloader.py` and `assessment_analyzer.py`, producing a merge decision document before any canonical version is written
 - [ ] **CORE-02**: Unified `core/assessment_downloader.py` exists as a single canonical version that reconciles all diverged methods from 6 project copies (including `complete_deployment/` subfolder versions)
 - [ ] **CORE-03**: Unified `core/assessment_analyzer.py` exists as a single canonical version that reconciles all diverged methods across all project copies
 - [ ] **CORE-04**: `core/` package includes canonical `storage.py`, `email_sender.py`, `drive_service.py` promoted from existing `shared/` folder

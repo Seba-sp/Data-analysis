@@ -12,7 +12,7 @@ Six independently-evolved copies of the same pipeline codebase are consolidated 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Consolidation Audit** - Diff all 6 diverged file copies and produce a merge decision document before writing any shared code
+- [x] **Phase 1: Consolidation Audit** - Diff all 6 diverged file copies and produce a merge decision document before writing any shared code
 - [ ] **Phase 2: Core Package** - Build `core/` with canonical single versions of all shared services, per-report data namespacing, and the plugin base class
 - [ ] **Phase 3: First Plugin Migration** - Port `diagnosticos` into the plugin structure and verify it produces identical output to the standalone version
 - [ ] **Phase 4: Unified Entry Points** - Build the local CLI (`main.py`), `PipelineRunner`, dry-run mode, test-email mode, and structured result schema
@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md — Run body diffs on diverged methods and write MERGE-DECISIONS.md with all method resolutions, requirements.txt candidate, and env var catalogue
+- [x] 01-01-PLAN.md — Run body diffs on diverged methods and write MERGE-DECISIONS.md with all method resolutions, requirements.txt candidate, and env var catalogue
 
 ### Phase 2: Core Package
 **Goal**: A stable `core/` package exists as the single source of truth for all shared pipeline services, with per-report data namespacing and a plugin base class ready for the first generator
@@ -99,7 +99,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Consolidation Audit | 0/1 | Not started | - |
+| 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
 | 2. Core Package | 0/TBD | Not started | - |
 | 3. First Plugin Migration | 0/TBD | Not started | - |
 | 4. Unified Entry Points | 0/TBD | Not started | - |
