@@ -31,7 +31,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A unified `requirements.txt` candidate exists with all version conflicts resolved (pandas, weasyprint, protobuf) and the resolution rationale documented
   4. All environment variables across all 5 projects are catalogued in a `.env.example` consolidation document
   5. The actual Cloud Run entry point for `diagnosticos_uim` (`main.py` vs `main_app.py`) is identified and documented
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Run body diffs on diverged methods and write MERGE-DECISIONS.md with all method resolutions, requirements.txt candidate, and env var catalogue
 
 ### Phase 2: Core Package
 **Goal**: A stable `core/` package exists as the single source of truth for all shared pipeline services, with per-report data namespacing and a plugin base class ready for the first generator
@@ -96,7 +99,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Consolidation Audit | 0/TBD | Not started | - |
+| 1. Consolidation Audit | 0/1 | Not started | - |
 | 2. Core Package | 0/TBD | Not started | - |
 | 3. First Plugin Migration | 0/TBD | Not started | - |
 | 4. Unified Entry Points | 0/TBD | Not started | - |
