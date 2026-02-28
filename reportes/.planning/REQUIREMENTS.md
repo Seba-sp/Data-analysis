@@ -87,35 +87,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase ? | Pending |
-| CORE-02 | Phase ? | Pending |
-| CORE-03 | Phase ? | Pending |
-| CORE-04 | Phase ? | Pending |
-| CORE-05 | Phase ? | Pending |
-| PLUG-01 | Phase ? | Pending |
-| PLUG-02 | Phase ? | Pending |
-| PLUG-03 | Phase ? | Pending |
-| ORG-01 | Phase ? | Pending |
-| ORG-02 | Phase ? | Pending |
-| ORG-03 | Phase ? | Pending |
-| ENTRY-01 | Phase ? | Pending |
-| ENTRY-02 | Phase ? | Pending |
-| ENTRY-03 | Phase ? | Pending |
-| ENTRY-04 | Phase ? | Pending |
-| MIG-01 | Phase ? | Pending |
-| MIG-02 | Phase ? | Pending |
-| MIG-03 | Phase ? | Pending |
-| MIG-04 | Phase ? | Pending |
-| MIG-05 | Phase ? | Pending |
-| GCP-01 | Phase ? | Pending |
-| GCP-02 | Phase ? | Pending |
-| DX-01 | Phase ? | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 2 | Pending |
+| CORE-03 | Phase 2 | Pending |
+| CORE-04 | Phase 2 | Pending |
+| CORE-05 | Phase 2 | Pending |
+| PLUG-01 | Phase 2 | Pending |
+| PLUG-02 | Phase 6 | Pending |
+| PLUG-03 | Phase 2 | Pending |
+| ORG-01 | Phase 2 | Pending |
+| ORG-02 | Phase 2 | Pending |
+| ORG-03 | Phase 2 | Pending |
+| ENTRY-01 | Phase 4 | Pending |
+| ENTRY-02 | Phase 5 | Pending |
+| ENTRY-03 | Phase 4 | Pending |
+| ENTRY-04 | Phase 4 | Pending |
+| MIG-01 | Phase 3 | Pending |
+| MIG-02 | Phase 6 | Pending |
+| MIG-03 | Phase 6 | Pending |
+| MIG-04 | Phase 6 | Pending |
+| MIG-05 | Phase 6 | Pending |
+| GCP-01 | Phase 5 | Pending |
+| GCP-02 | Phase 5 | Pending |
+| DX-01 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 after roadmap creation*
