@@ -1,6 +1,7 @@
 # Phase 1: Consolidation Audit - Context
 
 **Gathered:** 2026-02-28
+**Updated:** 2026-02-28
 **Status:** Ready for planning
 
 <domain>
@@ -15,10 +16,16 @@ Catalogue all diverged code across 6 copies (5 project dirs + `diagnosticos/comp
 
 ### Core boundary — what belongs in core/ vs per-report module
 
-Methods that exist in only ONE project and are specific to that report type's domain stay in the report module, NOT in `core/`. Examples:
-- `_normalize_commune`, `_compare_emails`, `_process_email_columns` (only in assessment-analysis-project) → stay in `reports/assessment_analysis/`
-- `download_users` (only in ensayos_generales) → stays in `reports/ensayos_generales/`
-- `save_form_responses_to_csv`, `download_and_process_form` (only in assessment-analysis family) → stay per-report
+Default rule: methods that exist in only ONE project and are specific to that report type's domain stay in the report module, NOT in `core/`.
+
+**Override — user/form infrastructure goes to `core/` regardless of current distribution:**
+- `download_users` → `core/` (even though currently only in ensayos_generales — user downloading is shared pipeline infrastructure)
+- `download_and_process_form` → `core/` (even though currently only in assessment-analysis family — form processing is shared infrastructure)
+- `save_form_responses_to_csv` → `core/` (same rationale — CSV output for form responses is shared)
+- `_download_form_responses_full` → `core/` (already in 2+ projects, also infrastructure)
+
+Per-report domain methods that stay per-report (report-type-specific logic, NOT infrastructure):
+- `_normalize_commune`, `_compare_emails`, `_process_email_columns` (assessment-analysis-specific data normalization) → stay in `reports/assessment_analysis/`
 
 Methods that exist in 2+ projects go into `core/` — these are the shared infrastructure.
 
@@ -32,7 +39,7 @@ The `BaseReportGenerator` ABC only governs the `generate()` interface — not th
 
 - How to resolve `cleanup_incremental_files` vs `cleanup_temp_files` naming conflict — pick whichever name is clearest for the canonical core version
 - Audit document format — method-by-method comparison table with explicit resolution decision per row
-- Where `_download_form_responses_full` goes: `ensayos_generales` has it AND `assessment-analysis-project` has it — if both need it, it could go into `core/`; check body similarity before deciding
+- Where `_download_form_responses_full` goes: DECIDED → `core/` (user/form infrastructure rule applies; body similarity check is still needed to reconcile the two versions, but destination is `core/`)
 - Whether `diagnosticos_uim/complete_deployment` and `diagnosticos/complete_deployment` share enough differences to be audited separately or can be treated as one
 - How to handle the `main.py` vs `main_app.py` ambiguity in `diagnosticos_uim/complete_deployment/` — investigate which one Cloud Run actually calls
 
@@ -46,8 +53,8 @@ The `BaseReportGenerator` ABC only governs the `generate()` interface — not th
 | Family | Projects | Key additions vs others |
 |--------|----------|------------------------|
 | Diagnosticos | diagnosticos/, diagnosticos_uim/, diagnosticos/complete_deployment/ | `cleanup_incremental_files`, `get_only_new_responses`, `get_incremental_json_file_path`, incremental merge flow |
-| Ensayos | ensayos_generales/ | Superset of diagnosticos family + `get_temp_csv_file_path`, `get_temp_analysis_file_path`, `get_latest_user_timestamp_from_json`, `_download_form_responses_full`, `save_temp_responses_to_csv`, `cleanup_temp_files`, `save_responses_to_csv(include_usernames)`, `download_users` |
-| Assessment-analysis | assessment-analysis-project/, reportes de test de diagnostico/ | Different branch: no incremental JSON, adds `get_users_csv_file_path`, `download_form_responses_incremental`, `save_form_responses_to_csv`, `_normalize_commune`, `_compare_emails`, `_process_email_columns`, `download_and_process_form` |
+| Ensayos | ensayos_generales/ | Superset of diagnosticos family + `get_temp_csv_file_path`, `get_temp_analysis_file_path`, `get_latest_user_timestamp_from_json`, `_download_form_responses_full` (**→ core/**), `save_temp_responses_to_csv`, `cleanup_temp_files`, `save_responses_to_csv(include_usernames)`, `download_users` (**→ core/**) |
+| Assessment-analysis | assessment-analysis-project/, reportes de test de diagnostico/ | Different branch: no incremental JSON, adds `get_users_csv_file_path`, `download_form_responses_incremental`, `save_form_responses_to_csv` (**→ core/**), `_normalize_commune`, `_compare_emails`, `_process_email_columns`, `download_and_process_form` (**→ core/**) |
 
 ### Two families of assessment_analyzer.py
 
