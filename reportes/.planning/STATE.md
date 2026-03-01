@@ -2,38 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T14:04:12.466Z"
-progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T13:31:38.621Z"
-progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 7
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T04:27:00Z"
+last_updated: "2026-03-01T14:42:14Z"
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 6
+  completed_phases: 3
+  total_plans: 9
   completed_plans: 6
 ---
 
@@ -44,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Adding a new report type requires only a new `report_generator` module and a docx template — all infrastructure is reused automatically.
-**Current focus:** Phase 2 - Core Package
+**Current focus:** Phase 4 - Unified Entry Points
 
 ## Current Position
 
-Phase: 3 of 6 (First Plugin Migration) — COMPLETE
-Plan: 2 of 2 in current phase — Plan 03-02 COMPLETE
-Status: Phase 3 complete — DiagnosticosGenerator implemented, registered in REGISTRY, output equivalence verified (4 PDFs produced via unified framework)
-Last activity: 2026-03-01 — Plan 03-02 complete; DiagnosticosGenerator runs end-to-end; Phase 4 (incremental mode) is next
+Phase: 4 of 6 (Unified Entry Points) — IN PROGRESS
+Plan: 1 of 2 in current phase — Plan 04-01 COMPLETE
+Status: Plan 04-01 complete — PipelineRunner implemented in core/runner.py with dry_run, test_email, and normal modes; 26 tests all passing
+Last activity: 2026-03-01 — Plan 04-01 complete; PipelineRunner ready; Plan 04-02 (main.py CLI entry point) is next
 
 Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 13 min
-- Total execution time: 1.07 hours
+- Total plans completed: 6
+- Average duration: 11 min
+- Total execution time: 1.12 hours
 
 **By Phase:**
 
@@ -69,9 +43,10 @@ Progress: [████████░░] 80%
 | 01-consolidation-audit | 1 | 45 min | 45 min |
 | 02-core-package | 4 | 19 min | 5 min |
 | 03-first-plugin-migration | 2 | 33 min | 16 min |
+| 04-unified-entry-points | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 6 min, 3 min, 8 min, 3 min
+- Last 5 plans: 6 min, 3 min, 8 min, 3 min, 3 min
 - Trend: mechanical porting and file migration plans execute very fast with clear source/destination mapping
 
 *Updated after each plan completion*
@@ -116,6 +91,10 @@ Recent decisions affecting current work:
 - [03-02]: Full-run semantics only in DiagnosticosGenerator — incremental_mode deferred to Phase 4
 - [03-02]: Output equivalence bar is content-equivalence, not byte-for-byte — weasyprint may embed different binary metadata
 - [03-02]: Plugin registration pattern: import ConcreteGenerator in reports/__init__.py, add to REGISTRY dict
+- [04-01]: Drive suppressed in test_email mode (same rule as dry_run for Drive) — no student-affecting side effects in test mode
+- [04-01]: records_processed counts PDFs found regardless of email outcome — reflects work done by generate(), independent of downstream success
+- [04-01]: success=True even on partial email failures — success=False only if generate() raises
+- [04-01]: _upload_to_drive absorbs all exceptions internally (returns None on failure) — Drive failures are non-fatal warnings, never abort the loop
 
 ### Pending Todos
 
@@ -131,5 +110,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 03-02-PLAN.md — DiagnosticosGenerator implemented and registered in REGISTRY; 4 PDFs verified via unified framework (M1, CL, CIEN, HYST); Phase 3 complete; Phase 4 (incremental mode) is next
+Stopped at: Completed 04-01-PLAN.md — PipelineRunner implemented in core/runner.py with dry_run, test_email, normal modes; 26 pytest tests passing; Plan 04-02 (main.py CLI entry point) is next
 Resume file: None

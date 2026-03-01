@@ -82,7 +82,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Implement PipelineRunner in core/runner.py with email loop, Drive upload, dry-run/test-email controls, and structured PipelineResult
+- [x] 04-01-PLAN.md — Implement PipelineRunner in core/runner.py with email loop, Drive upload, dry-run/test-email controls, and structured PipelineResult
 - [ ] 04-02-PLAN.md — Create main.py CLI entry point wiring --report-type, --dry-run, --test-email to PipelineRunner
 
 ### Phase 5: GCP Deployment
@@ -117,6 +117,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
 | 2. Core Package | 5/5 | Complete   | 2026-03-01 |
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
-| 4. Unified Entry Points | 0/2 | Not started | - |
+| 4. Unified Entry Points | 1/2 | In Progress | - |
 | 5. GCP Deployment | 0/TBD | Not started | - |
 | 6. Remaining Migrations | 0/TBD | Not started | - |

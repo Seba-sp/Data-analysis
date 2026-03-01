@@ -31,8 +31,8 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 
 - [ ] **ENTRY-01**: Unified `main.py` CLI entry point accepts `--report-type <name>` flag and routes execution to the correct generator via the plugin registry
 - [ ] **ENTRY-02**: Unified GCP webhook service routes incoming LearnWorlds webhook events to the correct report type based on assessment ID mapping
-- [ ] **ENTRY-03**: `--dry-run` flag in unified entry point runs the full pipeline (download, analyze, generate) without sending emails or uploading to Drive
-- [ ] **ENTRY-04**: `--test-email <address>` flag standardized across all report types via shared `email_sender` — redirects all outgoing email to one address during development
+- [x] **ENTRY-03**: `--dry-run` flag in unified entry point runs the full pipeline (download, analyze, generate) without sending emails or uploading to Drive
+- [x] **ENTRY-04**: `--test-email <address>` flag standardized across all report types via shared `email_sender` — redirects all outgoing email to one address during development
 
 ### Migration
 
@@ -49,7 +49,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 
 ### Developer Experience
 
-- [ ] **DX-01**: All pipeline operations return a structured result dict `{success, records_processed, emails_sent, errors[]}` — consistent across all report types and entry points
+- [x] **DX-01**: All pipeline operations return a structured result dict `{success, records_processed, emails_sent, errors[]}` — consistent across all report types and entry points
 
 ## v2 Requirements
 
@@ -100,8 +100,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ORG-03 | Phase 2 | Complete |
 | ENTRY-01 | Phase 4 | Pending |
 | ENTRY-02 | Phase 5 | Pending |
-| ENTRY-03 | Phase 4 | Pending |
-| ENTRY-04 | Phase 4 | Pending |
+| ENTRY-03 | Phase 4 | Complete |
+| ENTRY-04 | Phase 4 | Complete |
 | MIG-01 | Phase 3 | Complete |
 | MIG-02 | Phase 6 | Pending |
 | MIG-03 | Phase 6 | Pending |
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-05 | Phase 6 | Pending |
 | GCP-01 | Phase 5 | Pending |
 | GCP-02 | Phase 5 | Pending |
-| DX-01 | Phase 4 | Pending |
+| DX-01 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
@@ -118,4 +118,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after roadmap creation*
+*Last updated: 2026-03-01 after Plan 04-01 — ENTRY-03, ENTRY-04, DX-01 marked complete*
