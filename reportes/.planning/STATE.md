@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T04:20:00Z"
+last_updated: "2026-03-01T04:24:00Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -22,29 +22,29 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: 2 of 6 (Core Package)
-Plan: 5 of 5 in current phase (02-01, 02-02, 02-03, 02-04 complete; 02-05 remaining)
-Status: Phase 2 in progress — Wave 1 complete; Wave 2 complete (02-02, 02-03, 02-04 done); Wave 3 (02-05) ready
-Last activity: 2026-03-01 — Plan 02-02 complete; core/assessment_downloader.py assembled from 6 sources (38 methods, import-clean)
+Phase: 2 of 6 (Core Package) — COMPLETE, awaiting smoke test checkpoint
+Plan: 5 of 5 in current phase (02-01, 02-02, 02-03, 02-04, 02-05 complete pending verification)
+Status: Phase 2 Wave 3 done — 30 files migrated to from core.* imports; checkpoint human-verify pending
+Last activity: 2026-03-01 — Plan 02-05 complete; bare import migration across all 5 project directories
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 14 min
-- Total execution time: 0.93 hours
+- Total plans completed: 5
+- Average duration: 13 min
+- Total execution time: 1.07 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-consolidation-audit | 1 | 45 min | 45 min |
-| 02-core-package | 3 | 11 min | 4 min |
+| 02-core-package | 4 | 19 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 45 min, 2 min, 6 min, 3 min
+- Last 5 plans: 45 min, 2 min, 6 min, 3 min, 8 min
 - Trend: core implementation plans very fast due to clear merge decisions and straightforward file promotion
 
 *Updated after each plan completion*
@@ -80,6 +80,9 @@ Recent decisions affecting current work:
 - [02-04]: shared/ directory deleted after promotion — confirmed dead code, never imported by any active report
 - [02-02]: save_form_responses_to_csv domain-specific calls (_normalize_commune, _process_email_columns) excluded from core/ body — would cause NameError since those methods stay in reports/assessment_analysis/
 - [02-02]: Union[List, pd.DataFrame] type hints used instead of | syntax for Python 3.9 compatibility in filter_responses and save_responses_to_csv
+- [02-05]: task_service.py files included in GCP_PROJECT_ID rename scope even though not in plan frontmatter — grep found them, must_haves truth required zero GOOGLE_CLOUD_PROJECT in .py files
+- [02-05]: from report_generator import ReportGenerator left as bare import in main.py/main_app.py — report_generator is per-project not a core/ module
+- [02-05]: complete_deployment/ subdirs updated same as parent directories for consistency
 
 ### Pending Todos
 
@@ -95,5 +98,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 02-02-PLAN.md — core/assessment_downloader.py assembled (38 methods, import-clean, from core.storage); Wave 2 now fully complete; 02-05 is next
+Stopped at: 02-05 Task 1 complete (e54fa56) — bare import migration done, awaiting checkpoint:human-verify for Phase 2 smoke tests
 Resume file: None

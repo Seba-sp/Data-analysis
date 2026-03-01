@@ -13,7 +13,7 @@ Six independently-evolved copies of the same pipeline codebase are consolidated 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Consolidation Audit** - Diff all 6 diverged file copies and produce a merge decision document before writing any shared code
-- [ ] **Phase 2: Core Package** - Build `core/` with canonical single versions of all shared services, per-report data namespacing, and the plugin base class
+- [x] **Phase 2: Core Package** - Build `core/` with canonical single versions of all shared services, per-report data namespacing, and the plugin base class (completed 2026-03-01)
 - [ ] **Phase 3: First Plugin Migration** - Port `diagnosticos` into the plugin structure and verify it produces identical output to the standalone version
 - [ ] **Phase 4: Unified Entry Points** - Build the local CLI (`main.py`), `PipelineRunner`, dry-run mode, test-email mode, and structured result schema
 - [ ] **Phase 5: GCP Deployment** - Build the unified webhook service, single `Dockerfile`, health endpoint, and decommission `complete_deployment/`
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
-| 2. Core Package | 4/5 | In Progress|  |
+| 2. Core Package | 5/5 | Complete   | 2026-03-01 |
 | 3. First Plugin Migration | 0/TBD | Not started | - |
 | 4. Unified Entry Points | 0/TBD | Not started | - |
 | 5. GCP Deployment | 0/TBD | Not started | - |

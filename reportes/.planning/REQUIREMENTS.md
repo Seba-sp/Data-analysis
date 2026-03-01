@@ -13,7 +13,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 - [x] **CORE-02**: Unified `core/assessment_downloader.py` exists as a single canonical version that reconciles all diverged methods from 6 project copies (including `complete_deployment/` subfolder versions)
 - [x] **CORE-03**: Unified `core/assessment_analyzer.py` exists as a single canonical version that reconciles all diverged methods across all project copies
 - [x] **CORE-04**: `core/` package includes canonical `storage.py`, `email_sender.py`, `drive_service.py` promoted from existing `shared/` folder
-- [ ] **CORE-05**: All project files use package imports (`from core.storage import StorageClient`) — no bare flat-directory imports remain in the unified codebase
+- [x] **CORE-05**: All project files use package imports (`from core.storage import StorageClient`) — no bare flat-directory imports remain in the unified codebase
 
 ### Plugin System
 
@@ -91,7 +91,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-02 | Phase 2 | Complete |
 | CORE-03 | Phase 2 | Complete |
 | CORE-04 | Phase 2 | Complete |
-| CORE-05 | Phase 2 | Pending |
+| CORE-05 | Phase 2 | Complete |
 | PLUG-01 | Phase 2 | Complete |
 | PLUG-02 | Phase 6 | Pending |
 | PLUG-03 | Phase 2 | Complete |
