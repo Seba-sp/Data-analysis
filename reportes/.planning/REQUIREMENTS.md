@@ -36,7 +36,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 
 ### Migration
 
-- [ ] **MIG-01**: `diagnosticos` report type runs via the unified framework and produces output identical to the current standalone version
+- [x] **MIG-01**: `diagnosticos` report type runs via the unified framework and produces output identical to the current standalone version
 - [ ] **MIG-02**: `diagnosticos_uim` report type runs via the unified framework and produces output identical to the current standalone version
 - [ ] **MIG-03**: `ensayos_generales` report type runs via the unified framework and produces output identical to the current standalone version
 - [ ] **MIG-04**: `assessment-analysis-project` report type runs via the unified framework and produces output identical to the current standalone version
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENTRY-02 | Phase 5 | Pending |
 | ENTRY-03 | Phase 4 | Pending |
 | ENTRY-04 | Phase 4 | Pending |
-| MIG-01 | Phase 3 | Pending |
+| MIG-01 | Phase 3 | Complete |
 | MIG-02 | Phase 6 | Pending |
 | MIG-03 | Phase 6 | Pending |
 | MIG-04 | Phase 6 | Pending |
