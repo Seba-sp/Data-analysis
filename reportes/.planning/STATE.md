@@ -163,5 +163,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-02-PLAN.md — EnsayosGeneralesGenerator plugin created; HTML templates copied to canonical location; namespaced paths applied
+Stopped at: Completed 06-01-PLAN.md — DiagnosticosUIMGenerator plugin created; templates/diagnosticos_uim/ populated; reports/diagnosticos_uim/ package with namespaced report_generator.py and generator.py
 Resume file: None
