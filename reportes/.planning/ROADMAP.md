@@ -51,9 +51,9 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Scaffold core/__init__.py, reports/__init__.py, reports/base.py (BaseReportGenerator ABC), empty REGISTRY, requirements.txt, .env.example
 - [x] 02-02-PLAN.md — Assemble core/assessment_downloader.py by merging all 6 copies per MERGE-DECISIONS.md
-- [ ] 02-03-PLAN.md — Assemble core/assessment_analyzer.py (diagnosticos as canonical base for all methods)
-- [ ] 02-04-PLAN.md — Promote storage.py, email_sender.py, drive_service.py, slack_service.py, upload_folder_to_gcs.py to core/; delete shared/
-- [ ] 02-05-PLAN.md — Migrate all bare flat imports to package imports across all project subdirectories
+- [x] 02-03-PLAN.md — Assemble core/assessment_analyzer.py (diagnosticos as canonical base for all methods)
+- [x] 02-04-PLAN.md — Promote storage.py, email_sender.py, drive_service.py, slack_service.py, upload_folder_to_gcs.py to core/; delete shared/
+- [x] 02-05-PLAN.md — Migrate all bare flat imports to package imports across all project subdirectories
 
 ### Phase 3: First Plugin Migration
 **Goal**: The `diagnosticos` report type runs via the unified framework and produces output identical to its current standalone version, proving the plugin interface end-to-end
@@ -64,7 +64,11 @@ Plans:
   2. Running the pipeline for report type `diagnosticos` with the same input data produces a report file byte-for-byte (or content-equivalent) to the output of the pre-migration standalone version
   3. The `diagnosticos` generator's assessment type list (`["M1", "CL", "CIEN", "HYST"]`) lives in `generator.py` only — it does not appear anywhere in `core/`
   4. All `diagnosticos`-specific templates and question data files are organized under `templates/diagnosticos/` and `data/diagnosticos/questions/` respectively
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Scaffold reports/diagnosticos/ package and move templates + question CSVs to canonical per-report-type locations
+- [ ] 03-02-PLAN.md — Implement DiagnosticosGenerator, register in REGISTRY, verify output equivalence against standalone version
 
 ### Phase 4: Unified Entry Points
 **Goal**: A single `main.py` routes to any registered report type, runs the full pipeline through `PipelineRunner`, and supports dry-run and test-email modes with a structured result on every exit
@@ -108,7 +112,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
 | 2. Core Package | 5/5 | Complete   | 2026-03-01 |
-| 3. First Plugin Migration | 0/TBD | Not started | - |
+| 3. First Plugin Migration | 0/2 | Not started | - |
 | 4. Unified Entry Points | 0/TBD | Not started | - |
 | 5. GCP Deployment | 0/TBD | Not started | - |
 | 6. Remaining Migrations | 0/TBD | Not started | - |
