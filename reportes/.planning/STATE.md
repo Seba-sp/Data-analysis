@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T04:13:00Z"
+last_updated: "2026-03-01T04:14:00Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,29 +23,29 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 2 of 6 (Core Package)
-Plan: 3 of 5 in current phase (02-01, 02-03 complete)
-Status: Phase 2 in progress — Wave 1 complete; Wave 2 in progress (02-03 done, 02-02/02-04 ready)
-Last activity: 2026-03-01 — Plan 02-03 complete; core/assessment_analyzer.py canonical merged version produced
+Plan: 4 of 5 in current phase (02-01, 02-03, 02-04 complete)
+Status: Phase 2 in progress — Wave 1 complete; Wave 2 complete (02-03, 02-04 done, 02-02 ready); Wave 3 (02-05) ready
+Last activity: 2026-03-01 — Plan 02-04 complete; five service files promoted to core/ (storage, email_sender, drive_service, slack_service, upload_folder_to_gcs); shared/ deleted
 
-Progress: [███░░░░░░░] 33%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 18 min
-- Total execution time: 0.88 hours
+- Total plans completed: 4
+- Average duration: 14 min
+- Total execution time: 0.93 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-consolidation-audit | 1 | 45 min | 45 min |
-| 02-core-package | 2 | 8 min | 4 min |
+| 02-core-package | 3 | 11 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 45 min, 2 min, 6 min
-- Trend: core implementation plans (02-03) faster than audit (01-01) due to clear merge decisions
+- Last 5 plans: 45 min, 2 min, 6 min, 3 min
+- Trend: core implementation plans very fast due to clear merge decisions and straightforward file promotion
 
 *Updated after each plan completion*
 
@@ -75,6 +75,9 @@ Recent decisions affecting current work:
 - [02-03]: from core.storage import StorageClient placed at module top-level (not inside method body) — cleaner package import structure
 - [02-03]: analyze_assessment raises ValueError for unknown type (not uim _default fallback) — uim must pass own config dict
 - [02-03]: _analyze_by_category_generic included in core/ — uim intentionally omitted; core needs it for M1/CL/CIEN category analysis
+- [02-04]: diagnosticos/complete_deployment/ used as canonical source for storage, email_sender, drive_service (most feature-complete production copy)
+- [02-04]: StorageClient backend check fixed from 'gcp' to 'gcs' to match STORAGE_BACKEND=gcs env var documentation
+- [02-04]: shared/ directory deleted after promotion — confirmed dead code, never imported by any active report
 
 ### Pending Todos
 
@@ -90,5 +93,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 02-03-PLAN.md — core/assessment_analyzer.py canonical merged version produced; Wave 2 plans 02-02 and 02-04 still pending
+Stopped at: Completed 02-04-PLAN.md — five service files promoted to core/ (storage, email_sender, drive_service, slack_service, upload_folder_to_gcs); shared/ deleted; StorageClient 'gcp'->'gcs' bug fixed
 Resume file: None
