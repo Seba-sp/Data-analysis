@@ -1,11 +1,17 @@
 from typing import Dict, Type
 from reports.base import BaseReportGenerator
 from reports.diagnosticos.generator import DiagnosticosGenerator
+from reports.diagnosticos_uim.generator import DiagnosticosUIMGenerator
+from reports.ensayos_generales.generator import EnsayosGeneralesGenerator
+from reports.test_diagnostico.generator import TestDiagnosticoGenerator
 
 # Plugin registry — maps report type name strings to generator classes.
 # To add a new report type: import its generator class and add one entry here.
 REGISTRY: Dict[str, Type[BaseReportGenerator]] = {
-    "diagnosticos": DiagnosticosGenerator,
+    "diagnosticos":      DiagnosticosGenerator,
+    "diagnosticos_uim":  DiagnosticosUIMGenerator,
+    "ensayos_generales": EnsayosGeneralesGenerator,
+    "test_diagnostico":  TestDiagnosticoGenerator,
 }
 
 
