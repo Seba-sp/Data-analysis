@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T04:14:00Z"
+last_updated: "2026-03-01T04:20:00Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 2 of 6 (Core Package)
-Plan: 4 of 5 in current phase (02-01, 02-03, 02-04 complete)
-Status: Phase 2 in progress — Wave 1 complete; Wave 2 complete (02-03, 02-04 done, 02-02 ready); Wave 3 (02-05) ready
-Last activity: 2026-03-01 — Plan 02-04 complete; five service files promoted to core/ (storage, email_sender, drive_service, slack_service, upload_folder_to_gcs); shared/ deleted
+Plan: 5 of 5 in current phase (02-01, 02-02, 02-03, 02-04 complete; 02-05 remaining)
+Status: Phase 2 in progress — Wave 1 complete; Wave 2 complete (02-02, 02-03, 02-04 done); Wave 3 (02-05) ready
+Last activity: 2026-03-01 — Plan 02-02 complete; core/assessment_downloader.py assembled from 6 sources (38 methods, import-clean)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -78,6 +78,8 @@ Recent decisions affecting current work:
 - [02-04]: diagnosticos/complete_deployment/ used as canonical source for storage, email_sender, drive_service (most feature-complete production copy)
 - [02-04]: StorageClient backend check fixed from 'gcp' to 'gcs' to match STORAGE_BACKEND=gcs env var documentation
 - [02-04]: shared/ directory deleted after promotion — confirmed dead code, never imported by any active report
+- [02-02]: save_form_responses_to_csv domain-specific calls (_normalize_commune, _process_email_columns) excluded from core/ body — would cause NameError since those methods stay in reports/assessment_analysis/
+- [02-02]: Union[List, pd.DataFrame] type hints used instead of | syntax for Python 3.9 compatibility in filter_responses and save_responses_to_csv
 
 ### Pending Todos
 
@@ -93,5 +95,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 02-04-PLAN.md — five service files promoted to core/ (storage, email_sender, drive_service, slack_service, upload_folder_to_gcs); shared/ deleted; StorageClient 'gcp'->'gcs' bug fixed
+Stopped at: Completed 02-02-PLAN.md — core/assessment_downloader.py assembled (38 methods, import-clean, from core.storage); Wave 2 now fully complete; 02-05 is next
 Resume file: None

@@ -50,7 +50,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Scaffold core/__init__.py, reports/__init__.py, reports/base.py (BaseReportGenerator ABC), empty REGISTRY, requirements.txt, .env.example
-- [ ] 02-02-PLAN.md — Assemble core/assessment_downloader.py by merging all 6 copies per MERGE-DECISIONS.md
+- [x] 02-02-PLAN.md — Assemble core/assessment_downloader.py by merging all 6 copies per MERGE-DECISIONS.md
 - [ ] 02-03-PLAN.md — Assemble core/assessment_analyzer.py (diagnosticos as canonical base for all methods)
 - [ ] 02-04-PLAN.md — Promote storage.py, email_sender.py, drive_service.py, slack_service.py, upload_folder_to_gcs.py to core/; delete shared/
 - [ ] 02-05-PLAN.md — Migrate all bare flat imports to package imports across all project subdirectories
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
-| 2. Core Package | 3/5 | In Progress|  |
+| 2. Core Package | 4/5 | In Progress|  |
 | 3. First Plugin Migration | 0/TBD | Not started | - |
 | 4. Unified Entry Points | 0/TBD | Not started | - |
 | 5. GCP Deployment | 0/TBD | Not started | - |
