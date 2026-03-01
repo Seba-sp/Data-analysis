@@ -1,0 +1,8 @@
+# Shell scripts must use LF line endings — CRLF breaks the shebang interpreter on Linux/Cloud Run
+*.sh text eol=lf
+
+# Python files — normalize to LF
+*.py text eol=lf
+
+# Everything else — use default platform behavior
+* text=auto
