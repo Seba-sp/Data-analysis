@@ -2,39 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T18:23:49.771Z"
-progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 14
-  completed_plans: 12
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T18:17:55.186Z"
-progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 14
-  completed_plans: 11
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T14:55:00Z"
+last_updated: "2026-03-01T18:27:00Z"
 progress:
-  total_phases: 6
+  total_phases: 5
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 7
+  total_plans: 14
+  completed_plans: 13
 ---
 
 # Project State
@@ -49,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 5 of 6 (GCP Deployment) — In Progress
-Plan: 2 of 4 in current phase — Plan 05-02 COMPLETE
-Status: 05-02 complete — webhook_service.py unified entry point created at repo root, dispatching all routes via REGISTRY-registered core/ services
-Last activity: 2026-03-01 — Plan 05-02 complete; Phase 05-03 (Dockerfile/cloudbuild.yaml) is next
+Plan: 3 of 4 in current phase — Plan 05-03 COMPLETE
+Status: 05-03 complete — Dockerfile and entrypoint.sh created; container supports batch mode (REPORT_TYPE set) and webhook mode (functions-framework port 8080); .dockerignore added
+Last activity: 2026-03-01 — Plan 05-03 complete; Phase 05-04 (GCP deployment + test webhook delivery) is next
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -81,6 +55,7 @@ Progress: [█████████░] 88%
 |-------|-------|-------|----------|
 | 05-gcp-deployment | 05-01 | 6 min | 6 min |
 | 05-gcp-deployment | 05-02 | 3 min | 3 min |
+| 05-gcp-deployment | 05-03 | 2 min | 2 min |
 
 ## Accumulated Context
 
@@ -134,6 +109,10 @@ Recent decisions affecting current work:
 - [Phase 05-gcp-deployment]: BatchProcessor.process_batch calls PipelineRunner directly (no subprocess) — aligns with core/ no-subprocess contract
 - [Phase 05-gcp-deployment]: Single @functions_framework.http decorator on webhook_handler only — status_handler and cleanup_handler are plain functions dispatched internally
 - [Phase 05-gcp-deployment]: student_data dict includes report_type and assessment_type fields — queued Firestore record is self-describing
+- [05-03]: python:3.11-slim base image — avoids alpine musl wheel incompatibilities with pandas/numpy while keeping image small
+- [05-03]: No CMD instruction — entrypoint.sh handles both execution modes; CMD would conflict with mode-switch logic
+- [05-03]: ENTRYPOINT exec array form ensures signals propagate to Python process (not blocked by shell)
+- [05-03]: .dockerignore added as good practice even though Dockerfile uses selective COPY — prevents accidental context leakage
 
 ### Pending Todos
 
@@ -149,5 +128,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 05-02-PLAN.md — webhook_service.py unified HTTP entry point created; Phase 05-03 (Dockerfile/cloudbuild.yaml) is next
+Stopped at: Completed 05-03-PLAN.md — Dockerfile and entrypoint.sh created; Phase 05-04 (GCP deployment + test webhook delivery) is next
 Resume file: None
