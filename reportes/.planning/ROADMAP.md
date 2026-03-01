@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Consolidation Audit** - Diff all 6 diverged file copies and produce a merge decision document before writing any shared code
 - [x] **Phase 2: Core Package** - Build `core/` with canonical single versions of all shared services, per-report data namespacing, and the plugin base class (completed 2026-03-01)
 - [x] **Phase 3: First Plugin Migration** - Port `diagnosticos` into the plugin structure and verify it produces identical output to the standalone version (completed 2026-03-01)
-- [ ] **Phase 4: Unified Entry Points** - Build the local CLI (`main.py`), `PipelineRunner`, dry-run mode, test-email mode, and structured result schema
+- [x] **Phase 4: Unified Entry Points** - Build the local CLI (`main.py`), `PipelineRunner`, dry-run mode, test-email mode, and structured result schema (completed 2026-03-01)
 - [ ] **Phase 5: GCP Deployment** - Build the unified webhook service, single `Dockerfile`, health endpoint, and decommission `complete_deployment/`
 - [ ] **Phase 6: Remaining Migrations** - Migrate the four remaining report types and complete the plugin registry
 
@@ -117,6 +117,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
 | 2. Core Package | 5/5 | Complete   | 2026-03-01 |
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
-| 4. Unified Entry Points | 1/2 | In Progress | - |
+| 4. Unified Entry Points | 1/2 | Complete    | 2026-03-01 |
 | 5. GCP Deployment | 0/TBD | Not started | - |
 | 6. Remaining Migrations | 0/TBD | Not started | - |
