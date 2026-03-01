@@ -30,7 +30,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 ### Entry Points
 
 - [x] **ENTRY-01**: Unified `main.py` CLI entry point accepts `--report-type <name>` flag and routes execution to the correct generator via the plugin registry
-- [ ] **ENTRY-02**: Unified GCP webhook service routes incoming LearnWorlds webhook events to the correct report type based on assessment ID mapping
+- [x] **ENTRY-02**: Unified GCP webhook service routes incoming LearnWorlds webhook events to the correct report type based on assessment ID mapping
 - [x] **ENTRY-03**: `--dry-run` flag in unified entry point runs the full pipeline (download, analyze, generate) without sending emails or uploading to Drive
 - [x] **ENTRY-04**: `--test-email <address>` flag standardized across all report types via shared `email_sender` — redirects all outgoing email to one address during development
 
@@ -44,7 +44,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 
 ### GCP Deployment
 
-- [ ] **GCP-01**: Single `Dockerfile` covers all report types — the active generator is selected via `REPORT_TYPE` environment variable, eliminating the `complete_deployment/` subfolder duplication pattern
+- [x] **GCP-01**: Single `Dockerfile` covers all report types — the active generator is selected via `REPORT_TYPE` environment variable, eliminating the `complete_deployment/` subfolder duplication pattern
 - [ ] **GCP-02**: `GET /status` health endpoint is available in all GCP-deployed report type configurations, returning queue state and last-run metadata
 
 ### Developer Experience
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ORG-02 | Phase 2 | Complete |
 | ORG-03 | Phase 2 | Complete |
 | ENTRY-01 | Phase 4 | Complete |
-| ENTRY-02 | Phase 5 | Pending |
+| ENTRY-02 | Phase 5 | Complete |
 | ENTRY-03 | Phase 4 | Complete |
 | ENTRY-04 | Phase 4 | Complete |
 | MIG-01 | Phase 3 | Complete |
@@ -107,7 +107,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-03 | Phase 6 | Pending |
 | MIG-04 | Phase 6 | Pending |
 | MIG-05 | Phase 6 | Pending |
-| GCP-01 | Phase 5 | Pending |
+| GCP-01 | Phase 5 | Complete |
 | GCP-02 | Phase 5 | Pending |
 | DX-01 | Phase 4 | Complete |
 

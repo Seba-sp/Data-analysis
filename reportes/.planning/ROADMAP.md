@@ -97,10 +97,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
-- [ ] 05-02-PLAN.md — Write unified webhook_service.py at repo root with all route handlers
-- [ ] 05-03-PLAN.md — Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
-- [ ] 05-04-PLAN.md — Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
+- [ ] 05-01-PLAN.md ï¿½ Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
+- [ ] 05-02-PLAN.md ï¿½ Write unified webhook_service.py at repo root with all route handlers
+- [ ] 05-03-PLAN.md ï¿½ Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
+- [ ] 05-04-PLAN.md ï¿½ Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
 
 ### Phase 6: Remaining Migrations
 **Goal**: All five existing report types run via the unified framework with verified identical output, the plugin registry is complete, and the old `shared/` directory is removed
@@ -124,5 +124,5 @@ Phases execute in numeric order: 1 â†’ 2 â†’ 3 â†’ 4 â†’ 5 â†’ 6
 | 2. Core Package | 5/5 | Complete   | 2026-03-01 |
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
 | 4. Unified Entry Points | 1/2 | Complete    | 2026-03-01 |
-| 5. GCP Deployment | 0/TBD | Not started | - |
+| 5. GCP Deployment | 1/4 | In Progress|  |
 | 6. Remaining Migrations | 0/TBD | Not started | - |

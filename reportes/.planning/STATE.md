@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T14:55:10.930Z"
+last_updated: "2026-03-01T18:17:55.186Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 14
+  completed_plans: 11
 ---
 
 ---
@@ -31,16 +31,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Adding a new report type requires only a new `report_generator` module and a docx template — all infrastructure is reused automatically.
-**Current focus:** Phase 4 - Unified Entry Points
+**Current focus:** Phase 5 - GCP Deployment
 
 ## Current Position
 
-Phase: 4 of 6 (Unified Entry Points) — COMPLETE
-Plan: 2 of 2 in current phase — Plan 04-02 COMPLETE
-Status: Phase 4 complete — main.py CLI entry point created, routes --report-type to PipelineRunner via REGISTRY; user confirmed dry-run works end-to-end
-Last activity: 2026-03-01 — Plan 04-02 complete; Phase 5 (Cloud Run packaging) is next
+Phase: 5 of 6 (GCP Deployment) — In Progress
+Plan: 1 of 4 in current phase — Plan 05-01 COMPLETE
+Status: 05-01 complete — FirestoreService, TaskService, BatchProcessor, AssessmentMapper promoted to core/ with namespacing, bug fixes, and unified routing
+Last activity: 2026-03-01 — Plan 05-01 complete; Phase 05-02 (webhook_service.py) is next
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -63,6 +63,10 @@ Progress: [█████████░] 85%
 - Trend: mechanical porting and file migration plans execute very fast with clear source/destination mapping
 
 *Updated after each plan completion*
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 05-gcp-deployment | 05-01 | 6 min | 6 min |
 
 ## Accumulated Context
 
@@ -111,6 +115,9 @@ Recent decisions affecting current work:
 - [Phase 04-02]: Early get_generator() call in main.py validates report type BEFORE PipelineRunner construction — ensures descriptive 'Available types' error is always reachable
 - [Phase 04-02]: No shebang line in main.py — Windows compatibility
 - [Phase 04-02]: All exit paths use sys.exit(0) or sys.exit(1) with a logged summary — never silent
+- [Phase 05-gcp-deployment]: FirestoreService accepts report_type in __init__ — no singleton, callers scope to their report type
+- [Phase 05-gcp-deployment]: AssessmentMapper uses M1_UIM_ASSESSMENT_ID/HYST_UIM_ASSESSMENT_ID env vars for UIM — distinct from DIAG to avoid hex collisions
+- [Phase 05-gcp-deployment]: BatchProcessor.process_batch calls PipelineRunner directly (no subprocess) — aligns with core/ no-subprocess contract
 
 ### Pending Todos
 
@@ -126,5 +133,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 04-02-PLAN.md — main.py CLI entry point created; Phase 4 complete; Phase 5 (Cloud Run packaging) is next
+Stopped at: Completed 05-01-PLAN.md — FirestoreService, TaskService, BatchProcessor, AssessmentMapper promoted to core/; Phase 05-02 (webhook_service.py) is next
 Resume file: None
