@@ -35,12 +35,12 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: 3 of 6 (First Plugin Migration) — IN PROGRESS
-Plan: 1 of 2 in current phase — Plan 03-01 COMPLETE
-Status: Phase 3 in progress — reports/diagnosticos/ package scaffolded, assets migrated to canonical locations
-Last activity: 2026-03-01 — Plan 03-01 complete; package and asset migration done; Plan 03-02 (DiagnosticosGenerator) is next
+Phase: 3 of 6 (First Plugin Migration) — COMPLETE
+Plan: 2 of 2 in current phase — Plan 03-02 COMPLETE
+Status: Phase 3 complete — DiagnosticosGenerator implemented, registered in REGISTRY, output equivalence verified (4 PDFs produced via unified framework)
+Last activity: 2026-03-01 — Plan 03-02 complete; DiagnosticosGenerator runs end-to-end; Phase 4 (incremental mode) is next
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -55,7 +55,7 @@ Progress: [███████░░░] 70%
 |-------|-------|-------|----------|
 | 01-consolidation-audit | 1 | 45 min | 45 min |
 | 02-core-package | 4 | 19 min | 5 min |
-| 03-first-plugin-migration | 1 | 3 min | 3 min |
+| 03-first-plugin-migration | 2 | 33 min | 16 min |
 
 **Recent Trend:**
 - Last 5 plans: 2 min, 6 min, 3 min, 8 min, 3 min
@@ -99,6 +99,10 @@ Recent decisions affecting current work:
 - [02-05]: complete_deployment/ subdirs updated same as parent directories for consistency
 - [Phase 03-first-plugin-migration]: data/diagnosticos/questions/*.csv files are gitignored by parent .gitignore (data/ and *.csv exclusions) — intentional, data files not version-controlled
 - [Phase 03-first-plugin-migration]: diagnosticos/report_generator.py kept as standalone reference for output-equivalence verification in Plan 03-02
+- [03-02]: ASSESSMENT_TYPES = ["M1", "CL", "CIEN", "HYST"] lives only in generator.py — not promoted to core/
+- [03-02]: Full-run semantics only in DiagnosticosGenerator — incremental_mode deferred to Phase 4
+- [03-02]: Output equivalence bar is content-equivalence, not byte-for-byte — weasyprint may embed different binary metadata
+- [03-02]: Plugin registration pattern: import ConcreteGenerator in reports/__init__.py, add to REGISTRY dict
 
 ### Pending Todos
 
@@ -114,5 +118,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 03-01-PLAN.md — reports/diagnosticos/ package scaffolded, 4 HTML templates moved to templates/diagnosticos/, 4 question CSVs moved to data/diagnosticos/questions/; Plan 03-02 (DiagnosticosGenerator) is next
+Stopped at: Completed 03-02-PLAN.md — DiagnosticosGenerator implemented and registered in REGISTRY; 4 PDFs verified via unified framework (M1, CL, CIEN, HYST); Phase 3 complete; Phase 4 (incremental mode) is next
 Resume file: None
