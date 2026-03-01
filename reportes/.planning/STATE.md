@@ -3,6 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-01T23:20:38.073Z"
+progress:
+  total_phases: 6
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 17
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-01T23:14:16.915Z"
 progress:
   total_phases: 6
@@ -49,9 +62,9 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 6 of 6 (Remaining Migrations) — in progress
-Plan: 2 of 4 in current phase — Plan 06-02 COMPLETE
-Status: 06-02 complete — EnsayosGeneralesGenerator plugin created; HTML templates copied to templates/ensayos_generales/; namespaced paths applied to report_generator.py
-Last activity: 2026-03-01 — Plan 06-02 complete
+Plan: 3 of 4 in current phase — Plan 06-03 COMPLETE
+Status: 06-03 complete — TestDiagnosticoGenerator plugin migrated; all bare imports updated to package-relative; templates copied to canonical location
+Last activity: 2026-03-01 — Plan 06-03 complete
 
 Progress: [████████░░] 83% (15/18 plans)
 
@@ -85,6 +98,7 @@ Progress: [████████░░] 83% (15/18 plans)
 | 05-gcp-deployment | 05-04 | 30 min | 30 min |
 | Phase 06-remaining-migrations P02 | 2 | 2 tasks | 6 files |
 | Phase 06-remaining-migrations P01 | 3 | 2 tasks | 4 files |
+| Phase 06-remaining-migrations P06-03 | 8 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -148,6 +162,7 @@ Recent decisions affecting current work:
 - [Phase 06-02]: ensayos_generales download() is manual-prep pattern: reads analysis.csv from data/ensayos_generales/analysis/, fails fast with FileNotFoundError if absent
 - [Phase 06-02]: render() produces 1 PDF per student (not 1 per assessment type) — key distinction from diagnosticos
 - [Phase 06-remaining-migrations]: data/diagnosticos_uim/questions/ files (CSVs + xlsx) are gitignored by parent .gitignore — intentional, data files not version-controlled (same as diagnosticos)
+- [Phase 06-remaining-migrations]: Segmentos.xlsx force-added to git (git add -f) — *.xlsx gitignore rule but this is a static config template asset required for plugin operation
 
 ### Pending Todos
 

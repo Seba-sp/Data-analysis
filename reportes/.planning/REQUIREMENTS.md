@@ -39,8 +39,8 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 - [x] **MIG-01**: `diagnosticos` report type runs via the unified framework and produces output identical to the current standalone version
 - [x] **MIG-02**: `diagnosticos_uim` report type runs via the unified framework and produces output identical to the current standalone version
 - [x] **MIG-03**: `ensayos_generales` report type runs via the unified framework and produces output identical to the current standalone version
-- [ ] **MIG-04**: `assessment-analysis-project` report type runs via the unified framework and produces output identical to the current standalone version
-- [ ] **MIG-05**: `reportes de test de diagnostico` report type runs via the unified framework and produces output identical to the current standalone version
+- [x] **MIG-04**: `assessment-analysis-project` report type runs via the unified framework and produces output identical to the current standalone version
+- [x] **MIG-05**: `reportes de test de diagnostico` report type runs via the unified framework and produces output identical to the current standalone version
 
 ### GCP Deployment
 
@@ -105,8 +105,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-01 | Phase 3 | Complete |
 | MIG-02 | Phase 6 | Complete |
 | MIG-03 | Phase 6 | Complete |
-| MIG-04 | Phase 6 | Pending |
-| MIG-05 | Phase 6 | Pending |
+| MIG-04 | Phase 6 | Complete |
+| MIG-05 | Phase 6 | Complete |
 | GCP-01 | Phase 5 | Complete |
 | GCP-02 | Phase 5 | Complete |
 | DX-01 | Phase 4 | Complete |
