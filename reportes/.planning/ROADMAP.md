@@ -46,7 +46,14 @@ Plans:
   3. `from core.storage import StorageClient`, `from core.email_sender import EmailSender`, and `from core.drive_service import DriveService` all work from the canonical `core/` package
   4. No file in the unified codebase uses a bare flat import (`from storage import ...`) — all imports use `from core.X import Y`
   5. `reports/base.py` contains `BaseReportGenerator` ABC with the `generate()` interface; `reports/__init__.py` contains an empty `REGISTRY` dict; `data/<report_type>/raw/`, `data/<report_type>/processed/`, and `data/<report_type>/analysis/` directory conventions are established and documented; all templates live under `templates/<report_type>/`
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Scaffold core/__init__.py, reports/__init__.py, reports/base.py (BaseReportGenerator ABC), empty REGISTRY, requirements.txt, .env.example
+- [ ] 02-02-PLAN.md — Assemble core/assessment_downloader.py by merging all 6 copies per MERGE-DECISIONS.md
+- [ ] 02-03-PLAN.md — Assemble core/assessment_analyzer.py (diagnosticos as canonical base for all methods)
+- [ ] 02-04-PLAN.md — Promote storage.py, email_sender.py, drive_service.py, slack_service.py, upload_folder_to_gcs.py to core/; delete shared/
+- [ ] 02-05-PLAN.md — Migrate all bare flat imports to package imports across all project subdirectories
 
 ### Phase 3: First Plugin Migration
 **Goal**: The `diagnosticos` report type runs via the unified framework and produces output identical to its current standalone version, proving the plugin interface end-to-end
