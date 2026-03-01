@@ -1,0 +1,434 @@
+"""
+Tests for core/runner.py — PipelineRunner and PipelineResult.
+
+TDD RED phase: these tests are written before the implementation exists.
+"""
+import os
+import logging
+from pathlib import Path
+from unittest.mock import MagicMock, patch, PropertyMock
+import pytest
+
+# ── Imports under test ─────────────────────────────────────────────────────────
+from core.runner import PipelineRunner, PipelineResult
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _make_pdf_dir(tmp_path: Path, filenames: list[str]) -> Path:
+    """Create a temporary directory with fake PDF files."""
+    out_dir = tmp_path / "output"
+    out_dir.mkdir()
+    for name in filenames:
+        (out_dir / name).write_bytes(b"%PDF fake")
+    return out_dir
+
+
+# ── PipelineResult structure ───────────────────────────────────────────────────
+
+class TestPipelineResultStructure:
+    def test_has_four_keys(self):
+        result: PipelineResult = {
+            "success": True,
+            "records_processed": 0,
+            "emails_sent": 0,
+            "errors": [],
+        }
+        assert set(result.keys()) == {"success", "records_processed", "emails_sent", "errors"}
+
+    def test_typed_dict_is_importable(self):
+        from core.runner import PipelineResult as PR
+        assert PR is not None
+
+
+# ── PipelineRunner instantiation ──────────────────────────────────────────────
+
+class TestPipelineRunnerInit:
+    def test_stores_report_type(self):
+        runner = PipelineRunner("diagnosticos")
+        assert runner.report_type == "diagnosticos"
+
+    def test_default_dry_run_false(self):
+        runner = PipelineRunner("diagnosticos")
+        assert runner.dry_run is False
+
+    def test_dry_run_true(self):
+        runner = PipelineRunner("diagnosticos", dry_run=True)
+        assert runner.dry_run is True
+
+    def test_default_test_email_none(self):
+        runner = PipelineRunner("diagnosticos")
+        assert runner.test_email is None
+
+    def test_test_email_stored(self):
+        runner = PipelineRunner("diagnosticos", test_email="dev@example.com")
+        assert runner.test_email == "dev@example.com"
+
+
+# ── _extract_email_from_pdf ────────────────────────────────────────────────────
+
+class TestExtractEmailFromPdf:
+    def _runner(self):
+        return PipelineRunner("diagnosticos")
+
+    def test_standard_pattern(self, tmp_path):
+        pdf = tmp_path / "informe_alice@school.com_M1.pdf"
+        pdf.write_bytes(b"")
+        assert self._runner()._extract_email_from_pdf(pdf) == "alice@school.com"
+
+    def test_email_with_underscores(self, tmp_path):
+        # email itself has underscores: informe_first_last@school.com_CL.pdf
+        pdf = tmp_path / "informe_first_last@school.com_CL.pdf"
+        pdf.write_bytes(b"")
+        result = self._runner()._extract_email_from_pdf(pdf)
+        assert result == "first_last@school.com"
+
+    def test_missing_informe_prefix_returns_none(self, tmp_path):
+        pdf = tmp_path / "alice@school.com_M1.pdf"
+        pdf.write_bytes(b"")
+        assert self._runner()._extract_email_from_pdf(pdf) is None
+
+    def test_too_few_parts_returns_none(self, tmp_path):
+        pdf = tmp_path / "informe_M1.pdf"
+        pdf.write_bytes(b"")
+        assert self._runner()._extract_email_from_pdf(pdf) is None
+
+    def test_exactly_three_parts(self, tmp_path):
+        # informe_email@x.com_ATYPE — minimal valid
+        pdf = tmp_path / "informe_a@b.com_HYST.pdf"
+        pdf.write_bytes(b"")
+        result = self._runner()._extract_email_from_pdf(pdf)
+        assert result == "a@b.com"
+
+
+# ── run() — dry-run mode ───────────────────────────────────────────────────────
+
+class TestRunDryRun:
+    """In dry_run=True mode: generate() runs, no emails sent, no Drive upload."""
+
+    def test_dry_run_no_email_calls(self, tmp_path):
+        runner = PipelineRunner("diagnosticos", dry_run=True)
+        out_dir = _make_pdf_dir(tmp_path, [
+            "informe_alice@s.com_M1.pdf",
+            "informe_bob@s.com_CL.pdf",
+        ])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen_instance = MagicMock()
+            mock_gen_instance.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen_instance)
+
+            result = runner.run()
+
+        mock_email_cls.assert_not_called()
+        mock_drive_cls.assert_not_called()
+        assert result["success"] is True
+        assert result["emails_sent"] == 0
+        assert result["records_processed"] == 2
+
+    def test_dry_run_records_processed_equals_pdf_count(self, tmp_path):
+        runner = PipelineRunner("diagnosticos", dry_run=True)
+        out_dir = _make_pdf_dir(tmp_path, [
+            "informe_a@x.com_M1.pdf",
+            "informe_b@x.com_CL.pdf",
+            "informe_c@x.com_CIEN.pdf",
+        ])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender"), \
+             patch("core.runner.DriveService"):
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            result = runner.run()
+
+        assert result["records_processed"] == 3
+
+
+# ── run() — test-email mode ────────────────────────────────────────────────────
+
+class TestRunTestEmail:
+    """In test_email mode: emails go to override address, Drive suppressed."""
+
+    def test_email_sent_to_test_address(self, tmp_path):
+        runner = PipelineRunner("diagnosticos", test_email="dev@example.com")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_M1.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            result = runner.run()
+
+        # Drive must NOT be called
+        mock_drive_cls.assert_not_called()
+
+        # Email must be sent to test address, not student address
+        call_kwargs = mock_sender.send_comprehensive_report_email.call_args
+        assert call_kwargs.kwargs.get("recipient_email") == "dev@example.com" or \
+               call_kwargs.args[0] == "dev@example.com"
+
+        assert result["emails_sent"] == 1
+
+    def test_drive_suppressed_in_test_email_mode(self, tmp_path):
+        runner = PipelineRunner("diagnosticos", test_email="dev@example.com")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_x@y.com_CL.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            runner.run()
+
+        mock_drive_cls.assert_not_called()
+
+
+# ── run() — normal mode ────────────────────────────────────────────────────────
+
+class TestRunNormalMode:
+    """Normal mode: email to student, Drive upload attempted."""
+
+    def test_email_sent_to_student_address(self, tmp_path):
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_M1.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.return_value = "file-id-123"
+            mock_drive_cls.return_value = mock_drive
+
+            result = runner.run()
+
+        call_kwargs = mock_sender.send_comprehensive_report_email.call_args
+        recipient = call_kwargs.kwargs.get("recipient_email") or call_kwargs.args[0]
+        assert recipient == "student@s.com"
+        assert result["emails_sent"] == 1
+
+    def test_drive_upload_attempted_in_normal_mode(self, tmp_path):
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_a@b.com_M1.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.return_value = "fid"
+            mock_drive_cls.return_value = mock_drive
+
+            runner.run()
+
+        mock_drive_cls.assert_called_once()
+        mock_drive.upload_file.assert_called_once()
+
+
+# ── run() — error handling ─────────────────────────────────────────────────────
+
+class TestRunErrorHandling:
+    def test_generate_failure_returns_success_false(self):
+        runner = PipelineRunner("diagnosticos")
+
+        with patch("core.runner.get_generator") as mock_get_gen:
+            mock_gen = MagicMock()
+            mock_gen.generate.side_effect = RuntimeError("generation exploded")
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            result = runner.run()
+
+        assert result["success"] is False
+        assert len(result["errors"]) > 0
+        assert "generation exploded" in result["errors"][0]
+
+    def test_email_failure_does_not_abort_loop(self, tmp_path):
+        """If one email fails, the loop must continue to the next student."""
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, [
+            "informe_fail@s.com_M1.pdf",
+            "informe_ok@s.com_M1.pdf",
+        ])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.return_value = None
+            mock_drive_cls.return_value = mock_drive
+
+            # First call raises, second returns True
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.side_effect = [
+                Exception("SMTP timeout"),
+                True,
+            ]
+            mock_email_cls.return_value = mock_sender
+
+            result = runner.run()
+
+        assert result["success"] is True
+        assert result["emails_sent"] == 1
+        assert result["records_processed"] == 2
+        assert len(result["errors"]) == 1
+
+    def test_send_returning_false_appended_to_errors(self, tmp_path):
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_x@y.com_M1.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.return_value = None
+            mock_drive_cls.return_value = mock_drive
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = False
+            mock_email_cls.return_value = mock_sender
+
+            result = runner.run()
+
+        assert result["emails_sent"] == 0
+        assert len(result["errors"]) == 1
+
+    def test_unextractable_email_skipped_with_error(self, tmp_path):
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, ["bad_filename.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender"), \
+             patch("core.runner.DriveService"):
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            result = runner.run()
+
+        assert result["success"] is True
+        assert result["emails_sent"] == 0
+        assert len(result["errors"]) > 0
+
+    def test_drive_upload_failure_does_not_abort(self, tmp_path):
+        """Drive upload failure (exception or None) must not stop the email loop."""
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_s@x.com_M1.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.side_effect = Exception("Drive quota exceeded")
+            mock_drive_cls.return_value = mock_drive
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            result = runner.run()
+
+        # Email still sent despite Drive failure
+        assert result["emails_sent"] == 1
+        assert result["success"] is True
+
+
+# ── run() — always returns PipelineResult ─────────────────────────────────────
+
+class TestRunAlwaysReturnsResult:
+    def test_result_never_none_on_success(self, tmp_path):
+        runner = PipelineRunner("diagnosticos", dry_run=True)
+        out_dir = _make_pdf_dir(tmp_path, [])
+
+        with patch("core.runner.get_generator") as mock_get_gen:
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+            result = runner.run()
+
+        assert result is not None
+        assert "success" in result
+
+    def test_result_never_none_on_generate_failure(self):
+        runner = PipelineRunner("diagnosticos")
+
+        with patch("core.runner.get_generator") as mock_get_gen:
+            mock_gen = MagicMock()
+            mock_gen.generate.side_effect = ValueError("no data")
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+            result = runner.run()
+
+        assert result is not None
+        assert result["success"] is False
+
+
+# ── Logging (no bare print calls) ─────────────────────────────────────────────
+
+class TestNoBarePrints:
+    def test_runner_module_has_no_print_calls(self):
+        import ast
+        import inspect
+        import core.runner as runner_module
+
+        src_file = Path(inspect.getfile(runner_module))
+        tree = ast.parse(src_file.read_text(encoding="utf-8"))
+
+        print_calls = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "print"
+        ]
+        assert print_calls == [], f"Found {len(print_calls)} bare print() calls in runner.py"
