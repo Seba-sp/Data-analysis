@@ -1,0 +1,29 @@
+# Secrets — injected by Cloud Run at deploy time
+.env
+.env.*
+!.env.example
+
+# Data files — Cloud Run uses STORAGE_BACKEND=gcs
+data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Legacy subdirectories — not needed in image
+diagnosticos/
+diagnosticos_uim/
+assessment-analysis-project/
+ensayos_generales/
+reportes de test de diagnostico/
+
+# Planning / tooling
+.planning/
+.claude/
+scripts/
+tests/
+
+# Git
+.git/
