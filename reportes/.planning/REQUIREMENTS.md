@@ -18,7 +18,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 ### Plugin System
 
 - [x] **PLUG-01**: `BaseReportGenerator` abstract base class exists in `reports/base.py` with consistent interface: `generate(analysis_data) -> bytes` (or file path)
-- [ ] **PLUG-02**: Each existing report type has a `reports/<report_type>/generator.py` module that extends `BaseReportGenerator`
+- [x] **PLUG-02**: Each existing report type has a `reports/<report_type>/generator.py` module that extends `BaseReportGenerator`
 - [x] **PLUG-03**: Explicit plugin registry (dict or equivalent) maps report type name strings to generator classes, enabling lookup by name without dynamic discovery
 
 ### Data & Template Organization
@@ -37,8 +37,8 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 ### Migration
 
 - [x] **MIG-01**: `diagnosticos` report type runs via the unified framework and produces output identical to the current standalone version
-- [ ] **MIG-02**: `diagnosticos_uim` report type runs via the unified framework and produces output identical to the current standalone version
-- [ ] **MIG-03**: `ensayos_generales` report type runs via the unified framework and produces output identical to the current standalone version
+- [x] **MIG-02**: `diagnosticos_uim` report type runs via the unified framework and produces output identical to the current standalone version
+- [x] **MIG-03**: `ensayos_generales` report type runs via the unified framework and produces output identical to the current standalone version
 - [ ] **MIG-04**: `assessment-analysis-project` report type runs via the unified framework and produces output identical to the current standalone version
 - [ ] **MIG-05**: `reportes de test de diagnostico` report type runs via the unified framework and produces output identical to the current standalone version
 
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-04 | Phase 2 | Complete |
 | CORE-05 | Phase 2 | Complete |
 | PLUG-01 | Phase 2 | Complete |
-| PLUG-02 | Phase 6 | Pending |
+| PLUG-02 | Phase 6 | Complete |
 | PLUG-03 | Phase 2 | Complete |
 | ORG-01 | Phase 2 | Complete |
 | ORG-02 | Phase 2 | Complete |
@@ -103,8 +103,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENTRY-03 | Phase 4 | Complete |
 | ENTRY-04 | Phase 4 | Complete |
 | MIG-01 | Phase 3 | Complete |
-| MIG-02 | Phase 6 | Pending |
-| MIG-03 | Phase 6 | Pending |
+| MIG-02 | Phase 6 | Complete |
+| MIG-03 | Phase 6 | Complete |
 | MIG-04 | Phase 6 | Pending |
 | MIG-05 | Phase 6 | Pending |
 | GCP-01 | Phase 5 | Complete |

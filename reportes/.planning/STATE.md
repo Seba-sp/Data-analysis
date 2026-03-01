@@ -3,12 +3,25 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T19:01:24.282Z"
+last_updated: "2026-03-01T23:14:16.915Z"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 18
+  completed_plans: 16
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-01T23:13:51.503Z"
+progress:
+  total_phases: 6
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 15
 ---
 
 ---
@@ -31,16 +44,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** Adding a new report type requires only a new `report_generator` module and a docx template — all infrastructure is reused automatically.
-**Current focus:** Phase 5 - GCP Deployment
+**Current focus:** Phase 6 - Remaining Migrations
 
 ## Current Position
 
-Phase: 5 of 5 (GCP Deployment) — COMPLETE
-Plan: 4 of 4 in current phase — Plan 05-04 COMPLETE
-Status: 05-04 complete — Unified container deployed to Cloud Run; end-to-end webhook delivery verified; complete_deployment/ directories decommissioned; Phase 5 done
-Last activity: 2026-03-01 — Plan 05-04 complete; ALL PHASES COMPLETE
+Phase: 6 of 6 (Remaining Migrations) — in progress
+Plan: 2 of 4 in current phase — Plan 06-02 COMPLETE
+Status: 06-02 complete — EnsayosGeneralesGenerator plugin created; HTML templates copied to templates/ensayos_generales/; namespaced paths applied to report_generator.py
+Last activity: 2026-03-01 — Plan 06-02 complete
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83% (15/18 plans)
 
 ## Performance Metrics
 
@@ -70,6 +83,8 @@ Progress: [██████████] 100%
 | 05-gcp-deployment | 05-02 | 3 min | 3 min |
 | 05-gcp-deployment | 05-03 | 2 min | 2 min |
 | 05-gcp-deployment | 05-04 | 30 min | 30 min |
+| Phase 06-remaining-migrations P02 | 2 | 2 tasks | 6 files |
+| Phase 06-remaining-migrations P01 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -130,6 +145,9 @@ Recent decisions affecting current work:
 - [05-04]: Service URL is https://unified-webhook-822197731833.us-central1.run.app (regional URL, not hash-based — new revision on redeploy)
 - [05-04]: Two-step deploy pattern — initial deploy without PROCESS_BATCH_URL, retrieve URL, then update env var to resolve chicken-and-egg
 - [05-04]: complete_deployment/ decommissioned only after Task 2 human checkpoint approval (locked sequence per CONTEXT.md design decision)
+- [Phase 06-02]: ensayos_generales download() is manual-prep pattern: reads analysis.csv from data/ensayos_generales/analysis/, fails fast with FileNotFoundError if absent
+- [Phase 06-02]: render() produces 1 PDF per student (not 1 per assessment type) — key distinction from diagnosticos
+- [Phase 06-remaining-migrations]: data/diagnosticos_uim/questions/ files (CSVs + xlsx) are gitignored by parent .gitignore — intentional, data files not version-controlled (same as diagnosticos)
 
 ### Pending Todos
 
@@ -145,5 +163,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 05-04-PLAN.md — unified-webhook deployed to Cloud Run; complete_deployment/ decommissioned; ALL PHASES COMPLETE
+Stopped at: Completed 06-02-PLAN.md — EnsayosGeneralesGenerator plugin created; HTML templates copied to canonical location; namespaced paths applied
 Resume file: None

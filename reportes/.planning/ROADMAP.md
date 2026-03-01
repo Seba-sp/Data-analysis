@@ -131,4 +131,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
 | 4. Unified Entry Points | 2/2 | Complete    | 2026-03-01 |
 | 5. GCP Deployment | 4/4 | Complete   | 2026-03-01 |
-| 6. Remaining Migrations | 0/4 | Not started | - |
+| 6. Remaining Migrations | 2/4 | In Progress|  |
