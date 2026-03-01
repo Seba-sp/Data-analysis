@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T14:42:14Z"
+last_updated: "2026-03-01T14:55:00Z"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: 4 of 6 (Unified Entry Points) — IN PROGRESS
-Plan: 1 of 2 in current phase — Plan 04-01 COMPLETE
-Status: Plan 04-01 complete — PipelineRunner implemented in core/runner.py with dry_run, test_email, and normal modes; 26 tests all passing
-Last activity: 2026-03-01 — Plan 04-01 complete; PipelineRunner ready; Plan 04-02 (main.py CLI entry point) is next
+Phase: 4 of 6 (Unified Entry Points) — COMPLETE
+Plan: 2 of 2 in current phase — Plan 04-02 COMPLETE
+Status: Phase 4 complete — main.py CLI entry point created, routes --report-type to PipelineRunner via REGISTRY; user confirmed dry-run works end-to-end
+Last activity: 2026-03-01 — Plan 04-02 complete; Phase 5 (Cloud Run packaging) is next
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -43,10 +43,10 @@ Progress: [████████░░] 80%
 | 01-consolidation-audit | 1 | 45 min | 45 min |
 | 02-core-package | 4 | 19 min | 5 min |
 | 03-first-plugin-migration | 2 | 33 min | 16 min |
-| 04-unified-entry-points | 1 | 3 min | 3 min |
+| 04-unified-entry-points | 2 | 8 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 3 min, 8 min, 3 min, 3 min
+- Last 5 plans: 3 min, 8 min, 3 min, 3 min, 5 min
 - Trend: mechanical porting and file migration plans execute very fast with clear source/destination mapping
 
 *Updated after each plan completion*
@@ -95,6 +95,9 @@ Recent decisions affecting current work:
 - [04-01]: records_processed counts PDFs found regardless of email outcome — reflects work done by generate(), independent of downstream success
 - [04-01]: success=True even on partial email failures — success=False only if generate() raises
 - [04-01]: _upload_to_drive absorbs all exceptions internally (returns None on failure) — Drive failures are non-fatal warnings, never abort the loop
+- [Phase 04-02]: Early get_generator() call in main.py validates report type BEFORE PipelineRunner construction — ensures descriptive 'Available types' error is always reachable
+- [Phase 04-02]: No shebang line in main.py — Windows compatibility
+- [Phase 04-02]: All exit paths use sys.exit(0) or sys.exit(1) with a logged summary — never silent
 
 ### Pending Todos
 
@@ -110,5 +113,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 04-01-PLAN.md — PipelineRunner implemented in core/runner.py with dry_run, test_email, normal modes; 26 pytest tests passing; Plan 04-02 (main.py CLI entry point) is next
+Stopped at: Completed 04-02-PLAN.md — main.py CLI entry point created; Phase 4 complete; Phase 5 (Cloud Run packaging) is next
 Resume file: None
