@@ -17,15 +17,15 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 
 ### Plugin System
 
-- [ ] **PLUG-01**: `BaseReportGenerator` abstract base class exists in `reports/base.py` with consistent interface: `generate(analysis_data) -> bytes` (or file path)
+- [x] **PLUG-01**: `BaseReportGenerator` abstract base class exists in `reports/base.py` with consistent interface: `generate(analysis_data) -> bytes` (or file path)
 - [ ] **PLUG-02**: Each existing report type has a `reports/<report_type>/generator.py` module that extends `BaseReportGenerator`
-- [ ] **PLUG-03**: Explicit plugin registry (dict or equivalent) maps report type name strings to generator classes, enabling lookup by name without dynamic discovery
+- [x] **PLUG-03**: Explicit plugin registry (dict or equivalent) maps report type name strings to generator classes, enabling lookup by name without dynamic discovery
 
 ### Data & Template Organization
 
-- [ ] **ORG-01**: All templates are organized under `templates/<report_type>/` — no template files scattered inside report-type module directories or project root
-- [ ] **ORG-02**: All runtime data is namespaced per report type under `data/<report_type>/analysis/`, `data/<report_type>/processed/`, `data/<report_type>/raw/` — prevents file collisions when multiple report types run from the same codebase
-- [ ] **ORG-03**: Duplicate email suppression uses per-report-type tracking at `data/<report_type>/processed_emails.csv` — a student who received report type A is not blocked from receiving report type B
+- [x] **ORG-01**: All templates are organized under `templates/<report_type>/` — no template files scattered inside report-type module directories or project root
+- [x] **ORG-02**: All runtime data is namespaced per report type under `data/<report_type>/analysis/`, `data/<report_type>/processed/`, `data/<report_type>/raw/` — prevents file collisions when multiple report types run from the same codebase
+- [x] **ORG-03**: Duplicate email suppression uses per-report-type tracking at `data/<report_type>/processed_emails.csv` — a student who received report type A is not blocked from receiving report type B
 
 ### Entry Points
 
@@ -92,12 +92,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-03 | Phase 2 | Pending |
 | CORE-04 | Phase 2 | Pending |
 | CORE-05 | Phase 2 | Pending |
-| PLUG-01 | Phase 2 | Pending |
+| PLUG-01 | Phase 2 | Complete |
 | PLUG-02 | Phase 6 | Pending |
-| PLUG-03 | Phase 2 | Pending |
-| ORG-01 | Phase 2 | Pending |
-| ORG-02 | Phase 2 | Pending |
-| ORG-03 | Phase 2 | Pending |
+| PLUG-03 | Phase 2 | Complete |
+| ORG-01 | Phase 2 | Complete |
+| ORG-02 | Phase 2 | Complete |
+| ORG-03 | Phase 2 | Complete |
 | ENTRY-01 | Phase 4 | Pending |
 | ENTRY-02 | Phase 5 | Pending |
 | ENTRY-03 | Phase 4 | Pending |
