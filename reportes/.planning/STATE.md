@@ -3,6 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-01T18:23:49.771Z"
+progress:
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 14
+  completed_plans: 12
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-01T18:17:55.186Z"
 progress:
   total_phases: 5
@@ -36,9 +49,9 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 5 of 6 (GCP Deployment) — In Progress
-Plan: 1 of 4 in current phase — Plan 05-01 COMPLETE
-Status: 05-01 complete — FirestoreService, TaskService, BatchProcessor, AssessmentMapper promoted to core/ with namespacing, bug fixes, and unified routing
-Last activity: 2026-03-01 — Plan 05-01 complete; Phase 05-02 (webhook_service.py) is next
+Plan: 2 of 4 in current phase — Plan 05-02 COMPLETE
+Status: 05-02 complete — webhook_service.py unified entry point created at repo root, dispatching all routes via REGISTRY-registered core/ services
+Last activity: 2026-03-01 — Plan 05-02 complete; Phase 05-03 (Dockerfile/cloudbuild.yaml) is next
 
 Progress: [█████████░] 88%
 
@@ -67,6 +80,7 @@ Progress: [█████████░] 88%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 05-gcp-deployment | 05-01 | 6 min | 6 min |
+| 05-gcp-deployment | 05-02 | 3 min | 3 min |
 
 ## Accumulated Context
 
@@ -118,6 +132,8 @@ Recent decisions affecting current work:
 - [Phase 05-gcp-deployment]: FirestoreService accepts report_type in __init__ — no singleton, callers scope to their report type
 - [Phase 05-gcp-deployment]: AssessmentMapper uses M1_UIM_ASSESSMENT_ID/HYST_UIM_ASSESSMENT_ID env vars for UIM — distinct from DIAG to avoid hex collisions
 - [Phase 05-gcp-deployment]: BatchProcessor.process_batch calls PipelineRunner directly (no subprocess) — aligns with core/ no-subprocess contract
+- [Phase 05-gcp-deployment]: Single @functions_framework.http decorator on webhook_handler only — status_handler and cleanup_handler are plain functions dispatched internally
+- [Phase 05-gcp-deployment]: student_data dict includes report_type and assessment_type fields — queued Firestore record is self-describing
 
 ### Pending Todos
 
@@ -133,5 +149,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 05-01-PLAN.md — FirestoreService, TaskService, BatchProcessor, AssessmentMapper promoted to core/; Phase 05-02 (webhook_service.py) is next
+Stopped at: Completed 05-02-PLAN.md — webhook_service.py unified HTTP entry point created; Phase 05-03 (Dockerfile/cloudbuild.yaml) is next
 Resume file: None

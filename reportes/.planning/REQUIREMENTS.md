@@ -45,7 +45,7 @@ Requirements for the initial unified framework. Each maps to roadmap phases.
 ### GCP Deployment
 
 - [x] **GCP-01**: Single `Dockerfile` covers all report types — the active generator is selected via `REPORT_TYPE` environment variable, eliminating the `complete_deployment/` subfolder duplication pattern
-- [ ] **GCP-02**: `GET /status` health endpoint is available in all GCP-deployed report type configurations, returning queue state and last-run metadata
+- [x] **GCP-02**: `GET /status` health endpoint is available in all GCP-deployed report type configurations, returning queue state and last-run metadata
 
 ### Developer Experience
 
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-04 | Phase 6 | Pending |
 | MIG-05 | Phase 6 | Pending |
 | GCP-01 | Phase 5 | Complete |
-| GCP-02 | Phase 5 | Pending |
+| GCP-02 | Phase 5 | Complete |
 | DX-01 | Phase 4 | Complete |
 
 **Coverage:**
