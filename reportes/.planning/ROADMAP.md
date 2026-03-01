@@ -97,21 +97,27 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [x] 05-01-PLAN.md � Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
-- [x] 05-02-PLAN.md � Write unified webhook_service.py at repo root with all route handlers
-- [x] 05-03-PLAN.md � Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
-- [x] 05-04-PLAN.md � Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
+- [x] 05-01-PLAN.md — Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
+- [x] 05-02-PLAN.md — Write unified webhook_service.py at repo root with all route handlers
+- [x] 05-03-PLAN.md — Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
+- [x] 05-04-PLAN.md — Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
 
 ### Phase 6: Remaining Migrations
-**Goal**: All five existing report types run via the unified framework with verified identical output, the plugin registry is complete, and the old `shared/` directory is removed
+**Goal**: All four remaining report types run via the unified framework with verified identical output, the plugin registry maps all four keys, and each plugin is reachable via main.py and the webhook service
 **Depends on**: Phase 5
 **Requirements**: MIG-02, MIG-03, MIG-04, MIG-05, PLUG-02
 **Success Criteria** (what must be TRUE):
-  1. `reports/diagnosticos_uim/generator.py`, `reports/ensayos_generales/generator.py`, `reports/assessment_analysis/generator.py`, and `reports/test_diagnostico/generator.py` all exist, extend `BaseReportGenerator`, and are registered in `REGISTRY`
-  2. Running each of the four migrated report types with their respective input data produces output identical to the current standalone versions
-  3. The `shared/` directory at the `reportes/` root no longer exists — its contents have been fully superseded by `core/`
-  4. The REGISTRY in `reports/__init__.py` maps all 5 report type name strings to their generator classes, and `get_generator("diagnosticos_uim")` (and equivalents) returns the correct class without error
-**Plans**: TBD
+  1. `reports/diagnosticos_uim/generator.py`, `reports/ensayos_generales/generator.py`, and `reports/test_diagnostico/generator.py` all exist, extend `BaseReportGenerator`, and are registered in `REGISTRY`
+  2. Running each of the three migrated report types with their respective input data produces output content-equivalent to the current standalone versions
+  3. The REGISTRY in `reports/__init__.py` maps all 4 report type keys: `diagnosticos`, `diagnosticos_uim`, `ensayos_generales`, `test_diagnostico`
+  4. `get_generator("diagnosticos_uim")` (and equivalents) returns the correct class without error
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Create DiagnosticosUIMGenerator plugin: copy and update report_generator.py, copy templates + question banks, create generator.py
+- [ ] 06-02-PLAN.md — Create EnsayosGeneralesGenerator plugin: copy and update report_generator.py, copy templates, create generator.py with manual-prep CSV pattern
+- [ ] 06-03-PLAN.md — Create TestDiagnosticoGenerator plugin: copy 5 support modules with updated imports, copy templates, create generator.py with manual-prep Excel pattern
+- [ ] 06-04-PLAN.md — Wire all three generators into REGISTRY in reports/__init__.py; human visual spot-check on all plugins
 
 ## Progress
 
@@ -125,4 +131,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
 | 4. Unified Entry Points | 2/2 | Complete    | 2026-03-01 |
 | 5. GCP Deployment | 4/4 | Complete   | 2026-03-01 |
-| 6. Remaining Migrations | 0/TBD | Not started | - |
+| 6. Remaining Migrations | 0/4 | Not started | - |
