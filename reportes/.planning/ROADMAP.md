@@ -79,7 +79,11 @@ Plans:
   2. `python main.py --report-type diagnosticos --dry-run` completes download, analysis, and generation steps without sending any email or uploading anything to Drive
   3. `python main.py --report-type diagnosticos --test-email developer@example.com` redirects all outgoing email to the specified address instead of student addresses
   4. Every pipeline exit (success or failure, local or GCP) returns a dict matching `{success: bool, records_processed: int, emails_sent: int, errors: list}` — no pipeline path returns `None` or an unstructured value
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Implement PipelineRunner in core/runner.py with email loop, Drive upload, dry-run/test-email controls, and structured PipelineResult
+- [ ] 04-02-PLAN.md — Create main.py CLI entry point wiring --report-type, --dry-run, --test-email to PipelineRunner
 
 ### Phase 5: GCP Deployment
 **Goal**: A single Dockerfile deploys all report types to Cloud Run; the webhook service routes events to the correct generator; health endpoint is available; `complete_deployment/` subfolders are removed
@@ -113,6 +117,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
 | 2. Core Package | 5/5 | Complete   | 2026-03-01 |
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
-| 4. Unified Entry Points | 0/TBD | Not started | - |
+| 4. Unified Entry Points | 0/2 | Not started | - |
 | 5. GCP Deployment | 0/TBD | Not started | - |
 | 6. Remaining Migrations | 0/TBD | Not started | - |
