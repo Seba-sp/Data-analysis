@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T18:27:00Z"
+last_updated: "2026-03-01T20:00:00Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: 5 of 6 (GCP Deployment) — In Progress
-Plan: 3 of 4 in current phase — Plan 05-03 COMPLETE
-Status: 05-03 complete — Dockerfile and entrypoint.sh created; container supports batch mode (REPORT_TYPE set) and webhook mode (functions-framework port 8080); .dockerignore added
-Last activity: 2026-03-01 — Plan 05-03 complete; Phase 05-04 (GCP deployment + test webhook delivery) is next
+Phase: 5 of 5 (GCP Deployment) — COMPLETE
+Plan: 4 of 4 in current phase — Plan 05-04 COMPLETE
+Status: 05-04 complete — Unified container deployed to Cloud Run; end-to-end webhook delivery verified; complete_deployment/ directories decommissioned; Phase 5 done
+Last activity: 2026-03-01 — Plan 05-04 complete; ALL PHASES COMPLETE
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [█████████░] 93%
 | 05-gcp-deployment | 05-01 | 6 min | 6 min |
 | 05-gcp-deployment | 05-02 | 3 min | 3 min |
 | 05-gcp-deployment | 05-03 | 2 min | 2 min |
+| 05-gcp-deployment | 05-04 | 30 min | 30 min |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [05-03]: No CMD instruction — entrypoint.sh handles both execution modes; CMD would conflict with mode-switch logic
 - [05-03]: ENTRYPOINT exec array form ensures signals propagate to Python process (not blocked by shell)
 - [05-03]: .dockerignore added as good practice even though Dockerfile uses selective COPY — prevents accidental context leakage
+- [05-04]: Service URL is https://unified-webhook-822197731833.us-central1.run.app (regional URL, not hash-based — new revision on redeploy)
+- [05-04]: Two-step deploy pattern — initial deploy without PROCESS_BATCH_URL, retrieve URL, then update env var to resolve chicken-and-egg
+- [05-04]: complete_deployment/ decommissioned only after Task 2 human checkpoint approval (locked sequence per CONTEXT.md design decision)
 
 ### Pending Todos
 
@@ -128,5 +132,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 05-03-PLAN.md — Dockerfile and entrypoint.sh created; Phase 05-04 (GCP deployment + test webhook delivery) is next
+Stopped at: Completed 05-04-PLAN.md — unified-webhook deployed to Cloud Run; complete_deployment/ decommissioned; ALL PHASES COMPLETE
 Resume file: None

@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Core Package** - Build `core/` with canonical single versions of all shared services, per-report data namespacing, and the plugin base class (completed 2026-03-01)
 - [x] **Phase 3: First Plugin Migration** - Port `diagnosticos` into the plugin structure and verify it produces identical output to the standalone version (completed 2026-03-01)
 - [x] **Phase 4: Unified Entry Points** - Build the local CLI (`main.py`), `PipelineRunner`, dry-run mode, test-email mode, and structured result schema (completed 2026-03-01)
-- [ ] **Phase 5: GCP Deployment** - Build the unified webhook service, single `Dockerfile`, health endpoint, and decommission `complete_deployment/`
+- [x] **Phase 5: GCP Deployment** - Build the unified webhook service, single `Dockerfile`, health endpoint, and decommission `complete_deployment/` (completed 2026-03-01)
 - [ ] **Phase 6: Remaining Migrations** - Migrate the four remaining report types and complete the plugin registry
 
 ## Phase Details
@@ -83,7 +83,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Implement PipelineRunner in core/runner.py with email loop, Drive upload, dry-run/test-email controls, and structured PipelineResult
-- [ ] 04-02-PLAN.md — Create main.py CLI entry point wiring --report-type, --dry-run, --test-email to PipelineRunner
+- [x] 04-02-PLAN.md — Create main.py CLI entry point wiring --report-type, --dry-run, --test-email to PipelineRunner
 
 ### Phase 5: GCP Deployment
 **Goal**: A single Dockerfile deploys all report types to Cloud Run; the webhook service routes events to the correct generator; health endpoint is available; `complete_deployment/` subfolders are removed
@@ -97,10 +97,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md � Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
-- [ ] 05-02-PLAN.md � Write unified webhook_service.py at repo root with all route handlers
-- [ ] 05-03-PLAN.md � Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
-- [ ] 05-04-PLAN.md � Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
+- [x] 05-01-PLAN.md � Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
+- [x] 05-02-PLAN.md � Write unified webhook_service.py at repo root with all route handlers
+- [x] 05-03-PLAN.md � Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
+- [x] 05-04-PLAN.md � Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
 
 ### Phase 6: Remaining Migrations
 **Goal**: All five existing report types run via the unified framework with verified identical output, the plugin registry is complete, and the old `shared/` directory is removed
@@ -123,6 +123,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Consolidation Audit | 1/1 | Complete | 2026-02-28 |
 | 2. Core Package | 5/5 | Complete   | 2026-03-01 |
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
-| 4. Unified Entry Points | 1/2 | Complete    | 2026-03-01 |
-| 5. GCP Deployment | 3/4 | In Progress|  |
+| 4. Unified Entry Points | 2/2 | Complete    | 2026-03-01 |
+| 5. GCP Deployment | 4/4 | Complete   | 2026-03-01 |
 | 6. Remaining Migrations | 0/TBD | Not started | - |
