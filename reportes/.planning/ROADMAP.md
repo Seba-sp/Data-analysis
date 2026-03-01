@@ -94,7 +94,13 @@ Plans:
   2. A LearnWorlds webhook event for a `diagnosticos` assessment ID is received, validated (HMAC), queued in Firestore, and processed by the `diagnosticos` generator â€” verified via a test webhook delivery
   3. `GET /status` returns a JSON response with queue state and last-run metadata for every Cloud Run-deployed report type configuration
   4. The `complete_deployment/` subfolder inside `diagnosticos/` and `diagnosticos_uim/` no longer exists â€” all Cloud Run deployments use the unified Dockerfile
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Promote FirestoreService, TaskService, BatchProcessor, AssessmentMapper to core/
+- [ ] 05-02-PLAN.md — Write unified webhook_service.py at repo root with all route handlers
+- [ ] 05-03-PLAN.md — Write Dockerfile and entrypoint.sh for two-mode Cloud Run container
+- [ ] 05-04-PLAN.md — Deploy to Cloud Run, verify test webhook delivery, decommission complete_deployment/
 
 ### Phase 6: Remaining Migrations
 **Goal**: All five existing report types run via the unified framework with verified identical output, the plugin registry is complete, and the old `shared/` directory is removed
