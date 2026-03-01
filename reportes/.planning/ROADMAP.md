@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: First Plugin Migration** - Port `diagnosticos` into the plugin structure and verify it produces identical output to the standalone version (completed 2026-03-01)
 - [x] **Phase 4: Unified Entry Points** - Build the local CLI (`main.py`), `PipelineRunner`, dry-run mode, test-email mode, and structured result schema (completed 2026-03-01)
 - [x] **Phase 5: GCP Deployment** - Build the unified webhook service, single `Dockerfile`, health endpoint, and decommission `complete_deployment/` (completed 2026-03-01)
-- [ ] **Phase 6: Remaining Migrations** - Migrate the four remaining report types and complete the plugin registry
+- [x] **Phase 6: Remaining Migrations** - Migrate the four remaining report types and complete the plugin registry (completed 2026-03-01)
 
 ## Phase Details
 
@@ -131,4 +131,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. First Plugin Migration | 2/2 | Complete   | 2026-03-01 |
 | 4. Unified Entry Points | 2/2 | Complete    | 2026-03-01 |
 | 5. GCP Deployment | 4/4 | Complete   | 2026-03-01 |
-| 6. Remaining Migrations | 3/4 | In Progress|  |
+| 6. Remaining Migrations | 4/4 | Complete   | 2026-03-01 |
