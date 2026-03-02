@@ -43,10 +43,10 @@ class Config:
     
     # Agent 1 configurations
     AGENT1_DEEP_RESEARCH = 'deep-research-pro-preview-12-2025'  # Agent mode
-    AGENT1_MODEL = os.getenv('AGENT1_MODEL', 'gemini-3-pro-preview')  # Model mode
+    AGENT1_MODEL = os.getenv('AGENT1_MODEL', 'gemini-3.1-pro-preview')  # Model mode
     
     # Agents 2, 3, 4 use standard model
-    GEMINI_MODEL_AGENTS234 = os.getenv('GEMINI_MODEL_AGENTS234', 'gemini-2.0-flash-exp')
+    GEMINI_MODEL_AGENTS234 = os.getenv('GEMINI_MODEL_AGENTS234', 'gemini-3.1-pro-preview')
     
     # Legacy config for backwards compatibility
     GEMINI_MODEL_AGENT1 = AGENT1_DEEP_RESEARCH
