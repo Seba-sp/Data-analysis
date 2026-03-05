@@ -62,7 +62,6 @@ CL_UNIFORM_COLUMNS = [
     CL_COLUMNS["programa"],
     CL_COLUMNS["n_preguntas"],
     CL_COLUMNS["codigo_texto"],
-    CL_COLUMNS["codigo_spot"],
 ]
 
 CL_FILTER_ORDER_TOP_DOWN = [
