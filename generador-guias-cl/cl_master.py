@@ -273,52 +273,55 @@ def get_all_guides() -> List[Dict[str, object]]:
     if master_df.empty:
         return []
 
-    numero_usos_col = CL_TRACKING_COLUMNS["numero_usos"]
-    code_col = CL_COLUMNS["codigo_texto"]
-    num_col = CL_COLUMNS["numero_pregunta"]
-
-    # Scan all usage columns to collect unique (guide_name, date) pairs
+    # Scan all usage columns row-by-row to collect unique (guide_name, date) pairs.
+    # This preserves multiple generations with the same guide name.
     unique_guides: Dict[tuple, Dict[str, object]] = {}
 
     for col in master_df.columns:
         if not col.startswith("Nombre guía (uso "):
             continue
+
         usage_num = int(col.split("(uso ")[1].rstrip(")"))
         _, date_col = get_usage_column_names(usage_num)
 
-        guide_names = master_df[col].dropna().unique()
-        for gname in guide_names:
+        for _, row in master_df.iterrows():
+            gname = row.get(col)
+            if pd.isna(gname):
+                continue
+
             gname_str = str(gname).strip()
             if not gname_str:
                 continue
 
-            # Find all rows with this guide name in this usage column
-            mask = master_df[col] == gname
-            if date_col in master_df.columns and mask.any():
-                date_val = master_df.loc[mask, date_col].iloc[0]
-            else:
-                date_val = None
-
-            key = (gname_str, str(date_val) if pd.notna(date_val) else "")
+            date_val = row.get(date_col) if date_col in master_df.columns else None
+            date_key = str(date_val) if pd.notna(date_val) else ""
+            key = (gname_str, date_key)
 
             if key not in unique_guides:
-                # Collect all question rows across all usage columns for this guide+date
                 all_question_rows = set()
+
                 for ucol in master_df.columns:
                     if not ucol.startswith("Nombre guía (uso "):
                         continue
+
                     un = int(ucol.split("(uso ")[1].rstrip(")"))
                     _, dc = get_usage_column_names(un)
+
                     if dc in master_df.columns:
-                        gmask = (master_df[ucol] == gname) & (master_df[dc].astype(str) == str(date_val))
+                        gmask = (
+                            master_df[ucol].astype(str).str.strip() == gname_str
+                        ) & (
+                            master_df[dc].astype(str) == date_key
+                        )
                     else:
-                        gmask = master_df[ucol] == gname
+                        gmask = master_df[ucol].astype(str).str.strip() == gname_str
+
                     for idx in master_df[gmask].index:
                         all_question_rows.add(idx)
 
                 unique_guides[key] = {
                     "guide_name": gname_str,
-                    "date": str(date_val) if pd.notna(date_val) else None,
+                    "date": date_key if date_key else None,
                     "question_count": len(all_question_rows),
                     "question_indices": all_question_rows,
                 }
@@ -330,7 +333,6 @@ def get_all_guides() -> List[Dict[str, object]]:
         g["creation_order"] = i
 
     return sorted(guides_sorted_asc, key=lambda g: g["date"] or "", reverse=True)
-
 
 def delete_specific_guide_usage(guide_name: str, guide_date: str | None = None) -> Dict[str, object]:
     """
