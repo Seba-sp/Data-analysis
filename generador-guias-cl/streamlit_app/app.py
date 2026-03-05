@@ -43,6 +43,9 @@ SECTION_SUMMARY = "📊 Resumen"
 SECTION_GENERATE = "📝 Generar Guia"
 SECTION_MASTER_STATS = "📊 Estadisticas Totales"
 FILTER_ALL_OPTION = "Todos"
+FILTER_USED_OPTION = "Usados"
+FILTER_UNUSED_OPTION = "No usados"
+FILTER_TEXT_USAGE_KEY = "__text_usage__"
 
 TOP_DOWN_LABELS = {
     CL_COLUMNS["tipo_texto"]: "Tipo de texto",
@@ -199,6 +202,23 @@ def _extract_option_values_from_questions(base_df: pd.DataFrame, by_codigo_df: D
     return sorted(values)
 
 
+def _get_usage_count_series(df: pd.DataFrame) -> pd.Series:
+    usage_col = ""
+    for candidate in ("Numero de usos", "N\u00famero de usos", "N\u00c3\u00bamero de usos"):
+        if candidate in df.columns:
+            usage_col = candidate
+            break
+
+    if not usage_col:
+        return pd.Series(0, index=df.index, dtype="int64")
+
+    return pd.to_numeric(df[usage_col], errors="coerce").fillna(0)
+
+
+def _is_text_used(q_df: pd.DataFrame) -> bool:
+    return bool((_get_usage_count_series(q_df) > 0).any())
+
+
 def _build_independent_filters(base_df: pd.DataFrame, by_codigo_df: Dict[str, pd.DataFrame]) -> Dict[str, str]:
     filters: Dict[str, str] = {}
 
@@ -218,6 +238,12 @@ def _build_independent_filters(base_df: pd.DataFrame, by_codigo_df: Dict[str, pd
     tarea_col = CL_COLUMNS["tarea_lectora"]
     tarea_opts = [FILTER_ALL_OPTION] + _extract_option_values_from_questions(base_df, by_codigo_df, tarea_col)
     filters[tarea_col] = st.selectbox(INDEPENDENT_LABELS[tarea_col], options=tarea_opts, key="flt_tarea")
+
+    filters[FILTER_TEXT_USAGE_KEY] = st.selectbox(
+        "Uso del texto",
+        options=[FILTER_ALL_OPTION, FILTER_USED_OPTION, FILTER_UNUSED_OPTION],
+        key="flt_text_usage",
+    )
 
     return filters
 
@@ -257,6 +283,20 @@ def _apply_independent_filters(df: pd.DataFrame, filters: Dict[str, str], by_cod
                 keep_codes.add(code)
         filtered = filtered[filtered["Codigo Texto"].astype(str).isin(keep_codes)]
 
+
+    text_usage_val = filters.get(FILTER_TEXT_USAGE_KEY, "")
+    if text_usage_val and text_usage_val != FILTER_ALL_OPTION:
+        keep_codes: Set[str] = set()
+        want_used = text_usage_val == FILTER_USED_OPTION
+        for _, row in filtered.iterrows():
+            code = str(row["Codigo Texto"])
+            q_df = by_codigo_df.get(code)
+            if q_df is None or q_df.empty:
+                continue
+            is_used = _is_text_used(q_df)
+            if (want_used and is_used) or ((not want_used) and (not is_used)):
+                keep_codes.add(code)
+        filtered = filtered[filtered["Codigo Texto"].astype(str).isin(keep_codes)]
     return filtered
 
 
