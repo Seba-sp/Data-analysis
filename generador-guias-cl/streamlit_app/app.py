@@ -347,7 +347,11 @@ def _update_ordered_list_from_positions() -> None:
     st.session_state["selected_order"] = [code for code, _ in sorted_items]
 
 
-def _collect_selected_texts(filtered_df: pd.DataFrame, by_codigo_df: Dict[str, pd.DataFrame]) -> List[Dict[str, object]]:
+def _collect_selected_texts(
+    filtered_df: pd.DataFrame,
+    catalog_df: pd.DataFrame,
+    by_codigo_df: Dict[str, pd.DataFrame],
+) -> List[Dict[str, object]]:
     st.subheader(SECTION_SELECT)
     selected_codes: Set[str] = st.session_state["selected_codes"]
     positions: Dict[str, int] = st.session_state["text_positions"]
@@ -485,7 +489,7 @@ def _collect_selected_texts(filtered_df: pd.DataFrame, by_codigo_df: Dict[str, p
             current_pos = positions[code]
             current_index = position_options.index(current_pos) if current_pos in position_options else 0
 
-            match = filtered_df[filtered_df["Codigo Texto"].astype(str) == code]
+            match = catalog_df[catalog_df["Codigo Texto"].astype(str) == code]
             if not match.empty:
                 r = match.iloc[0]
                 txt = r.get(CL_COLUMNS["titulo_texto"], "")
@@ -509,7 +513,7 @@ def _collect_selected_texts(filtered_df: pd.DataFrame, by_codigo_df: Dict[str, p
                 st.markdown(label)
 
     # Build result sorted by order.
-    selected_rows_df = filtered_df[filtered_df["Codigo Texto"].astype(str).isin(current_order)].copy()
+    selected_rows_df = catalog_df[catalog_df["Codigo Texto"].astype(str).isin(current_order)].copy()
     if current_order:
         selected_rows_df["_order"] = selected_rows_df["Codigo Texto"].astype(str).apply(lambda c: current_order.index(c))
         selected_rows_df = selected_rows_df.sort_values("_order").drop(columns=["_order"])
@@ -828,7 +832,7 @@ def main() -> None:
     st.caption(f"Textos encontrados: {len(final_filtered_df)}")
 
     st.markdown("---")
-    selected_rows = _collect_selected_texts(final_filtered_df, by_codigo_df)
+    selected_rows = _collect_selected_texts(final_filtered_df, catalog_df, by_codigo_df)
 
     target_questions = st.session_state.get("target_questions", CL_DEFAULT_TARGET_QUESTIONS)
 
