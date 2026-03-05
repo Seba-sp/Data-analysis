@@ -69,9 +69,9 @@ def parse_cl_source_docx(docx_path: Path, expected_questions: int) -> ParsedText
             f"pero se esperaban al menos {expected_questions}"
         )
 
-    split_index = len(pages) - expected_questions
-    if split_index < 1:
-        split_index = 1
+    # Allow zero text pages when the source document effectively contains only
+    # question pages. Forcing at least one text page can drop one question.
+    split_index = max(0, len(pages) - expected_questions)
 
     text_pages = pages[:split_index]
     question_pages = pages[split_index:]
@@ -172,7 +172,10 @@ def generate_cl_outputs(
                 continue
 
             if idx - 1 >= len(parsed.question_blocks):
-                continue
+                raise ValueError(
+                    f"Documento {docx_path.name}: falta bloque para la pregunta "
+                    f"{original_num} (indice {idx}) al generar la guia."
+                )
 
             kept_blocks = parsed.question_blocks[idx - 1]
             _append_blocks_to_document(final_doc, kept_blocks)
@@ -217,3 +220,4 @@ def generate_cl_outputs(
     excel_bytes = excel_buffer.getvalue()
 
     return word_bytes, word_filename, excel_bytes, excel_filename, report_df
+
