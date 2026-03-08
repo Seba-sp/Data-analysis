@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Phases
 status: executing
-stopped_at: Completed 10-05-PLAN.md (Tasks 1-2); awaiting human verification at Task 3 checkpoint
-last_updated: "2026-03-08T15:42:53.630Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-08T19:04:41.937Z"
 last_activity: 2026-03-08 - Executed plan 10-04 with per-report-type email templates via importlib plugin pattern and created 10-04-SUMMARY.md
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 15
   percent: 93
 ---
 
@@ -67,6 +67,8 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase 10]: Plugin email templates resolved via importlib at send time — dropping email_template.py into plugin dir is the entire extension point
 - [Phase 10]: EmailSender subject/body params use truthy check so None or empty string both fall back to defaults, preserving all existing callers
 - [Phase Phase 10]: Use gs://data-analysis-465905-t6-mapping/ids.xlsx as GCS mapping path; ids_path fallback chain IDS_XLSX_GCS_PATH || IDS_XLSX_PATH || default preserves backward-compat
+- [Phase 11]: PDU% thresholds locked at 50 (Riesgo/En desarrollo boundary) and 80 (En desarrollo/Solido boundary) per CONTEXT.md for examen_de_eje
+- [Phase 11]: ExamenPlan carries explicit unit_order list to preserve bank row sequence for render injection
 
 ## Blockers
 
@@ -74,6 +76,6 @@ Progress: [█████████░] 93% (13/14 plans)
 
 ## Session Continuity
 
-Last session: 2026-03-08T15:42:47.308Z
-Stopped at: Completed 10-05-PLAN.md (Tasks 1-2); awaiting human verification at Task 3 checkpoint
+Last session: 2026-03-08T19:04:41.934Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
