@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Test de diagnostico - Cuerpo</title>
+  <style>
+    @page { margin: 0; size: A4; }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, "DejaVu Sans", sans-serif;
+      font-size: 11pt;
+      line-height: 1.15;
+      color: #111827;
+    }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      position: relative;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .page + .page { page-break-before: always; }
+    .content {
+      position: absolute;
+      inset: 0;
+      padding: 25mm;
+      box-sizing: border-box;
+    }
+    p { margin: 0 0 8pt; }
+    h2, h3 { margin: 0 0 8pt; font-size: 11pt; font-weight: 700; }
+    .list { margin: 0 0 8pt 18pt; padding: 0; }
+    .list li { margin: 0 0 4pt; }
+    .unit { margin: 0; }
+    :root {
+      --unit-content-width: 160mm;
+      --unit-activity-col-width: 96mm;
+      --unit-action-col-width: 64mm;
+    }
+    .unit-card {
+      display: block;
+      width: var(--unit-content-width);
+      margin: 0 0 12pt;
+    }
+    .unit-title { margin-bottom: 4pt; }
+    .unit-domain { margin-bottom: 8pt; }
+    .unit-table {
+      display: block;
+      width: var(--unit-content-width);
+      margin: 0 0 8pt;
+    }
+    .exam-block p { margin-bottom: 6pt; }
+    .exam-title { font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 11pt; margin: 0 0 8pt; table-layout: fixed; }
+    th, td { border: 1px solid #111827; padding: 6pt; text-align: left; vertical-align: top; font-weight: 400; }
+    .page.unit .activity-table {
+      display: table;
+      width: var(--unit-content-width) !important;
+      min-width: var(--unit-content-width);
+      max-width: var(--unit-content-width);
+      margin: 0 0 8pt;
+      table-layout: fixed;
+    }
+    .page.unit .activity-table col {
+      width: var(--unit-activity-col-width) !important;
+    }
+    .activity-table col:first-child,
+    .exam-table col:first-child { width: 54%; }
+    .activity-table col:last-child,
+    .exam-table col:last-child { width: 46%; }
+    .page.unit .activity-table col:first-child,
+    .page.unit .activity-table col:last-child {
+      width: var(--unit-activity-col-width) !important;
+    }
+    .page.unit .activity-table col:last-child {
+      width: var(--unit-action-col-width) !important;
+    }
+    .page.unit .activity-table th,
+    .page.unit .activity-table td {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .page.unit .activity-table thead th {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .page.unit .activity-table tbody td:last-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .page.unit .activity-table tbody td:first-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .exam-table thead th {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .exam-table tbody td:last-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .exam-table tbody td:first-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body data-template="test_de_eje_body">
+  <section class="page" data-page="1">
+    <div class="content">
+      <p data-placeholder="report_title">📍 Este es tu Plan de Estudio Personalizado para este eje.</p>
+      <p>
+        Tu objetivo es simple: completar lo que te falta para dominar las unidades y llegar
+        preparado al Examen del eje, que es donde comprobamos la aplicación en formato PAES.
+      </p>
+
+      <h3>¿Cómo leer tu plan?</h3>
+      <p>
+        En cada unidad verás tu Dominio inicial (PD) y una tabla con Actividades. En la columna
+        "Acción" aparecerá uno de estos estados:
+      </p>
+      <p>&#10003; = Ya lo tienes dominado (no necesitas hacerlo)</p>
+      <p>&#9633; = Tarea a realizar (debes completarla)</p>
+      <p>No requerido = No forma parte de tu plan en esta unidad</p>
+
+      <h3>¿Qué debes hacer?</h3>
+      <ol class="list">
+        <li>Avanza unidad por unidad y realiza solo lo que esté marcado con &#9633;.</li>
+        <li>Si una actividad está con &#10003;, no la repitas: tu foco está en lo que falta.</li>
+        <li>Cuando termines una unidad, pasa a la siguiente y aplica el mismo criterio.</li>
+      </ol>
+
+      <h3>⏱ Tiempo estimado</h3>
+      <p>
+        El tiempo total estimado para completar este plan es:
+        <strong data-placeholder="estimated_total_hours">HE hrs</strong>
+        hrs.
+      </p>
+      <p>Como referencia:</p>
+      <p>Lección: 1 h</p>
+      <p>Test de unidad: 0,5 h (30 minutos)</p>
+      <p>Guia tematica: 2 h</p>
+      <p>Examen: 2 h</p>
+
+      <h3>Importante</h3>
+      <p>
+        Al final del plan siempre encontrarás el Examen del eje. Debes rendirlo antes de seguir con
+        tu viaje en M30M, porque ahí confirmamos cómo estás aplicando estos contenidos en formato PAES.
+      </p>
+      <p>
+        Si al rendir el examen aparece alguna unidad por reforzar, recibirás una recomendación de
+        práctica para que avances cada vez más sólido.
+      </p>
+    </div>
+  </section>
+
+  <section class="page unit" data-page="2" data-placeholder="unit_block">
+    <div class="content">
+      <p class="unit-title">Unidad: <span data-placeholder="unit_1_name">NOMBRE UNIDAD 1</span></p>
+      <p class="unit-domain">Dominio inicial: <span data-placeholder="unit_1_initial_pd">PD%</span></p>
+      <div class="unit-table" data-placeholder="unit_1_activities_table" data-table-anchor="unit_1_activity_status"></div>
+    </div>
+  </section>
+
+  <section class="page unit" data-page="3" data-placeholder="unit_block">
+    <div class="content">
+      <p class="unit-title">Unidad: <span data-placeholder="unit_2_name">NOMBRE UNIDAD 2</span></p>
+      <p class="unit-domain">Dominio inicial: <span data-placeholder="unit_2_initial_pd">PD%</span></p>
+      <div class="unit-table" data-placeholder="unit_2_activities_table" data-table-anchor="unit_2_activity_status"></div>
+    </div>
+  </section>
+
+  <section class="page unit" data-page="4" data-placeholder="unit_block">
+    <div class="content">
+      <p class="unit-title">Unidad: <span data-placeholder="unit_3_name">NOMBRE UNIDAD N</span></p>
+      <p class="unit-domain">Dominio inicial: <span data-placeholder="unit_3_initial_pd">PD%</span></p>
+      <div class="unit-table" data-placeholder="unit_3_activities_table" data-table-anchor="unit_3_activity_status"></div>
+    </div>
+  </section>
+
+  <section class="page" data-page="5">
+    <div class="content exam-block">
+      <table class="exam-table" aria-label="Examen del eje">
+        <colgroup>
+          <col />
+          <col />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Actividad</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Examen</td>
+            <td>&#9633;</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="exam-title">Antes de seguir con tu viaje en M30M, hay un paso clave</p>
+      <p class="exam-title">📍 Rinde el Examen del eje.</p>
+      <p>
+        Este examen cierra el proceso y nos muestra cómo estás hoy: no está para "pasar materia",
+        sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales.
+        Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una
+        recomendación de práctica para que avances cada vez más sólido.
+      </p>
+      <p>Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.</p>
+      <p>Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.</p>
+    </div>
+  </section>
+</body>
+</html>
