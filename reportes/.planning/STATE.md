@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Phases
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-08T19:04:41.937Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-03-08T19:10:15.610Z"
 last_activity: 2026-03-08 - Executed plan 10-04 with per-report-type email templates via importlib plugin pattern and created 10-04-SUMMARY.md
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 93
 ---
 
@@ -69,6 +69,8 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase Phase 10]: Use gs://data-analysis-465905-t6-mapping/ids.xlsx as GCS mapping path; ids_path fallback chain IDS_XLSX_GCS_PATH || IDS_XLSX_PATH || default preserves backward-compat
 - [Phase 11]: PDU% thresholds locked at 50 (Riesgo/En desarrollo boundary) and 80 (En desarrollo/Solido boundary) per CONTEXT.md for examen_de_eje
 - [Phase 11]: ExamenPlan carries explicit unit_order list to preserve bank row sequence for render injection
+- [Phase 11]: Placeholder intersection: only schema-and-body.html intersection keys passed to render_with_placeholders for examen_de_eje — computed [student_name, course_name, generated_at, period_label], static [page_portada, report_title, page_resultados]
+- [Phase 11]: unit_status_rows tbody anchor used in insert_dynamic_tables for examen_de_eje to inject rows directly into existing table body
 
 ## Blockers
 
@@ -76,6 +78,6 @@ Progress: [█████████░] 93% (13/14 plans)
 
 ## Session Continuity
 
-Last session: 2026-03-08T19:04:41.934Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-03-08T19:10:15.607Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
