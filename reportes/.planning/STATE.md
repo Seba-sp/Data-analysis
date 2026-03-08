@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Phases
 status: executing
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-08T19:10:15.610Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-03-08T19:33:35.968Z"
 last_activity: 2026-03-08 - Executed plan 10-04 with per-report-type email templates via importlib plugin pattern and created 10-04-SUMMARY.md
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
   percent: 93
 ---
 
@@ -71,6 +71,8 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase 11]: ExamenPlan carries explicit unit_order list to preserve bank row sequence for render injection
 - [Phase 11]: Placeholder intersection: only schema-and-body.html intersection keys passed to render_with_placeholders for examen_de_eje — computed [student_name, course_name, generated_at, period_label], static [page_portada, report_title, page_resultados]
 - [Phase 11]: unit_status_rows tbody anchor used in insert_dynamic_tables for examen_de_eje to inject rows directly into existing table body
+- [Phase 11-examen-de-eje-plugin]: WeasyPrint cannot render color emoji on Windows — replace all emoji with inline SVG in PDF templates
+- [Phase 11-examen-de-eje-plugin]: Colored SVG circles (green/yellow/red) for RS/RD/RR state labels preserve semantic meaning without emoji dependency
 
 ## Blockers
 
@@ -78,6 +80,6 @@ Progress: [█████████░] 93% (13/14 plans)
 
 ## Session Continuity
 
-Last session: 2026-03-08T19:10:15.607Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-03-08T19:33:35.965Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
