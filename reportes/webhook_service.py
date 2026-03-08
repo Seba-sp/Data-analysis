@@ -34,6 +34,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _webhook_log_context(payload: dict, request_id: str, **kwargs) -> dict:
+    """Build a consistent structured context for webhook logs."""
+    event_id = payload.get("event_id") or payload.get("id") or "unknown"
+    context = {
+        "request_id": request_id,
+        "event_id": event_id,
+    }
+    context.update(kwargs)
+    return context
+
+
 # ---------------------------------------------------------------------------
 # Module-level configuration
 # ---------------------------------------------------------------------------
@@ -172,6 +184,7 @@ def handle_webhook(request: Request):
       5. Schedule Cloud Tasks callback via TaskService if no batch is active.
     """
     try:
+        request_id = request.headers.get("X-Request-Id") or str(uuid.uuid4())
         if not _initialize_services():
             return jsonify({'error': 'Services not properly initialized. Check environment variables.'}), 500
 
@@ -182,7 +195,10 @@ def handle_webhook(request: Request):
         if not payload:
             return jsonify({'error': 'No payload received'}), 400
 
-        logger.info(f"Received webhook payload keys: {list(payload.keys())}")
+        logger.info(
+            "Webhook event received",
+            extra={"context": _webhook_log_context(payload, request_id, payload_keys=list(payload.keys()))},
+        )
 
         # Extract assessment URL
         assessment_url = payload.get('assessment', {}).get('url')
@@ -196,9 +212,22 @@ def handle_webhook(request: Request):
 
         route = _am.get_route(assessment_id)
         if route is None:
+            mapping_source = getattr(_am, "mapping_source", "unknown")
+            logger.warning(
+                "Rejected webhook: unknown assessment_id route",
+                extra={"context": _webhook_log_context(
+                    payload,
+                    request_id,
+                    assessment_id=assessment_id,
+                    mapping_source=mapping_source,
+                    ids_path=(os.getenv("IDS_XLSX_GCS_PATH") or os.getenv("IDS_XLSX_PATH") or "default"),
+                    rejected_rows=getattr(_am, "validation_counters", {}).get("rejected", 0),
+                )},
+            )
             return jsonify({'error': f'Unknown assessment ID: {assessment_id}'}), 400
 
         report_type, assessment_type = route
+        mapping_source = getattr(_am, "mapping_source", "unknown")
 
         # Extract user data
         user_info = payload.get('user', {})
@@ -222,10 +251,38 @@ def handle_webhook(request: Request):
         # Queue student and increment per-type counter
         fs = FirestoreService(report_type)
 
-        if not fs.queue_student(student_data):
+        queue_result = fs.queue_student(student_data)
+        logger.info(
+            "Webhook queue insertion attempted",
+            extra={"context": _webhook_log_context(
+                payload,
+                request_id,
+                assessment_id=assessment_id,
+                report_type=report_type,
+                assessment_type=assessment_type,
+                mapping_source=mapping_source,
+                ids_path=(os.getenv("IDS_XLSX_GCS_PATH") or os.getenv("IDS_XLSX_PATH") or "default"),
+                queue_inserted=bool(queue_result),
+            )},
+        )
+        if not queue_result:
             return jsonify({'error': 'Failed to queue student'}), 500
 
-        if not fs.increment_counter(assessment_type):
+        counter_result = fs.increment_counter(assessment_type)
+        logger.info(
+            "Webhook counter increment attempted",
+            extra={"context": _webhook_log_context(
+                payload,
+                request_id,
+                assessment_id=assessment_id,
+                report_type=report_type,
+                assessment_type=assessment_type,
+                mapping_source=mapping_source,
+                ids_path=(os.getenv("IDS_XLSX_GCS_PATH") or os.getenv("IDS_XLSX_PATH") or "default"),
+                counter_incremented=bool(counter_result),
+            )},
+        )
+        if not counter_result:
             logger.warning(f"[{report_type}] Failed to increment counter for {assessment_type}")
 
         # Determine if early triggering applies
