@@ -9,11 +9,13 @@ Builds a per-student study plan from:
 from __future__ import annotations
 
 import logging
+import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -313,9 +315,33 @@ class TestDeEjeGenerator(BaseReportGenerator):
         self.downloader = AssessmentDownloader(data_dir=f"data/{REPORT_TYPE}")
         self.templates_path = Path("templates") / REPORT_TYPE
 
+    def _gcs_bank_blob(self, bank_name: str):
+        """Return a GCS Blob for the given question bank filename."""
+        from google.cloud import storage
+        mapper = AssessmentMapper()
+        bucket_name, _ = mapper._resolve_gcs_target()
+        prefix = os.getenv("BANKS_GCS_PREFIX", "inputs/").rstrip("/") + "/"
+        return storage.Client().bucket(bucket_name).blob(f"{prefix}{bank_name}")
+
+    def _bank_exists(self, bank_name: str) -> bool:
+        """Check if a question bank exists (cheap: HEAD for GCS, exists() for local)."""
+        if AssessmentMapper().mapping_source == "gcs":
+            return self._gcs_bank_blob(bank_name).exists()
+        return (BANKS_DIR / bank_name).exists()
+
+    def _read_bank_bytes(self, bank_name: str, local_path: Optional[Path] = None) -> bytes:
+        """Download question bank bytes from GCS (production) or read from local path (dev).
+
+        local_path, when provided, is used as-is in local mode (useful for tests that
+        write banks to a temp directory rather than the default BANKS_DIR).
+        """
+        if AssessmentMapper().mapping_source == "gcs":
+            return self._gcs_bank_blob(bank_name).download_as_bytes()
+        path = local_path if local_path is not None else BANKS_DIR / bank_name
+        return path.read_bytes()
+
     def _load_test_de_eje_mapping(self) -> list[MappingRow]:
         ids_bytes = AssessmentMapper()._read_ids_xlsx_bytes()
-        from io import BytesIO
         workbook = load_workbook(filename=BytesIO(ids_bytes), data_only=True)
         sheet = workbook.active
         rows = list(sheet.iter_rows(values_only=True))
@@ -356,7 +382,7 @@ class TestDeEjeGenerator(BaseReportGenerator):
 
             bank_name = f"{assessment_type}-TEST DE EJE {assessment_number}-DATA.xlsx"
             bank_path = BANKS_DIR / bank_name
-            if not bank_path.exists():
+            if not self._bank_exists(bank_name):
                 logger.warning("Question bank not found for mapping row: %s", bank_name)
                 continue
 
@@ -406,12 +432,12 @@ class TestDeEjeGenerator(BaseReportGenerator):
             if map_row is None:
                 continue
 
-            bank_df = pd.read_excel(map_row.bank_path)
+            bank_df = pd.read_excel(BytesIO(self._read_bank_bytes(map_row.bank_path.name, local_path=map_row.bank_path)))
             bank_df.columns = [_normalize_text(c).lower() for c in bank_df.columns]
             required_cols = {"pregunta", "alternativa", "unidad", "leccion"}
             if not required_cols.issubset(set(bank_df.columns)):
                 missing = required_cols - set(bank_df.columns)
-                raise ValueError(f"Bank {map_row.bank_path} missing columns: {sorted(missing)}")
+                raise ValueError(f"Bank {map_row.bank_path.name} missing columns: {sorted(missing)}")
 
             for _, student_row in df.iterrows():
                 email = _normalize_text(student_row.get("email") or student_row.get("username") or "")
