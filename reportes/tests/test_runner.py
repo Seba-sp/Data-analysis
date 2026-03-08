@@ -5,12 +5,39 @@ TDD RED phase: these tests are written before the implementation exists.
 """
 import os
 import logging
+import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 import pytest
 
+_existing_batch_module = sys.modules.get("core.batch_processor")
+if _existing_batch_module is not None and not hasattr(_existing_batch_module, "__file__"):
+    del sys.modules["core.batch_processor"]
+_existing_firestore_module = sys.modules.get("core.firestore_service")
+if _existing_firestore_module is not None and not hasattr(_existing_firestore_module, "__file__"):
+    del sys.modules["core.firestore_service"]
+
+if "google" not in sys.modules:
+    sys.modules["google"] = types.ModuleType("google")
+if "google.cloud" not in sys.modules:
+    sys.modules["google.cloud"] = types.ModuleType("google.cloud")
+if "google.cloud.firestore" not in sys.modules:
+    fake_firestore_module = types.ModuleType("google.cloud.firestore")
+    fake_firestore_module.Transaction = object
+    fake_firestore_module.Client = object
+    fake_firestore_module.transactional = lambda fn: fn
+    sys.modules["google.cloud.firestore"] = fake_firestore_module
+if "google.cloud.firestore_v1" not in sys.modules:
+    fake_firestore_v1_module = types.ModuleType("google.cloud.firestore_v1")
+    fake_firestore_v1_module.FieldFilter = object
+    sys.modules["google.cloud.firestore_v1"] = fake_firestore_v1_module
+sys.modules["google.cloud"].firestore = sys.modules["google.cloud.firestore"]
+
 # ── Imports under test ─────────────────────────────────────────────────────────
 from core.runner import PipelineRunner, PipelineResult
+from core.email_sender import EmailSender
+from core.batch_processor import BatchProcessor
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -234,6 +261,8 @@ class TestRunNormalMode:
         call_kwargs = mock_sender.send_comprehensive_report_email.call_args
         recipient = call_kwargs.kwargs.get("recipient_email") or call_kwargs.args[0]
         assert recipient == "student@s.com"
+        assert call_kwargs.kwargs["filename"] == "informe_student@s.com_M1.pdf"
+        assert call_kwargs.kwargs["correlation_key"] == "student@s.com|M1"
         assert result["emails_sent"] == 1
 
     def test_drive_upload_attempted_in_normal_mode(self, tmp_path):
@@ -338,6 +367,9 @@ class TestRunErrorHandling:
 
         assert result["emails_sent"] == 0
         assert len(result["errors"]) == 1
+        assert "recipient=x@y.com" in result["errors"][0]
+        assert "attachment=informe_x@y.com_M1.pdf" in result["errors"][0]
+        assert "event_key=x@y.com|M1" in result["errors"][0]
 
     def test_unextractable_email_skipped_with_error(self, tmp_path):
         runner = PipelineRunner("diagnosticos")
@@ -356,6 +388,7 @@ class TestRunErrorHandling:
         assert result["success"] is True
         assert result["emails_sent"] == 0
         assert len(result["errors"]) > 0
+        assert "attachment=bad_filename.pdf" in result["errors"][0]
 
     def test_drive_upload_failure_does_not_abort(self, tmp_path):
         """Drive upload failure (exception or None) must not stop the email loop."""
@@ -432,3 +465,150 @@ class TestNoBarePrints:
             and node.func.id == "print"
         ]
         assert print_calls == [], f"Found {len(print_calls)} bare print() calls in runner.py"
+
+
+# ── Task 1 TDD: email_template module ─────────────────────────────────────────
+
+class TestTestDeEjeEmailTemplate:
+    """tests/test_runner.py — Task 1 RED: email_template module contract."""
+
+    def test_template_module_importable(self):
+        from reports.test_de_eje.email_template import SUBJECT, BODY
+        assert SUBJECT is not None
+        assert BODY is not None
+
+    def test_subject_is_non_empty_string(self):
+        from reports.test_de_eje.email_template import SUBJECT
+        assert isinstance(SUBJECT, str) and len(SUBJECT) > 0
+
+    def test_body_is_non_empty_string(self):
+        from reports.test_de_eje.email_template import BODY
+        assert isinstance(BODY, str) and len(BODY) > 0
+
+    def test_subject_differs_from_generic_diagnostic(self):
+        from reports.test_de_eje.email_template import SUBJECT
+        assert "Resultados de Diagnóstico" not in SUBJECT
+
+    def test_body_differs_from_generic_diagnostic(self):
+        from reports.test_de_eje.email_template import BODY
+        assert "test de diagnóstico" not in BODY
+
+    def test_import_is_idempotent(self):
+        import importlib
+        mod1 = importlib.import_module("reports.test_de_eje.email_template")
+        mod2 = importlib.import_module("reports.test_de_eje.email_template")
+        assert mod1.SUBJECT is mod2.SUBJECT
+        assert mod1.BODY is mod2.BODY
+
+
+class TestEmailSenderValidation:
+    def test_empty_attachment_returns_false_without_smtp(self, monkeypatch):
+        monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
+        monkeypatch.setenv("EMAIL_PASS", "secret")
+
+        with patch("core.email_sender.smtplib.SMTP") as mock_smtp:
+            sender = EmailSender()
+            sent = sender.send_comprehensive_report_email(
+                recipient_email="student@example.com",
+                pdf_content=b"",
+                username="student@example.com",
+                filename="informe_student@example.com_M1.pdf",
+                correlation_key="student@example.com|M1",
+            )
+
+        assert sent is False
+        mock_smtp.assert_not_called()
+
+
+class TestBatchProcessorResultSemantics:
+    def test_batch_result_is_unsuccessful_when_pipeline_reports_errors(self):
+        processor = BatchProcessor()
+        fake_fs = MagicMock()
+        fake_fs.get_queued_students.return_value = [{"user_email": "student@example.com"}]
+        fake_fs.clear_queue.return_value = True
+        fake_fs.clear_batch_state.return_value = True
+
+        with patch("core.batch_processor.FirestoreService", return_value=fake_fs), \
+             patch.object(
+                 processor,
+                 "process_report_type",
+                 return_value={
+                     "success": False,
+                     "records_processed": 1,
+                     "emails_sent": 0,
+                     "errors": ["smtp timeout"],
+                 },
+             ):
+            result = processor.process_batch("test_de_eje", "batch-1")
+
+        assert result["success"] is False
+        assert result["records_processed"] == 1
+        assert result["emails_sent"] == 0
+        assert "smtp timeout" in result["errors"]
+        assert "Pipeline failed for test_de_eje" in result["errors"]
+
+    def test_batch_result_exposes_success_metrics_when_pipeline_is_clean(self):
+        processor = BatchProcessor()
+        fake_fs = MagicMock()
+        fake_fs.get_queued_students.return_value = [{"user_email": "student@example.com"}]
+        fake_fs.clear_queue.return_value = True
+        fake_fs.clear_batch_state.return_value = True
+
+        with patch("core.batch_processor.FirestoreService", return_value=fake_fs), \
+             patch.object(
+                 processor,
+                 "process_report_type",
+                 return_value={
+                     "success": True,
+                     "records_processed": 2,
+                     "emails_sent": 2,
+                     "errors": [],
+                 },
+             ):
+            result = processor.process_batch("test_de_eje", "batch-2")
+
+        assert result["success"] is True
+        assert result["records_processed"] == 2
+        assert result["emails_sent"] == 2
+        assert result["errors"] == []
+
+    def test_batch_result_marks_cleanup_failures_as_errors(self):
+        processor = BatchProcessor()
+        fake_fs = MagicMock()
+        fake_fs.get_queued_students.return_value = [{"user_email": "student@example.com"}]
+        fake_fs.clear_queue.return_value = False
+        fake_fs.clear_batch_state.return_value = False
+
+        with patch("core.batch_processor.FirestoreService", return_value=fake_fs), \
+             patch.object(
+                 processor,
+                 "process_report_type",
+                 return_value={
+                     "success": True,
+                     "records_processed": 1,
+                     "emails_sent": 1,
+                     "errors": [],
+                 },
+             ):
+            result = processor.process_batch("test_de_eje", "batch-3")
+
+        assert result["success"] is False
+        assert "Failed to clear queue for test_de_eje" in result["errors"]
+        assert "Failed to clear batch state for test_de_eje" in result["errors"]
+
+    def test_invalid_attachment_filename_returns_false_without_smtp(self, monkeypatch):
+        monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
+        monkeypatch.setenv("EMAIL_PASS", "secret")
+
+        with patch("core.email_sender.smtplib.SMTP") as mock_smtp:
+            sender = EmailSender()
+            sent = sender.send_comprehensive_report_email(
+                recipient_email="student@example.com",
+                pdf_content=b"%PDF fake",
+                username="student@example.com",
+                filename="not-a-pdf.txt",
+                correlation_key="student@example.com|M1",
+            )
+
+        assert sent is False
+        mock_smtp.assert_not_called()
