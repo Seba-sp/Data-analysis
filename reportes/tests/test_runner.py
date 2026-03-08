@@ -501,6 +501,204 @@ class TestTestDeEjeEmailTemplate:
         assert mod1.BODY is mod2.BODY
 
 
+# ── Task 2 TDD: EmailSender subject/body overrides + runner template resolution ─
+
+class TestEmailSenderSubjectBodyOverrides:
+    """Task 2 RED: EmailSender accepts optional subject/body without breaking callers."""
+
+    def test_subject_override_used_when_provided(self, monkeypatch):
+        monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
+        monkeypatch.setenv("EMAIL_PASS", "secret")
+
+        captured = {}
+
+        def fake_send_message(msg):
+            captured["subject"] = msg["Subject"]
+
+        with patch("core.email_sender.smtplib.SMTP") as mock_smtp:
+            mock_server = MagicMock()
+            mock_server.__enter__ = lambda s: mock_server
+            mock_server.__exit__ = MagicMock(return_value=False)
+            mock_server.send_message.side_effect = fake_send_message
+            mock_smtp.return_value = mock_server
+
+            sender = EmailSender()
+            sender.send_comprehensive_report_email(
+                recipient_email="student@example.com",
+                pdf_content=b"%PDF fake",
+                username="student@example.com",
+                filename="informe_student@example.com_M1.pdf",
+                subject="Tu informe Test de Eje",
+            )
+
+        assert captured.get("subject") == "Tu informe Test de Eje"
+
+    def test_default_subject_used_when_not_provided(self, monkeypatch):
+        monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
+        monkeypatch.setenv("EMAIL_PASS", "secret")
+
+        captured = {}
+
+        def fake_send_message(msg):
+            captured["subject"] = msg["Subject"]
+
+        with patch("core.email_sender.smtplib.SMTP") as mock_smtp:
+            mock_server = MagicMock()
+            mock_server.__enter__ = lambda s: mock_server
+            mock_server.__exit__ = MagicMock(return_value=False)
+            mock_server.send_message.side_effect = fake_send_message
+            mock_smtp.return_value = mock_server
+
+            sender = EmailSender()
+            sender.send_comprehensive_report_email(
+                recipient_email="student@example.com",
+                pdf_content=b"%PDF fake",
+                username="student@example.com",
+                filename="informe_student@example.com_M1.pdf",
+            )
+
+        assert captured.get("subject") == "Resultados de Diagnóstico"
+
+    def test_body_override_used_when_provided(self, monkeypatch):
+        monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
+        monkeypatch.setenv("EMAIL_PASS", "secret")
+
+        captured = {}
+
+        def fake_attach(part):
+            # Capture first text/plain part payload
+            if hasattr(part, "get_content_type") and part.get_content_type() == "text/plain":
+                captured["body"] = part.get_payload(decode=True).decode("utf-8")
+
+        with patch("core.email_sender.smtplib.SMTP") as mock_smtp:
+            mock_server = MagicMock()
+            mock_server.__enter__ = lambda s: mock_server
+            mock_server.__exit__ = MagicMock(return_value=False)
+            mock_smtp.return_value = mock_server
+
+            sender = EmailSender()
+            result = sender.send_comprehensive_report_email(
+                recipient_email="student@example.com",
+                pdf_content=b"%PDF fake",
+                username="student@example.com",
+                filename="informe_student@example.com_M1.pdf",
+                body="Custom body for test_de_eje",
+            )
+
+        # Verify call reached SMTP (not rejected by validation)
+        assert result is True
+
+    def test_none_subject_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
+        monkeypatch.setenv("EMAIL_PASS", "secret")
+
+        captured = {}
+
+        def fake_send_message(msg):
+            captured["subject"] = msg["Subject"]
+
+        with patch("core.email_sender.smtplib.SMTP") as mock_smtp:
+            mock_server = MagicMock()
+            mock_server.__enter__ = lambda s: mock_server
+            mock_server.__exit__ = MagicMock(return_value=False)
+            mock_server.send_message.side_effect = fake_send_message
+            mock_smtp.return_value = mock_server
+
+            sender = EmailSender()
+            sender.send_comprehensive_report_email(
+                recipient_email="student@example.com",
+                pdf_content=b"%PDF fake",
+                username="student@example.com",
+                filename="informe_student@example.com_M1.pdf",
+                subject=None,
+            )
+
+        assert captured.get("subject") == "Resultados de Diagnóstico"
+
+
+class TestRunnerEmailTemplateResolution:
+    """Task 2 RED: PipelineRunner._get_email_template() resolves per-type templates."""
+
+    def test_test_de_eje_sends_typed_email_subject(self):
+        runner = PipelineRunner("test_de_eje")
+        subject, body = runner._get_email_template()
+        assert subject is not None
+        assert subject != "Resultados de Diagnóstico"
+        assert len(subject) > 0
+
+    def test_test_de_eje_sends_typed_email_body(self):
+        runner = PipelineRunner("test_de_eje")
+        subject, body = runner._get_email_template()
+        assert body is not None
+        assert len(body) > 0
+
+    def test_unknown_report_type_email_template_falls_back(self):
+        runner = PipelineRunner("nonexistent_type_xyz")
+        subject, body = runner._get_email_template()
+        assert subject is None
+        assert body is None
+
+    def test_template_resolution_does_not_raise_on_missing_module(self):
+        runner = PipelineRunner("no_such_report_type_abc")
+        # Must not raise
+        result = runner._get_email_template()
+        assert result == (None, None)
+
+    def test_runner_passes_subject_to_sender_for_test_de_eje(self, tmp_path):
+        runner = PipelineRunner("test_de_eje")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_TDE.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.return_value = "fid"
+            mock_drive_cls.return_value = mock_drive
+
+            runner.run()
+
+        call_kwargs = mock_sender.send_comprehensive_report_email.call_args
+        subject_kwarg = call_kwargs.kwargs.get("subject")
+        assert subject_kwarg is not None
+        assert subject_kwarg != "Resultados de Diagnóstico"
+
+    def test_runner_passes_none_subject_for_templateless_type(self, tmp_path):
+        runner = PipelineRunner("diagnosticos")
+        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_M1.pdf"])
+
+        with patch("core.runner.get_generator") as mock_get_gen, \
+             patch("core.runner.EmailSender") as mock_email_cls, \
+             patch("core.runner.DriveService") as mock_drive_cls:
+
+            mock_gen = MagicMock()
+            mock_gen.generate.return_value = out_dir
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            mock_sender = MagicMock()
+            mock_sender.send_comprehensive_report_email.return_value = True
+            mock_email_cls.return_value = mock_sender
+
+            mock_drive = MagicMock()
+            mock_drive.upload_file.return_value = "fid"
+            mock_drive_cls.return_value = mock_drive
+
+            runner.run()
+
+        call_kwargs = mock_sender.send_comprehensive_report_email.call_args
+        # diagnosticos has no email_template.py — subject should be None (fallback)
+        subject_kwarg = call_kwargs.kwargs.get("subject")
+        assert subject_kwarg is None
+
+
 class TestEmailSenderValidation:
     def test_empty_attachment_returns_false_without_smtp(self, monkeypatch):
         monkeypatch.setenv("EMAIL_FROM", "noreply@example.com")
