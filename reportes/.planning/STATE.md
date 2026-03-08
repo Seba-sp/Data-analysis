@@ -74,6 +74,11 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase 11-examen-de-eje-plugin]: WeasyPrint cannot render color emoji on Windows — replace all emoji with inline SVG in PDF templates
 - [Phase 11-examen-de-eje-plugin]: Colored SVG circles (green/yellow/red) for RS/RD/RR state labels preserve semantic meaning without emoji dependency
 
+## Accumulated Context
+
+### Roadmap Evolution
+- Phase 14 added: GCP and GCS Webhook Fixes — both webhooks incomplete, GCP/GCS mistakes to be detailed before planning
+
 ## Blockers
 
 - Git metadata writes are blocked in this environment (`.git/index.lock` permission denied), preventing task commits.

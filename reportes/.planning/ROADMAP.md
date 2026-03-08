@@ -129,3 +129,14 @@ Success criteria:
 | 11. Examen de Eje Plugin | v1.1 | 0/3 | Pending | - |
 | 12. Ensayo Plugin + Integration Hardening | v1.1 | 0/0 | Pending | - |
 | 13. Full New-Plugin GCP Deployment Validation | v1.1 | 0/0 | Pending | - |
+| 14. GCP and GCS Webhook Fixes | v1.1 | 0/0 | Pending | - |
+
+### Phase 14: GCP and GCS Webhook Fixes
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 13
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 14 to break down)
