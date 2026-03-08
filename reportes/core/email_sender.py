@@ -29,8 +29,17 @@ class EmailSender:
         if not all([self.email_from, self.email_pass]):
             raise ValueError("Missing required environment variables: EMAIL_FROM, EMAIL_PASS")
 
-    def send_comprehensive_report_email(self, recipient_email: str, pdf_content: bytes,
-                                      username: str, filename: str, drive_link: str = None) -> bool:
+    def send_comprehensive_report_email(
+        self,
+        recipient_email: str,
+        pdf_content: bytes,
+        username: str,
+        filename: str,
+        drive_link: str = None,
+        correlation_key: str = None,
+        subject: str = None,
+        body: str = None,
+    ) -> bool:
         """
         Send comprehensive assessment report email
 
@@ -40,21 +49,40 @@ class EmailSender:
             username: Username for personalization
             filename: Filename for the attachment
             drive_link: Optional Google Drive link
+            correlation_key: Optional event correlation key for logging
+            subject: Optional email subject override; falls back to generic default
+            body: Optional email body override; falls back to generic default
 
         Returns:
             True if email sent successfully, False otherwise
         """
+        context = (
+            f"recipient={recipient_email} attachment={filename} "
+            f"event_key={correlation_key or 'n/a'}"
+        )
+
+        # Defensive validation keeps outbound behavior explicit and debuggable.
+        if not recipient_email or "@" not in recipient_email:
+            logger.error(f"Invalid recipient for send attempt: {context}")
+            return False
+        if not filename or not filename.lower().endswith(".pdf"):
+            logger.error(f"Invalid attachment filename for send attempt: {context}")
+            return False
+        if not pdf_content:
+            logger.error(f"Empty attachment payload for send attempt: {context}")
+            return False
+
         try:
-            logger.info(f"Sending comprehensive report email to {recipient_email}")
+            logger.info(f"Sending comprehensive report email ({context})")
 
             # Create email message
             msg = MIMEMultipart()
-            msg["Subject"] = f"Resultados de Diagnóstico"
+            msg["Subject"] = subject if subject else "Resultados de Diagnóstico"
             msg["From"] = self.email_from
             msg["To"] = recipient_email
 
-            # Email body
-            body = f"""Hola,
+            # Email body — use provided override or fall back to generic default
+            _default_body = """Hola,
 
 Has completado tu test de diagnóstico correctamente, en el informe adjunto encontrarás:
 1. Tu nivel en la materia
@@ -63,11 +91,12 @@ Has completado tu test de diagnóstico correctamente, en el informe adjunto enco
 
 Un abrazo a la distancia
 """
+            body_text = body if body else _default_body
 
             if drive_link:
-                body += f"\n\nTambién puedes acceder al informe desde Google Drive: {drive_link}"
+                body_text += f"\n\nTambién puedes acceder al informe desde Google Drive: {drive_link}"
 
-            msg.attach(MIMEText(body, "plain", "utf-8"))
+            msg.attach(MIMEText(body_text, "plain", "utf-8"))
 
             # Attach PDF report
             pdf_attachment = MIMEBase("application", "pdf")
@@ -79,7 +108,7 @@ Un abrazo a la distancia
             )
             msg.attach(pdf_attachment)
 
-            logger.info(f"PDF attached: {filename}")
+            logger.info(f"PDF attached ({context})")
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -87,9 +116,9 @@ Un abrazo a la distancia
                 server.login(self.email_from, self.email_pass)
                 server.send_message(msg)
 
-            logger.info(f"Comprehensive report email sent successfully to {recipient_email}")
+            logger.info(f"Comprehensive report email sent successfully ({context})")
             return True
 
         except Exception as e:
-            logger.error(f"Error sending comprehensive report email to {recipient_email}: {str(e)}")
+            logger.error(f"Error sending comprehensive report email ({context}): {str(e)}")
             return False

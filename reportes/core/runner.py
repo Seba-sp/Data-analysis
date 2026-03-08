@@ -4,10 +4,12 @@ PipelineRunner — orchestrates report generation, email delivery, and Drive upl
 Decouples report generation from email/Drive side effects so that dry-run and
 test-email modes can suppress I/O without touching generator logic.
 """
+import importlib
 import logging
 import os
+from collections import Counter
 from pathlib import Path
-from typing import List, Optional, TypedDict
+from typing import List, Optional, Tuple, TypedDict
 
 from reports import get_generator
 from core.email_sender import EmailSender
@@ -71,13 +73,46 @@ class PipelineRunner:
         email = "_".join(parts[1:-1])
         return email if email else None
 
+    def _get_email_template(self) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Resolve the per-report-type email template for this runner instance.
+
+        Attempts to import ``reports.{report_type}.email_template`` and reads
+        its ``SUBJECT`` and ``BODY`` string constants.
+
+        Returns:
+            (subject, body) tuple — both are None when the module is absent or
+            raises an unexpected error. Never raises.
+        """
+        module_path = f"reports.{self.report_type}.email_template"
+        try:
+            mod = importlib.import_module(module_path)
+            return mod.SUBJECT, mod.BODY
+        except ImportError:
+            logger.debug(
+                "[%s] No email_template module found at %s — using defaults",
+                self.report_type,
+                module_path,
+            )
+            return None, None
+        except Exception as exc:
+            logger.warning(
+                "[%s] Unexpected error loading email template from %s: %s",
+                self.report_type,
+                module_path,
+                exc,
+            )
+            return None, None
+
     def _send_email(
         self,
         recipient: str,
         pdf_path: Path,
         drive_link: Optional[str],
+        correlation_key: Optional[str] = None,
     ) -> bool:
         """Send a single report email. Returns True on success, False otherwise."""
+        subject, body = self._get_email_template()
         sender = EmailSender()
         return sender.send_comprehensive_report_email(
             recipient_email=recipient,
@@ -85,6 +120,9 @@ class PipelineRunner:
             username=recipient,
             filename=pdf_path.name,
             drive_link=drive_link,
+            correlation_key=correlation_key,
+            subject=subject,
+            body=body,
         )
 
     def _upload_to_drive(self, pdf_path: Path) -> Optional[str]:
@@ -102,6 +140,58 @@ class PipelineRunner:
         except Exception as exc:
             logger.warning(f"[{self.report_type}] Drive upload failed: {exc}")
             return None
+
+    def _event_key_for_pdf(self, pdf_path: Path) -> Optional[str]:
+        """Return stable event correlation key based on filename semantics."""
+        student_email = self._extract_email_from_pdf(pdf_path)
+        if not student_email:
+            return None
+        stem_parts = pdf_path.stem.split("_")
+        assessment_type = stem_parts[-1] if len(stem_parts) >= 3 else "unknown"
+        return f"{student_email}|{assessment_type}"
+
+    def _filter_duplicate_test_de_eje_artifacts(
+        self,
+        pdfs: List[Path],
+        errors: List[str],
+    ) -> List[Path]:
+        """
+        Guard one-event/one-email contract for test_de_eje.
+
+        If multiple PDFs resolve to the same event key, only the first one is kept
+        and an actionable error is recorded with event/report identifiers.
+        """
+        if self.report_type != "test_de_eje":
+            return pdfs
+
+        event_keys = [self._event_key_for_pdf(pdf) for pdf in pdfs]
+        duplicates = {
+            key: count for key, count in Counter(event_keys).items()
+            if key and count > 1
+        }
+        if not duplicates:
+            return pdfs
+
+        logger.warning(
+            "[%s] Cardinality drift detected for test_de_eje artifacts: %s",
+            self.report_type,
+            duplicates,
+        )
+
+        seen = set()
+        filtered: List[Path] = []
+        for pdf in pdfs:
+            key = self._event_key_for_pdf(pdf)
+            if key and key in duplicates:
+                if key in seen:
+                    errors.append(
+                        f"Duplicate artifact skipped report_type={self.report_type} "
+                        f"event_key={key} attachment={pdf.name}"
+                    )
+                    continue
+                seen.add(key)
+            filtered.append(pdf)
+        return filtered
 
     # ── Public interface ───────────────────────────────────────────────────────
 
@@ -139,17 +229,22 @@ class PipelineRunner:
         else:
             pdfs = [output_path] if output_path.suffix == ".pdf" else []
 
+        pdfs = self._filter_duplicate_test_de_eje_artifacts(pdfs, errors)
         records_processed = len(pdfs)
 
         # ── Step 3: Email loop ─────────────────────────────────────────────────
         for pdf_path in pdfs:
             student_email = self._extract_email_from_pdf(pdf_path)
+            event_key = self._event_key_for_pdf(pdf_path) or "unknown"
             if not student_email:
                 logger.warning(
                     f"[{self.report_type}] Could not extract email from "
                     f"{pdf_path.name}, skipping"
                 )
-                errors.append(f"Could not extract email from {pdf_path.name}")
+                errors.append(
+                    f"Could not extract email report_type={self.report_type} "
+                    f"attachment={pdf_path.name} event_key={event_key}"
+                )
                 continue
 
             # Dry-run: skip all I/O
@@ -170,7 +265,12 @@ class PipelineRunner:
 
             # Send email — catch all exceptions so the loop continues
             try:
-                sent = self._send_email(recipient, pdf_path, drive_link)
+                sent = self._send_email(
+                    recipient,
+                    pdf_path,
+                    drive_link,
+                    correlation_key=event_key,
+                )
                 if sent:
                     emails_sent += 1
                     logger.info(
@@ -178,13 +278,21 @@ class PipelineRunner:
                         f"{recipient} ({pdf_path.name})"
                     )
                 else:
-                    errors.append(f"Email returned False for {student_email}")
+                    errors.append(
+                        f"Email returned False report_type={self.report_type} "
+                        f"event_key={event_key} recipient={recipient} "
+                        f"attachment={pdf_path.name}"
+                    )
                     logger.warning(
                         f"[{self.report_type}] Failed: {student_email}: "
                         f"send returned False"
                     )
             except Exception as exc:
-                errors.append(f"Email error for {student_email}: {exc}")
+                errors.append(
+                    f"Email error report_type={self.report_type} "
+                    f"event_key={event_key} recipient={recipient} "
+                    f"attachment={pdf_path.name}: {exc}"
+                )
                 logger.error(
                     f"[{self.report_type}] Failed: {student_email}: {exc}"
                 )
