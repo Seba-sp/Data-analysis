@@ -82,6 +82,11 @@ Success criteria:
 **Phase 11: Examen de Eje Plugin**
 Goal: Implement and register `examen_de_eje` end-to-end report generation.
 Requirements: PLUG-02, DATA-02
+Plans: 3 plans
+Plans:
+- [ ] 11-01-PLAN.md — Failing test scaffolding (TDD RED state) for PDU% logic, data contract, REGISTRY, render contract
+- [ ] 11-02-PLAN.md — Implement ExamenDeEjeGenerator + email template + REGISTRY registration (tests GREEN)
+- [ ] 11-03-PLAN.md — Smoke test with real bank file + human visual verification of generated PDF
 Success criteria:
 1. `reports/examen_de_eje/generator.py` implements `download -> analyze -> render` through `BaseReportGenerator`.
 2. Plugin consumes API responses plus `M30M2-EXAMEN DE EJE 1-DATA.xlsx` metadata for state/recommendation outputs.
@@ -121,6 +126,6 @@ Success criteria:
 | 8. Template and Cover Foundation | v1.1 | 5/5 | Complete | 2026-03-07 |
 | 9. Test de Eje Plugin | v1.1 | 1/1 | Complete | 2026-03-08 |
 | 10. Test de Eje Email + GCP Production Validation | v1.1 | 2/5 | In execution | - |
-| 11. Examen de Eje Plugin | v1.1 | 0/0 | Pending | - |
+| 11. Examen de Eje Plugin | v1.1 | 0/3 | Pending | - |
 | 12. Ensayo Plugin + Integration Hardening | v1.1 | 0/0 | Pending | - |
 | 13. Full New-Plugin GCP Deployment Validation | v1.1 | 0/0 | Pending | - |
