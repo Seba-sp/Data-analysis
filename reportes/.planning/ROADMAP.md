@@ -29,7 +29,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 | 8 | Template and Cover Foundation | Convert DOCX templates and cover images into render-ready HTML contracts for all 3 new report types | TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 4 |
 | 9 | Test de Eje Plugin | Deliver production-ready `test_de_eje` plugin using API + XLSX question bank + HTML templates | PLUG-01, DATA-01 | 4 |
 | 10 | 5/5 | Complete   | 2026-03-08 | 5 |
-| 11 | 3/3 | Complete   | 2026-03-08 | 4 |
+| 11 | 3/3 | Complete    | 2026-03-08 | 4 |
 | 12 | Ensayo Plugin + Integration Hardening | Deliver `ensayo` plugin and verify one-assessment-per-email behavior with no regressions on existing types | PLUG-03, DATA-03, PLUG-04, MAIL-02 | 5 |
 | 13 | Full New-Plugin GCP Deployment Validation | Deploy and validate `examen_de_eje` + `ensayo` in GCP with production mapping and Firestore state checks | DEPL-01 | 4 |
 
