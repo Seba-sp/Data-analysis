@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pandas as pd
+from core.storage import StorageClient
 from openpyxl import load_workbook
 from weasyprint import HTML
 
@@ -431,7 +432,7 @@ class TestDeEjeGenerator(BaseReportGenerator):
                 df = result
             else:
                 csv_path = self.downloader.get_csv_file_path(assessment_name)
-                df = pd.read_csv(str(csv_path), sep=";")
+                df = StorageClient().read_csv(csv_path, sep=";")
             downloaded[assessment_name] = df
         return downloaded
 
