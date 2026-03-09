@@ -33,10 +33,17 @@ _UIM_MAPPING: Dict[str, Tuple[str, str]] = {
 }
 
 _VALID_HEX_ID_RE = re.compile(r"^[a-fA-F0-9]{24}$")
+# CL: included for ids.xlsx name-pattern parsing. CL assessment IDs are also routed via
+# _DIAG_MAPPING env-var entries (CL_ASSESSMENT_ID) which take priority at lookup time.
+# L30M: 3 rows exist in ids.xlsx as of 2026-03-08 but their IDs are invalid non-hex
+# placeholders — all L30M rows are rejected at _register_route with "invalid_assessment_id"
+# until valid hex IDs are provided. L30M is intentionally excluded from this set to keep
+# rejection reason as "unsupported_group" so the startup summary log surfaces the issue.
 _ALLOWED_GROUPS = {"M1", "M2", "H30M", "Q30M", "F30M", "B30M", "CL"}
 _GROUP_ALIASES = {
     "M30M2": "M2",
     "M30M1": "M1",
+    "M30M": "M1",
 }
 _TYPE_TO_REPORT = {
     "TEST DE EJE": "test_de_eje",
@@ -62,6 +69,8 @@ class AssessmentMapper:
         (i.e. the same hex is used by both systems), the UIM entry wins.
         """
         self._routes: Dict[str, Tuple[str, str]] = {}
+        self._names: Dict[str, str] = {}       # normalized_id -> assessment_name
+        self._rejected_names: List[str] = []   # names rejected for invalid_assessment_id
         self.validation_counters: Dict[str, int] = {"accepted": 0, "rejected": 0}
         self.validation_errors: Dict[str, int] = {}
         self.mapping_source = self._select_source()
@@ -209,13 +218,27 @@ class AssessmentMapper:
         for row_index, assessment_id, assessment_name in rows:
             self.register_ids_row(assessment_id, assessment_name, row_index=row_index)
 
+        accepted_new = self.validation_counters["accepted"] - accepted_before
+        rejected_new = self.validation_counters["rejected"] - rejected_before
         logger.info(
             "Loaded ids.xlsx routes",
             extra={
                 "mapping_source": self.mapping_source,
                 "rows_total": len(rows),
-                "accepted_new": self.validation_counters["accepted"] - accepted_before,
-                "rejected_new": self.validation_counters["rejected"] - rejected_before,
+                "accepted_new": accepted_new,
+                "rejected_new": rejected_new,
+            },
+        )
+        # Always emit a startup summary warning so Cloud Run logs show which assessment
+        # names were rejected due to invalid_assessment_id. Emitted unconditionally
+        # (even when rejected_names is empty) so log presence is predictable.
+        logger.warning(
+            "ids.xlsx startup summary",
+            extra={
+                "mapping_source": self.mapping_source,
+                "accepted": accepted_new,
+                "rejected": rejected_new,
+                "rejected_names": list(self._rejected_names),
             },
         )
 
@@ -283,6 +306,10 @@ class AssessmentMapper:
     ) -> None:
         self.validation_counters["rejected"] += 1
         self.validation_errors[reason] = self.validation_errors.get(reason, 0) + 1
+        # Track names rejected specifically for invalid_assessment_id so the startup
+        # summary can surface which assessments are missing valid hex IDs.
+        if reason == "invalid_assessment_id" and assessment_name:
+            self._rejected_names.append(assessment_name)
         logger.warning(
             "Rejected ids mapping row",
             extra={
@@ -325,6 +352,8 @@ class AssessmentMapper:
 
         if existing is None:
             self._routes[normalized_id] = candidate
+            if assessment_name:
+                self._names[normalized_id] = assessment_name
 
         self.validation_counters["accepted"] += 1
         return True
@@ -370,6 +399,27 @@ class AssessmentMapper:
         if not assessment_id:
             return None
         return self._routes.get(assessment_id.lower())
+
+    def get_route_full(self, assessment_id: str) -> Optional[Tuple[str, str, str]]:
+        """Return (report_type, assessment_type, assessment_name) for a known assessment ID.
+
+        Extends get_route() with the assessment_name so webhook handlers can tag
+        queued students with a human-readable label without a second lookup.
+
+        Args:
+            assessment_id: 24-character hex assessment ID from LearnWorlds.
+
+        Returns:
+            (report_type, assessment_type, assessment_name) 3-tuple, or None if unknown.
+            assessment_name is empty string if the name was not stored at registration time.
+        """
+        if not assessment_id:
+            return None
+        route = self._routes.get(assessment_id.lower())
+        if route is None:
+            return None
+        name = self._names.get(assessment_id.lower(), "")
+        return (route[0], route[1], name)
 
     def extract_assessment_id(self, url: str) -> Optional[str]:
         """Extract assessment ID from a LearnWorlds URL.
