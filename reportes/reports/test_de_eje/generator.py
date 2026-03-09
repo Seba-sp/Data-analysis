@@ -70,6 +70,11 @@ def _normalize_text(value: Any) -> str:
     return text.strip()
 
 
+def _display_text(value: Any) -> str:
+    text = "" if value is None else str(value)
+    return unicodedata.normalize("NFC", text).strip()
+
+
 def _normalize_answer(value: Any) -> str:
     return _normalize_text(value).upper()
 
@@ -492,9 +497,9 @@ class TestDeEjeGenerator(BaseReportGenerator):
                 plan = student_plans[plan_key]
 
                 for _, question in bank_df.iterrows():
-                    unit_name = _normalize_text(question["unidad"])
-                    lesson_name = _normalize_text(question["leccion"])
-                    question_label = _normalize_text(question["pregunta"])
+                    unit_name = _display_text(question["unidad"])
+                    lesson_name = _display_text(question["leccion"])
+                    question_label = _display_text(question["pregunta"])
                     correct_answer = _normalize_answer(question["alternativa"])
                     user_answer = _normalize_answer(_lookup_answer_column(student_row, question_label))
                     is_correct = user_answer == correct_answer
