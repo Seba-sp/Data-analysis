@@ -2,20 +2,20 @@
 
 ## Milestones
 
-- [x] **v1.0 Plugin Architecture MVP** - Phases 1-6 (shipped 2026-03-01)
+- [x] **v1.0 Plugin Architecture MVP** - Phases 1-6 (shipped 2016-03-01)
 - [ ] **v1.1 Dynamic Assessment Routing + 3 New Report Types** - Phases 7-13 (in execution; phases 7-9 complete)
 
 ## Phases
 
 <details>
-<summary>[x] v1.0 Plugin Architecture MVP (Phases 1-6) - SHIPPED 2026-03-01</summary>
+<summary>[x] v1.0 Plugin Architecture MVP (Phases 1-6) - SHIPPED 2016-03-01</summary>
 
-- [x] Phase 1: Consolidation Audit (1/1 plans) - completed 2026-02-28
-- [x] Phase 2: Core Package (5/5 plans) - completed 2026-03-01
-- [x] Phase 3: First Plugin Migration (2/2 plans) - completed 2026-03-01
-- [x] Phase 4: Unified Entry Points (2/2 plans) - completed 2026-03-01
-- [x] Phase 5: GCP Deployment (4/4 plans) - completed 2026-03-01
-- [x] Phase 6: Remaining Migrations (4/4 plans) - completed 2026-03-01
+- [x] Phase 1: Consolidation Audit (1/1 plans) - completed 2016-02-28
+- [x] Phase 2: Core Package (5/5 plans) - completed 2016-03-01
+- [x] Phase 3: First Plugin Migration (2/2 plans) - completed 2016-03-01
+- [x] Phase 4: Unified Entry Points (2/2 plans) - completed 2016-03-01
+- [x] Phase 5: GCP Deployment (4/4 plans) - completed 2016-03-01
+- [x] Phase 6: Remaining Migrations (4/4 plans) - completed 2016-03-01
 
 See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
@@ -28,8 +28,8 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 | 7 | 3/3 | Completed | ROUT-01, ROUT-02, ROUT-03, ROUT-04, ROUT-05 | 4 |
 | 8 | Template and Cover Foundation | Convert DOCX templates and cover images into render-ready HTML contracts for all 3 new report types | TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 4 |
 | 9 | Test de Eje Plugin | Deliver production-ready `test_de_eje` plugin using API + XLSX question bank + HTML templates | PLUG-01, DATA-01 | 4 |
-| 10 | 5/5 | Complete   | 2026-03-08 | 5 |
-| 11 | 3/3 | Complete    | 2026-03-08 | 4 |
+| 10 | 5/5 | Complete   | 2016-03-08 | 5 |
+| 11 | 3/3 | Complete    | 2016-03-08 | 4 |
 | 12 | Ensayo Plugin + Integration Hardening | Deliver `ensayo` plugin and verify one-assessment-per-email behavior with no regressions on existing types | PLUG-03, DATA-03, PLUG-04, MAIL-02 | 5 |
 | 13 | Full New-Plugin GCP Deployment Validation | Deploy and validate `examen_de_eje` + `ensayo` in GCP with production mapping and Firestore state checks | DEPL-01 | 4 |
 
@@ -116,20 +116,21 @@ Success criteria:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Consolidation Audit | v1.0 | 1/1 | Complete | 2026-02-28 |
-| 2. Core Package | v1.0 | 5/5 | Complete | 2026-03-01 |
-| 3. First Plugin Migration | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 4. Unified Entry Points | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 5. GCP Deployment | v1.0 | 4/4 | Complete | 2026-03-01 |
-| 6. Remaining Migrations | v1.0 | 4/4 | Complete | 2026-03-01 |
-| 7. Dynamic ID Routing from GCS | v1.1 | 3/3 | Complete | 2026-03-06 |
-| 8. Template and Cover Foundation | v1.1 | 5/5 | Complete | 2026-03-07 |
-| 9. Test de Eje Plugin | v1.1 | 1/1 | Complete | 2026-03-08 |
+| 1. Consolidation Audit | v1.0 | 1/1 | Complete | 2016-02-28 |
+| 2. Core Package | v1.0 | 5/5 | Complete | 2016-03-01 |
+| 3. First Plugin Migration | v1.0 | 2/2 | Complete | 2016-03-01 |
+| 4. Unified Entry Points | v1.0 | 2/2 | Complete | 2016-03-01 |
+| 5. GCP Deployment | v1.0 | 4/4 | Complete | 2016-03-01 |
+| 6. Remaining Migrations | v1.0 | 4/4 | Complete | 2016-03-01 |
+| 7. Dynamic ID Routing from GCS | v1.1 | 3/3 | Complete | 2016-03-06 |
+| 8. Template and Cover Foundation | v1.1 | 5/5 | Complete | 2016-03-07 |
+| 9. Test de Eje Plugin | v1.1 | 1/1 | Complete | 2016-03-08 |
 | 10. Test de Eje Email + GCP Production Validation | v1.1 | 2/5 | In execution | - |
 | 11. Examen de Eje Plugin | v1.1 | 0/3 | Pending | - |
 | 12. Ensayo Plugin + Integration Hardening | v1.1 | 0/0 | Pending | - |
 | 13. Full New-Plugin GCP Deployment Validation | v1.1 | 0/0 | Pending | - |
-| 14. GCP and GCS Webhook Fixes | 3/3 | Complete   | 2026-03-09 | - |
+| 14. GCP and GCS Webhook Fixes | 3/3 | Complete   | 2016-03-09 | - |
+| 15. GCP Setup and Installation Tutorial | 1/1 | Complete   | 2026-03-09 |
 
 ### Phase 14: GCP and GCS Webhook Fixes
 
@@ -149,3 +150,20 @@ Success criteria:
 3. Each webhook event queues students tagged with the specific assessment_name that fired.
 4. BatchProcessor downloads only the specific assessment that triggered each webhook, not all assessments for the report_type.
 5. Full automated test suite passes with no regressions on existing report types.
+
+### Phase 15: GCP Setup and Installation Tutorial Document for Non-Technical Users
+
+**Goal:** Produce a single Spanish-language Markdown setup guide (SETUP_GUIDE.md) that a non-technical Windows user with a corporate Gmail account can follow from zero to a fully deployed and verified GCP installation, including LearnWorlds webhook registration.
+**Requirements**: DOC-01
+**Depends on:** Phase 14
+**Plans:** 1/1 plans complete
+
+Plans:
+- [ ] 15-01-PLAN.md — Update .env.example with 3 missing variables and write SETUP_GUIDE.md (Spanish, 15 steps, 8 troubleshooting entries)
+
+Success criteria:
+1. SETUP_GUIDE.md exists at repo root, written entirely in Spanish, with Table of Contents and anchor links.
+2. All 15 steps follow the locked pattern: one-sentence context, numbered actions, ✅ Deberías ver expected output.
+3. Two-step deploy sequence for PROCESS_BATCH_URL chicken-and-egg is explicit with a warning callout.
+4. Troubleshooting section covers all 8 known failure modes with plain-language fixes in Spanish.
+5. .env.example contains IDS_XLSX_GCS_PATH, ASSESSMENT_MAPPING_SOURCE, and BANKS_GCS_PREFIX with descriptive comments.
