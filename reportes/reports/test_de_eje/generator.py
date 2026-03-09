@@ -401,8 +401,24 @@ class TestDeEjeGenerator(BaseReportGenerator):
             raise ValueError("No valid TEST DE EJE rows found in ids.xlsx")
         return mapping
 
-    def download(self) -> dict[str, pd.DataFrame]:
+    def download(self, assessment_name: str = "") -> dict[str, pd.DataFrame]:
+        """Download assessment responses, optionally scoped to one assessment.
+
+        Args:
+            assessment_name: When non-empty, only download rows matching this
+                normalized assessment_name from the ids.xlsx mapping.
+                Empty string downloads all valid assessments.
+        """
         mapping = self._load_test_de_eje_mapping()
+        if assessment_name:
+            normalized_filter = _normalize_text(assessment_name).upper()
+            normalized_filter = re.sub(r"\s*-\s*", "-", normalized_filter)
+            mapping = [r for r in mapping if r.assessment_name == normalized_filter]
+            if not mapping:
+                logger.warning(
+                    "No mapping rows found for assessment_name=%r — returning empty download",
+                    assessment_name,
+                )
         downloaded: dict[str, pd.DataFrame] = {}
         for item in mapping:
             assessment_name = f"{item.assessment_type}_TEST_DE_EJE_{item.assessment_number}"

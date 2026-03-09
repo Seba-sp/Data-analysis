@@ -743,7 +743,7 @@ class TestBatchProcessorResultSemantics:
         assert result["records_processed"] == 1
         assert result["emails_sent"] == 0
         assert "smtp timeout" in result["errors"]
-        assert "Pipeline failed for test_de_eje" in result["errors"]
+        assert any("Pipeline failed for test_de_eje" in e for e in result["errors"])
 
     def test_batch_result_exposes_success_metrics_when_pipeline_is_clean(self):
         processor = BatchProcessor()

@@ -23,7 +23,7 @@ class TestDiagnosticoGenerator(BaseReportGenerator):
     def __init__(self):
         super().__init__("test_diagnostico")
 
-    def download(self) -> str:
+    def download(self, assessment_name: str = "") -> str:
         """Return path to Excel input file; fail fast if missing."""
         excel_path = self.analysis_dir / "analisis de datos.xlsx"
         if not excel_path.exists():

@@ -57,7 +57,7 @@ class DiagnosticosUIMGenerator(BaseReportGenerator):
     # Lifecycle: download
     # ------------------------------------------------------------------
 
-    def download(self) -> Dict[str, pd.DataFrame]:
+    def download(self, assessment_name: str = "") -> Dict[str, pd.DataFrame]:
         """
         Download and process all assessment responses.
 

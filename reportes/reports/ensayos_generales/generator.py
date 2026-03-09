@@ -12,7 +12,7 @@ class EnsayosGeneralesGenerator(BaseReportGenerator):
         super().__init__("ensayos_generales")
         self.report_generator = ReportGenerator()
 
-    def download(self) -> pd.DataFrame:
+    def download(self, assessment_name: str = "") -> pd.DataFrame:
         # Fail fast if analysis.csv is missing — no warn-and-continue
         csv_path = self.analysis_dir / "analysis.csv"
         if not csv_path.exists():

@@ -65,9 +65,13 @@ class BaseReportGenerator(ABC):
             os.makedirs(directory, exist_ok=True)
 
     @abstractmethod
-    def download(self) -> Any:
+    def download(self, assessment_name: str = "") -> Any:
         """
         Download raw assessment responses from LearnWorlds API.
+
+        Args:
+            assessment_name: When non-empty, download only this specific assessment.
+                Empty string means download all assessments (legacy behaviour).
 
         Returns:
             Implementation-defined — typically a list of response dicts or a DataFrame
@@ -100,12 +104,16 @@ class BaseReportGenerator(ABC):
         """
         ...
 
-    def generate(self) -> Path:
+    def generate(self, assessment_name: str = "") -> Path:
         """
         Orchestrate the full pipeline: download -> analyze -> render.
 
         This is a concrete method. Subclasses should override the three
         lifecycle methods, not this orchestrator.
+
+        Args:
+            assessment_name: When non-empty, scope the download to only this
+                specific assessment. Empty string means all assessments (legacy).
 
         Returns:
             Path to the produced report file on disk.
@@ -113,7 +121,7 @@ class BaseReportGenerator(ABC):
         """
         logger.info(f"[{self.report_type}] Starting report generation")
 
-        download_result = self.download()
+        download_result = self.download(assessment_name=assessment_name)
         logger.info(f"[{self.report_type}] Download complete")
 
         analysis_result = self.analyze(download_result)

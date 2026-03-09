@@ -48,10 +48,12 @@ class PipelineRunner:
         report_type: str,
         dry_run: bool = False,
         test_email: Optional[str] = None,
+        assessment_name: Optional[str] = None,
     ) -> None:
         self.report_type = report_type
         self.dry_run = dry_run
         self.test_email = test_email
+        self.assessment_name = assessment_name or ""
 
     # ── Private helpers ────────────────────────────────────────────────────────
 
@@ -212,7 +214,7 @@ class PipelineRunner:
         try:
             GeneratorClass = get_generator(self.report_type)
             generator = GeneratorClass()
-            output_path = generator.generate()
+            output_path = generator.generate(assessment_name=self.assessment_name)
         except Exception as exc:
             errors.append(str(exc))
             logger.error(f"[{self.report_type}] Generation failed: {exc}")

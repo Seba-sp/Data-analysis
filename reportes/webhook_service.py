@@ -210,8 +210,8 @@ def handle_webhook(request: Request):
         if not assessment_id:
             return jsonify({'error': 'Could not extract assessment ID from URL'}), 400
 
-        route = _am.get_route(assessment_id)
-        if route is None:
+        route_full = _am.get_route_full(assessment_id)
+        if route_full is None:
             mapping_source = getattr(_am, "mapping_source", "unknown")
             logger.warning(
                 "Rejected webhook: unknown assessment_id route",
@@ -226,7 +226,7 @@ def handle_webhook(request: Request):
             )
             return jsonify({'error': f'Unknown assessment ID: {assessment_id}'}), 400
 
-        report_type, assessment_type = route
+        report_type, assessment_type, assessment_name = route_full
         mapping_source = getattr(_am, "mapping_source", "unknown")
 
         # Extract user data
@@ -241,6 +241,7 @@ def handle_webhook(request: Request):
         student_data = {
             'report_type': report_type,
             'assessment_type': assessment_type,
+            'assessment_name': assessment_name,
             'assessment_id': assessment_id,
             'user_email': user_email,
             'user_id': user_id,
