@@ -3,14 +3,29 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Phases
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-03-08T19:39:33.129Z"
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-03-09T00:46:08.549Z"
 last_activity: 2026-03-08 - Executed plan 10-04 with per-report-type email templates via importlib plugin pattern and created 10-04-SUMMARY.md
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 2
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.1
+milestone_name: Phases
+status: executing
+stopped_at: Phase 14 context gathered
+last_updated: "2026-03-09T00:18:22.542Z"
+last_activity: 2026-03-08 - Executed plan 10-04 with per-report-type email templates via importlib plugin pattern and created 10-04-SUMMARY.md
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 93
 ---
 
@@ -73,6 +88,11 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase 11]: unit_status_rows tbody anchor used in insert_dynamic_tables for examen_de_eje to inject rows directly into existing table body
 - [Phase 11-examen-de-eje-plugin]: WeasyPrint cannot render color emoji on Windows — replace all emoji with inline SVG in PDF templates
 - [Phase 11-examen-de-eje-plugin]: Colored SVG circles (green/yellow/red) for RS/RD/RR state labels preserve semantic meaning without emoji dependency
+- [Phase 14-gcp-and-gcs-webhook-fixes]: PDF filename contract uses informe_{email}_{assessment_type}.pdf — plan.assessment_type directly, no _strip_data_suffix label
+- [Phase 14-gcp-and-gcs-webhook-fixes]: Generator filename change required updating phase9/phase11 render contract tests (Rule 1 auto-fix)
+- [Phase 14-gcp-and-gcs-webhook-fixes]: _ALLOWED_GROUPS keeps CL, excludes L30M with comment explaining 3 active but invalid-ID rows
+- [Phase 14-gcp-and-gcs-webhook-fixes]: AssessmentMapper._names dict and get_route_full() 3-tuple provide assessment_name to webhook queue handler without secondary lookup
+- [Phase 14-gcp-and-gcs-webhook-fixes]: Startup warning log always emitted unconditionally after ids.xlsx load, listing rejected_names for operational visibility
 
 ## Accumulated Context
 
@@ -85,6 +105,6 @@ Progress: [█████████░] 93% (13/14 plans)
 
 ## Session Continuity
 
-Last session: 2026-03-08T19:33:35.965Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-03-09T00:46:08.546Z
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None
