@@ -1,10 +1,12 @@
 FROM python:3.11-slim
 
 # WeasyPrint requires native Pango/HarfBuzz libraries (not pip-installable)
+# fonts-noto-color-emoji provides emoji glyph coverage for WeasyPrint PDF output
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libharfbuzz-subset0 \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # Unbuffered output — important for Cloud Run log streaming
