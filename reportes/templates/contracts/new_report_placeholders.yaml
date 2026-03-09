@@ -1,0 +1,96 @@
+{
+  "test_de_eje": {
+    "computed": [
+      "estimated_total_hours",
+      "unit_1_name",
+      "unit_1_initial_pd",
+      "unit_1_activities_table",
+      "unit_2_name",
+      "unit_2_initial_pd",
+      "unit_2_activities_table",
+      "unit_3_name",
+      "unit_3_initial_pd",
+      "unit_3_activities_table"
+    ],
+    "static": [
+      "report_title",
+      "cover_subtitle",
+      "unit_block",
+      "final_exam_heading"
+    ]
+  },
+  "examen_de_eje": {
+    "computed": [
+      "student_name",
+      "course_name",
+      "generated_at",
+      "period_label"
+    ],
+    "static": [
+      "page_portada",
+      "report_name",
+      "cover_page_label",
+      "report_title",
+      "what_it_measures_heading",
+      "what_it_measures_body",
+      "important_heading",
+      "important_body",
+      "states_heading",
+      "state_solido_text",
+      "state_desarrollo_text",
+      "state_riesgo_text",
+      "how_to_use_heading",
+      "how_to_use_line_1",
+      "how_to_use_line_2",
+      "how_to_use_line_3",
+      "page_resultados",
+      "table_section_heading",
+      "priority_guidance",
+      "closing_message"
+    ]
+  },
+  "ensayo": {
+    "computed": [
+      "overall_score",
+      "correct_total_with_pilot",
+      "correct_total_without_pilot",
+      "domain_axis_1_correctness",
+      "domain_axis_1_percentage",
+      "domain_axis_2_correctness",
+      "domain_axis_2_percentage",
+      "domain_axis_3_correctness",
+      "domain_axis_3_percentage",
+      "domain_axis_4_correctness",
+      "domain_axis_4_percentage",
+      "quick_row_1_unit",
+      "quick_row_1_skill",
+      "quick_row_1_correct_key",
+      "quick_row_1_selected_key",
+      "quick_row_1_lesson",
+      "quick_row_2_unit",
+      "quick_row_2_skill",
+      "quick_row_2_correct_key",
+      "quick_row_2_selected_key",
+      "quick_row_2_lesson",
+      "quick_row_n_unit",
+      "quick_row_n_skill",
+      "quick_row_n_correct_key",
+      "quick_row_n_selected_key",
+      "quick_row_n_lesson"
+    ],
+    "static": [
+      "report_title",
+      "cover_label",
+      "domain_table_title",
+      "domain_axis_1_label",
+      "domain_axis_2_label",
+      "domain_axis_3_label",
+      "domain_axis_4_label",
+      "pilot_note",
+      "quick_report_title",
+      "quick_row_1_question",
+      "quick_row_2_question",
+      "quick_row_n_question"
+    ]
+  }
+}

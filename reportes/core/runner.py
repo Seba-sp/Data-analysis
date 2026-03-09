@@ -7,15 +7,22 @@ test-email modes can suppress I/O without touching generator logic.
 import importlib
 import logging
 import os
+import re
 from collections import Counter
+from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
 
+import pandas as pd
+
+from core.storage import StorageClient
 from reports import get_generator
 from core.email_sender import EmailSender
 from core.drive_service import DriveService
 
 logger = logging.getLogger(__name__)
+_EMAIL_LIKE_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class PipelineResult(TypedDict):
@@ -57,23 +64,71 @@ class PipelineRunner:
 
     # ── Private helpers ────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _safe_filename_component(value: str) -> str:
+        cleaned = value.strip()
+        cleaned = "".join("_" if ch in '<>:"/\\|?*' else ch for ch in cleaned)
+        cleaned = " ".join(cleaned.split()).rstrip(".")
+        return cleaned or "unknown"
+
+    def _parse_filename_contract(
+        self,
+        pdf_path: Path,
+    ) -> Optional[Tuple[str, str, str]]:
+        """
+        Parse the locked filename contract:
+            informe_{report_type}_{assessment_name}_{email}.pdf
+
+        Uses split(maxsplit=3) so email may contain underscores safely.
+        """
+        stem = pdf_path.stem
+        prefix = f"informe_{self._safe_filename_component(self.report_type)}_"
+        if not stem.startswith(prefix):
+            return None
+        payload = stem[len(prefix):]
+        if not payload:
+            return None
+
+        if self.assessment_name:
+            expected_assessment = self._safe_filename_component(self.assessment_name)
+            expected_prefix = f"{expected_assessment}_"
+            if payload.startswith(expected_prefix):
+                assessment_name = expected_assessment
+                email = payload[len(expected_prefix):]
+                if not email or not _EMAIL_LIKE_RE.match(email):
+                    return None
+                return self.report_type, assessment_name, email
+
+        # Fallback for legacy/no-assessment_name invocations:
+        # enumerate all possible `_` split points and only accept an unambiguous
+        # email-like suffix match. If ambiguous, fail closed to avoid misrouting.
+        candidates: list[tuple[str, str]] = []
+        for idx, ch in enumerate(payload):
+            if ch != "_":
+                continue
+            assessment_name = payload[:idx]
+            email = payload[idx + 1 :]
+            if not assessment_name or not email:
+                continue
+            if _EMAIL_LIKE_RE.match(email):
+                candidates.append((assessment_name, email))
+
+        if len(candidates) != 1:
+            return None
+
+        assessment_name, email = candidates[0]
+        return self.report_type, assessment_name, email
+
     def _extract_email_from_pdf(self, pdf_path: Path) -> Optional[str]:
         """
         Parse the student email from a PDF filename.
 
-        Expected pattern: informe_{email}_{atype}.pdf
-        - parts[0]  == 'informe'  (prefix)
-        - parts[-1] == atype      (e.g. 'M1', 'CL', 'CIEN', 'HYST')
-        - parts[1:-1] are email segments (re-joined with '_')
-
-        Returns None if the filename does not match the expected pattern.
+        Expected locked pattern: informe_{report_type}_{assessment_name}_{email}.pdf
         """
-        stem = pdf_path.stem  # filename without .pdf
-        parts = stem.split("_")
-        if len(parts) < 3 or parts[0] != "informe":
+        parsed = self._parse_filename_contract(pdf_path)
+        if parsed is None:
             return None
-        email = "_".join(parts[1:-1])
-        return email if email else None
+        return parsed[2]
 
     def _get_email_template(self) -> Tuple[Optional[str], Optional[str]]:
         """
@@ -145,12 +200,107 @@ class PipelineRunner:
 
     def _event_key_for_pdf(self, pdf_path: Path) -> Optional[str]:
         """Return stable event correlation key based on filename semantics."""
-        student_email = self._extract_email_from_pdf(pdf_path)
-        if not student_email:
+        parsed = self._parse_filename_contract(pdf_path)
+        if parsed is None:
             return None
-        stem_parts = pdf_path.stem.split("_")
-        assessment_type = stem_parts[-1] if len(stem_parts) >= 3 else "unknown"
-        return f"{student_email}|{assessment_type}"
+        report_type, assessment_name, student_email = parsed
+        return f"{report_type}|{assessment_name}|{student_email}"
+
+    def _dedupe_key_for_pdf(self, pdf_path: Path) -> Optional[Tuple[str, str, str]]:
+        """Return dedupe key tuple: (report_type, assessment_name, email)."""
+        return self._parse_filename_contract(pdf_path)
+
+    def _processed_emails_xlsx_path(self) -> Path:
+        """Per-report XLSX ledger path: data/{report_type}/processed_emails.xlsx."""
+        return Path("data") / self.report_type / "processed_emails.xlsx"
+
+    def _storage(self) -> StorageClient:
+        """Storage backend abstraction (local/GCS)."""
+        return StorageClient()
+
+    def _load_processed_email_keys(self) -> set[Tuple[str, str, str]]:
+        """Load dedupe keys from XLSX ledger, if present."""
+        ledger = self._processed_emails_xlsx_path()
+        storage = self._storage()
+        if not storage.exists(str(ledger)):
+            return set()
+        try:
+            data = storage.read_bytes(str(ledger))
+            df = pd.read_excel(BytesIO(data), dtype=str)
+        except Exception as exc:
+            logger.warning(
+                "[%s] Failed reading processed-emails ledger %s: %s",
+                self.report_type,
+                ledger,
+                exc,
+            )
+            return set()
+
+        required_cols = {"report_type", "assessment_name", "email"}
+        if not required_cols.issubset(df.columns):
+            logger.warning(
+                "[%s] processed-emails ledger missing columns %s in %s",
+                self.report_type,
+                sorted(required_cols - set(df.columns)),
+                ledger,
+            )
+            return set()
+
+        keys: set[Tuple[str, str, str]] = set()
+        for _, row in df.iterrows():
+            key = (
+                str(row.get("report_type", "") or ""),
+                str(row.get("assessment_name", "") or ""),
+                str(row.get("email", "") or ""),
+            )
+            if all(key):
+                keys.add(key)
+        return keys
+
+    def _append_processed_email_row(
+        self,
+        report_type: str,
+        assessment_name: str,
+        email: str,
+        attachment_filename: str,
+        event_key: str,
+    ) -> bool:
+        """Append one successful-send row to processed_emails.xlsx."""
+        ledger = self._processed_emails_xlsx_path()
+        storage = self._storage()
+        storage.ensure_directory(str(ledger.parent))
+        row = {
+            "report_type": report_type,
+            "assessment_name": assessment_name,
+            "email": email,
+            "attachment_filename": attachment_filename,
+            "sent_at_utc": datetime.now(timezone.utc).isoformat(),
+            "event_key": event_key,
+        }
+
+        try:
+            if storage.exists(str(ledger)):
+                data = storage.read_bytes(str(ledger))
+                df = pd.read_excel(BytesIO(data), dtype=str)
+                df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+            else:
+                df = pd.DataFrame([row])
+            out = BytesIO()
+            df.to_excel(out, index=False)
+            storage.write_bytes(
+                str(ledger),
+                out.getvalue(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            return True
+        except Exception as exc:
+            logger.error(
+                "[%s] Failed writing processed-emails ledger %s: %s",
+                self.report_type,
+                ledger,
+                exc,
+            )
+            return False
 
     def _filter_duplicate_test_de_eje_artifacts(
         self,
@@ -233,12 +383,14 @@ class PipelineRunner:
 
         pdfs = self._filter_duplicate_test_de_eje_artifacts(pdfs, errors)
         records_processed = len(pdfs)
+        processed_email_keys = self._load_processed_email_keys()
 
         # ── Step 3: Email loop ─────────────────────────────────────────────────
         for pdf_path in pdfs:
+            filename_parts = self._parse_filename_contract(pdf_path)
             student_email = self._extract_email_from_pdf(pdf_path)
             event_key = self._event_key_for_pdf(pdf_path) or "unknown"
-            if not student_email:
+            if not student_email or filename_parts is None:
                 logger.warning(
                     f"[{self.report_type}] Could not extract email from "
                     f"{pdf_path.name}, skipping"
@@ -246,6 +398,30 @@ class PipelineRunner:
                 errors.append(
                     f"Could not extract email report_type={self.report_type} "
                     f"attachment={pdf_path.name} event_key={event_key}"
+                )
+                continue
+            report_type_part, assessment_name_part, _ = filename_parts
+            dedupe_key = self._dedupe_key_for_pdf(pdf_path)
+            if report_type_part != self.report_type:
+                errors.append(
+                    f"Filename report_type mismatch report_type={self.report_type} "
+                    f"filename_report_type={report_type_part} attachment={pdf_path.name}"
+                )
+                continue
+
+            if dedupe_key is None:
+                errors.append(
+                    f"Could not compute dedupe key report_type={self.report_type} "
+                    f"attachment={pdf_path.name}"
+                )
+                continue
+
+            if not self.test_email and dedupe_key in processed_email_keys:
+                logger.info(
+                    "[%s] Skipping already-sent report for %s assessment=%s",
+                    self.report_type,
+                    student_email,
+                    assessment_name_part,
                 )
                 continue
 
@@ -275,6 +451,22 @@ class PipelineRunner:
                 )
                 if sent:
                     emails_sent += 1
+                    if not self.test_email:
+                        appended = self._append_processed_email_row(
+                            report_type=report_type_part,
+                            assessment_name=assessment_name_part,
+                            email=student_email,
+                            attachment_filename=pdf_path.name,
+                            event_key=event_key,
+                        )
+                        if appended:
+                            processed_email_keys.add(dedupe_key)
+                        else:
+                            errors.append(
+                                f"Processed-emails ledger append failed "
+                                f"report_type={self.report_type} event_key={event_key} "
+                                f"recipient={recipient} attachment={pdf_path.name}"
+                            )
                     logger.info(
                         f"[{self.report_type}] Sent: {student_email} -> "
                         f"{recipient} ({pdf_path.name})"

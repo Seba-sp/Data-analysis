@@ -50,6 +50,7 @@ class BaseReportGenerator(ABC):
 
         # Per-report email deduplication (ORG-03: per-report-type tracking)
         self.processed_emails_path = self.data_dir / "processed_emails.csv"
+        self.processed_emails_xlsx_path = self.data_dir / "processed_emails.xlsx"
 
         # Ensure runtime directories exist
         self._ensure_data_dirs()

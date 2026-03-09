@@ -44,7 +44,7 @@ def _make_plan_with_units() -> ExamenPlan:
 
 
 def test_render_writes_pdf_with_correct_filename(monkeypatch):
-    """render() must create a PDF file named 'informe_{email}_{assessment_type}.pdf'."""
+    """render() must create a PDF file named informe_{report_type}_{assessment_name}_{email}.pdf."""
     captured_html: list[str] = []
 
     class _FakeHTML:
@@ -63,7 +63,7 @@ def test_render_writes_pdf_with_correct_filename(monkeypatch):
     plan = _make_plan_with_units()
     output_dir = gen.render({("M30M2", "student@example.com"): plan})
 
-    expected_pdf = output_dir / "informe_student@example.com_M30M2.pdf"
+    expected_pdf = output_dir / "informe_examen_de_eje_M30M2-EXAMEN DE EJE 1-DATA_student@example.com.pdf"
     assert expected_pdf.exists(), f"Expected PDF not found: {expected_pdf}"
     assert expected_pdf.read_bytes().startswith(b"%PDF-1.4")
 

@@ -66,6 +66,15 @@ _bp: Optional[BatchProcessor] = None
 _SERVICES_AVAILABLE = False
 
 
+def _ids_path_hint() -> str:
+    """Return configured ids mapping path for logs with deterministic precedence."""
+    return (
+        os.getenv("IDS_XLSX_PATH")
+        or os.getenv("IDS_XLSX_GCS_PATH")
+        or "default"
+    )
+
+
 def _initialize_services() -> bool:
     """Initialize module-level service instances on first call (lazy init).
 
@@ -220,7 +229,7 @@ def handle_webhook(request: Request):
                     request_id,
                     assessment_id=assessment_id,
                     mapping_source=mapping_source,
-                    ids_path=(os.getenv("IDS_XLSX_GCS_PATH") or os.getenv("IDS_XLSX_PATH") or "default"),
+                    ids_path=_ids_path_hint(),
                     rejected_rows=getattr(_am, "validation_counters", {}).get("rejected", 0),
                 )},
             )
@@ -262,7 +271,7 @@ def handle_webhook(request: Request):
                 report_type=report_type,
                 assessment_type=assessment_type,
                 mapping_source=mapping_source,
-                ids_path=(os.getenv("IDS_XLSX_GCS_PATH") or os.getenv("IDS_XLSX_PATH") or "default"),
+                ids_path=_ids_path_hint(),
                 queue_inserted=bool(queue_result),
             )},
         )
@@ -279,7 +288,7 @@ def handle_webhook(request: Request):
                 report_type=report_type,
                 assessment_type=assessment_type,
                 mapping_source=mapping_source,
-                ids_path=(os.getenv("IDS_XLSX_GCS_PATH") or os.getenv("IDS_XLSX_PATH") or "default"),
+                ids_path=_ids_path_hint(),
                 counter_incremented=bool(counter_result),
             )},
         )

@@ -118,7 +118,7 @@ class TestStartupSummaryLog:
         )
 
     def test_startup_summary_emitted_even_when_zero_valid_rows(self, caplog):
-        """Warning is emitted even when all rows are rejected (zero accepted)."""
+        """Summary warning is emitted when all rows are rejected (zero accepted)."""
         rows = [
             (_BAD_ID_NAME, _BAD_ID),
         ]
@@ -126,7 +126,7 @@ class TestStartupSummaryLog:
             mapper = _make_mapper_with_xlsx(rows)
 
         assert mapper.validation_counters["accepted"] == 0, "Expected 0 accepted"
-        # Warning with rejected_names must still exist
+        # Summary warning with rejected_names must still exist
         warning_with_rejected = [
             r for r in caplog.records if getattr(r, "rejected_names", None) is not None
         ]
@@ -134,19 +134,18 @@ class TestStartupSummaryLog:
             "Expected startup warning with rejected_names even when accepted=0"
         )
 
-    def test_startup_summary_rejected_names_empty_when_all_valid(self, caplog):
-        """When all rows have valid IDs, rejected_names list is empty (not absent)."""
+    def test_startup_summary_not_warning_when_all_valid(self, caplog):
+        """When all rows are valid, startup summary should not be warning-level."""
         rows = [(_VALID_NAME, _VALID_ID)]
-        with caplog.at_level("WARNING", logger="core.assessment_mapper"):
-            mapper = _make_mapper_with_xlsx(rows)
+        with caplog.at_level("INFO", logger="core.assessment_mapper"):
+            _make_mapper_with_xlsx(rows)
 
-        warning_with_rejected = [
-            r for r in caplog.records if hasattr(r, "rejected_names")
+        warning_summaries = [
+            r
+            for r in caplog.records
+            if r.levelname == "WARNING" and getattr(r, "rejected_names", None) is not None
         ]
-        assert len(warning_with_rejected) >= 1, "Startup summary warning must always be emitted"
-        assert warning_with_rejected[0].rejected_names == [], (
-            "rejected_names should be empty list when no rejections occurred"
-        )
+        assert warning_summaries == []
 
 
 class TestGetRouteUnchanged:

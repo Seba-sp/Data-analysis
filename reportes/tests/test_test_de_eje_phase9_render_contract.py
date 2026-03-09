@@ -54,14 +54,14 @@ def test_render_contract_supports_dynamic_units_and_output_naming(monkeypatch):
 
     output_dir = gen.render({("M30M2", "student@example.com"): plan})
 
-    expected_pdf = output_dir / "informe_student@example.com_M30M2.pdf"
+    expected_pdf = output_dir / "informe_test_de_eje_M30M-TEST DE EJE 1-DATA_student@example.com.pdf"
     assert output_dir == gen.data_dir / "output"
     assert expected_pdf.exists()
     assert expected_pdf.read_bytes().startswith(b"%PDF-1.4")
 
     html = captured_html[0]
     assert "HE hrs" not in html
-    assert "El tiempo total estimado para completar este plan es:" in html
+    assert "El tiempo total estimado para completar este plan es de:" in html
     assert "Unidad 4" in html
     assert 1 <= html.count('<section class="page unit"') <= 4
     assert "✓" in html or "Ã¢Å“â€œ" in html
@@ -92,5 +92,5 @@ def test_render_contract_supports_single_unit(monkeypatch):
     plan.units["Unidad unica"] = _make_unit("Unidad unica", [(1, 2)])
 
     output_dir = gen.render({("M30M2", "single@example.com"): plan})
-    pdf_path = output_dir / "informe_single@example.com_M30M2.pdf"
+    pdf_path = output_dir / "informe_test_de_eje_M30M-TEST DE EJE 2-DATA_single@example.com.pdf"
     assert pdf_path.exists()

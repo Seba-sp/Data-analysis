@@ -39,6 +39,9 @@ Out of scope: Git setup (recipients already have the repo connected and follow a
 - **Environment variables:** Both a reference table (variable name, what it's for, where to find the value) AND a `.env.example` template file in the repo that users copy and fill in
 - **Local test run:** Tutorial includes a "verify it works locally" checkpoint before GCP deployment — catches setup issues early
 
+### Language
+- The entire tutorial must be written in Spanish — all section headings, explanations, step descriptions, expected output labels, and troubleshooting entries
+
 ### Claude's Discretion
 - Exact section headings and subsection order within the overall structure above
 - Specific formatting of code blocks, callout boxes, and warning notes

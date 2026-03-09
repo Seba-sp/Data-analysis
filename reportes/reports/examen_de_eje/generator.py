@@ -153,33 +153,52 @@ class ExamenDeEjeGenerator(BaseReportGenerator):
         super().__init__(REPORT_TYPE)
         self.downloader = AssessmentDownloader(data_dir=f"data/{REPORT_TYPE}")
         self.templates_path = Path("templates") / REPORT_TYPE
+        self.mapper = AssessmentMapper()
+        self._available_bank_names_cache: Optional[set[str]] = None
 
     def _gcs_bank_blob(self, bank_name: str):
         """Return a GCS Blob for the given question bank filename."""
         from google.cloud import storage
-        mapper = AssessmentMapper()
-        bucket_name, _ = mapper._resolve_gcs_target()
+        bucket_name, _ = self.mapper._resolve_gcs_target()
         prefix = os.getenv("BANKS_GCS_PREFIX", "inputs/").rstrip("/") + "/"
         return storage.Client().bucket(bucket_name).blob(f"{prefix}{bank_name}")
 
-    def _bank_exists(self, bank_name: str) -> bool:
-        """Check if a question bank exists."""
-        if AssessmentMapper().mapping_source == "gcs":
-            return self._gcs_bank_blob(bank_name).exists()
-        return (BANKS_DIR / bank_name).exists()
+    def _available_bank_names(self) -> set[str]:
+        """Build a cached set of available bank filenames."""
+        if self._available_bank_names_cache is not None:
+            return self._available_bank_names_cache
+
+        if self.mapper.mapping_source == "gcs":
+            from google.cloud import storage
+
+            bucket_name, _ = self.mapper._resolve_gcs_target()
+            prefix = os.getenv("BANKS_GCS_PREFIX", "inputs/").rstrip("/") + "/"
+            blobs = storage.Client().bucket(bucket_name).list_blobs(prefix=prefix)
+            names = {Path(blob.name).name for blob in blobs if blob.name and not blob.name.endswith("/")}
+        else:
+            names = {p.name for p in BANKS_DIR.glob("*.xlsx") if p.is_file()}
+
+        self._available_bank_names_cache = names
+        return names
 
     def _read_bank_bytes(self, bank_name: str, local_path: Optional[Path] = None) -> bytes:
         """Download question bank bytes from GCS (production) or read from local path (dev)."""
-        if AssessmentMapper().mapping_source == "gcs":
+        if self.mapper.mapping_source == "gcs":
             return self._gcs_bank_blob(bank_name).download_as_bytes()
         path = local_path if local_path is not None else BANKS_DIR / bank_name
         return path.read_bytes()
 
     def _load_examen_de_eje_mapping(self) -> list[MappingRow]:
-        ids_bytes = AssessmentMapper()._read_ids_xlsx_bytes()
-        workbook = load_workbook(filename=BytesIO(ids_bytes), data_only=True)
-        sheet = workbook.active
-        rows = list(sheet.iter_rows(values_only=True))
+        if self.mapper.mapping_source == "local" and IDS_LOCAL_PATH.exists():
+            ids_bytes = IDS_LOCAL_PATH.read_bytes()
+            workbook = load_workbook(filename=BytesIO(ids_bytes), data_only=True)
+            sheet = workbook.active
+            rows = list(sheet.iter_rows(values_only=True))
+        else:
+            rows = [
+                (assessment_name, assessment_id)
+                for _, assessment_id, assessment_name in self.mapper.get_ids_rows()
+            ]
         if not rows:
             raise ValueError("No valid EXAMEN DE EJE rows found in ids.xlsx")
 
@@ -217,7 +236,7 @@ class ExamenDeEjeGenerator(BaseReportGenerator):
 
             bank_name = f"{assessment_type}-EXAMEN DE EJE {assessment_number}-DATA.xlsx"
             bank_path = BANKS_DIR / bank_name
-            if not self._bank_exists(bank_name):
+            if bank_name not in self._available_bank_names():
                 logger.warning("Question bank not found for mapping row: %s", bank_name)
                 continue
 
@@ -389,9 +408,11 @@ class ExamenDeEjeGenerator(BaseReportGenerator):
             final_html = _compose_cover_plus_body_html(cover_html, rendered_body)
 
             pdf_bytes = HTML(string=final_html, base_url=str(Path.cwd())).write_pdf()
+            assessment_label = plan.assessment_name or plan.assessment_type
             pdf_path = output_dir / (
-                f"informe_{_safe_filename_component(email)}"
-                f"_{_safe_filename_component(plan.assessment_type)}.pdf"
+                f"informe_{_safe_filename_component(REPORT_TYPE)}"
+                f"_{_safe_filename_component(assessment_label)}"
+                f"_{_safe_filename_component(email)}.pdf"
             )
             pdf_path.write_bytes(pdf_bytes)
 

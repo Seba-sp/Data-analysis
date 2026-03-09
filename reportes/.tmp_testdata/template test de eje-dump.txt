@@ -1,0 +1,122 @@
+01. P [-] COVER, this is page 1 of the report and this text should not be on the html
+    RUNS N:COVER, this is page 1 o | N:f the report and this text should not be on the html
+02. P [-] Este es tu Plan de Estudio Personalizado para este eje.
+    RUNS N:Este es tu Plan de Estudio Personalizado para este eje.
+03. P [-] Tu objetivo es simple: completar lo que te falta para dominar las unidades y llegar preparado al Examen del eje, que es donde comprobamos la aplicación en formato PAES.
+    RUNS N:Tu objetivo es simple: completar lo que te falta para dominar las unidades y llegar preparado al Examen del eje, que es donde comprobamos la aplicación en formato PAES.
+04. P [-] Cómo leer tu plan
+    RUNS N:Cómo leer tu plan
+05. P [-] En cada unidad verás tu Dominio inicial (PD) y una tabla con Actividades. En la columna “Acción” aparecerá uno de estos estados:
+    RUNS N:En cada unidad verás tu Dominio inicial (PD) y una tabla con Actividades. En la columna “Acción” aparecerá uno de estos estados:
+06. P [-] ✓ = Ya lo tienes dominado (no necesitas hacerlo)
+    RUNS 
+07. P [-] □ =  Tarea a realizar (debes completarla)
+    RUNS N:□ =  Tarea a realizar (debes completarla)
+08. P [-] No requerido =  No forma parte de tu plan en esta unidad
+    RUNS N:No requerido =  No forma parte de tu plan en esta unidad
+09. P [-] Qué debes hacer
+    RUNS N:Qué debes hacer
+10. P [numId=1;ilvl=0] Avanza unidad por unidad y realiza solo lo que esté marcado con □.
+    RUNS N:Avanza unidad por unidad y realiza solo lo que esté marcado con □.
+11. P [numId=1;ilvl=0] Si una actividad está con ✓, no la repitas: tu foco está en lo que falta.
+    RUNS 
+12. P [numId=1;ilvl=0] Cuando termines una unidad, pasa a la siguiente y aplica el mismo criterio.
+    RUNS N:Cuando termines una unidad, pasa a la siguiente y aplica el mismo criterio.
+13. P [-] Tiempo estimado
+    RUNS N:Tiempo estimado
+14. P [-] El tiempo total estimado para completar este plan es: HE hrs.
+    RUNS N:El tiempo total estimado para completar este plan es: HE  | N:hrs | N:.
+15. P [-] Como referencia:
+    RUNS N:Como referencia:
+16. P [-] Lección: 1 h
+    RUNS N:Lección: 1 h
+17. P [-] Test de unidad: 0,5 h (30 minutos)
+    RUNS N:Test de unidad: 0,5 h (30 minutos)
+18. P [-] Guía temática: 2 h
+    RUNS N:Guía temática: 2 h
+19. P [-] Examen: 2 h
+    RUNS N:Examen: 2 h
+20. P [-] Importante
+    RUNS N:Importante
+21. P [-] Al final del plan siempre encontrarás el Examen del eje. Debes rendirlo antes de seguir con tu viaje en M30M, porque ahí confirmamos cómo estás aplicando estos contenidos en formato PAES.
+    RUNS N:Al final del plan siempre encontrarás el Examen del eje. Debes rendirlo antes de seguir con tu viaje en M30M, porque ahí confirmamos cómo estás aplicando estos contenidos en formato PAES.
+22. P [-] Si al rendir el examen aparece alguna unidad por reforzar, recibirás una recomendación de práctica para que avances cada vez más sólido.
+    RUNS N:Si al rendir el examen aparece alguna unidad por reforzar, recibirás una recomendación de práctica para que avances cada vez más sólido.
+23. P [-] This page is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+    RUNS N:This | N: page  | N:is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+24. P [-] Unidad: NOMBRE UNIDAD 1
+    RUNS N:Unidad: NOMBRE UNIDAD 1
+25. P [-] Dominio inicial: “PD”%
+    RUNS N:Dominio inicial: “PD”% 
+26. T
+    row1: ['Actividad', 'Acción']
+    row2: ['Lección X', '{✓, □}']
+    row3: ['Lección Y', '{✓, □}']
+    row4: ['Lección Z', '{✓, □}']
+    row5: ['Test de unidad', '{□, No requerido}']
+    row6: ['Guía temática', '{□, No requerido}']
+27. T
+    row1: ['Actividad', 'Acción']
+    row2: ['Examen', '□']
+28. P [-] “Antes de seguir con tu viaje en M30M, hay un paso clave
+    RUNS N:“Antes de seguir con tu viaje en M30M, hay un paso clave
+29. P [-] Rinde el Examen del eje.
+    RUNS N:Rinde el Examen del eje.
+30. P [-] Este examen cierra el proceso y nos muestra cómo estás hoy: no está para “pasar materia”, sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales. Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para que avances cada vez más sólido.
+    RUNS N:Este examen cierra el proceso y nos muestra cómo estás hoy: no está para “pasar materia”, sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales. Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para que avances cada vez más sólido.
+31. P [-] Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.
+    RUNS N:Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.
+32. P [-] Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.”
+    RUNS N:Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.”
+33. P [-] This page is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+    RUNS N:This | N: page  | N:is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+34. P [-] Unidad: NOMBRE UNIDAD 2
+    RUNS N:Unidad: NOMBRE UNIDAD 2
+35. P [-] Dominio inicial: “PD”%
+    RUNS N:Dominio inicial: “PD”%
+36. T
+    row1: ['Actividad', 'Acción']
+    row2: ['Lección X', '{✓, □}']
+    row3: ['Lección Y', '{✓, □}']
+    row4: ['Lección Z', '{✓, □}']
+    row5: ['Test de unidad', '{□, No requerido}']
+    row6: ['Guía temática', '{□, No requerido}']
+37. T
+    row1: ['Actividad', 'Acción']
+    row2: ['Examen', '□']
+38. P [-] “Antes de seguir con tu viaje en M30M, hay un paso clave
+    RUNS N:“Antes de seguir con tu viaje en M30M, hay un paso clave
+39. P [-] Rinde el Examen del eje.
+    RUNS N:Rinde el Examen del eje.
+40. P [-] Este examen cierra el proceso y nos muestra cómo estás hoy: no está para “pasar materia”, sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales. Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para que avances cada vez más sólido.
+    RUNS N:Este examen cierra el proceso y nos muestra cómo estás hoy: no está para “pasar materia”, sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales. Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para que avances cada vez más sólido.
+41. P [-] Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.
+    RUNS N:Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.
+42. P [-] Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.”
+    RUNS N:Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.”
+43. P [-] This page is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+    RUNS N:This | N: page  | N:is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+44. P [-] Unidad: NOMBRE UNIDAD N
+    RUNS N:Unidad: NOMBRE UNIDAD N
+45. P [-] Dominio inicial: “PD”%
+    RUNS N:Dominio inicial: “PD”%
+46. T
+    row1: ['Actividad', 'Acción']
+    row2: ['Lección X', '{✓, □}']
+    row3: ['Lección Y', '{✓, □}']
+    row4: ['Lección Z', '{✓, □}']
+    row5: ['Test de unidad', '{□, No requerido}']
+    row6: ['Guía temática', '{□, No requerido}']
+47. T
+    row1: ['Actividad', 'Acción']
+    row2: ['Examen', '□']
+48. P [-] “Antes de seguir con tu viaje en M30M, hay un paso clave
+    RUNS N:“Antes de seguir con tu viaje en M30M, hay un paso clave
+49. P [-] Rinde el Examen del eje.
+    RUNS N:Rinde el Examen del eje.
+50. P [-] Este examen cierra el proceso y nos muestra cómo estás hoy: no está para “pasar materia”, sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales. Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para que avances cada vez más sólido.
+    RUNS N:Este examen cierra el proceso y nos muestra cómo estás hoy: no está para “pasar materia”, sino para confirmar que puedes aplicar lo aprendido en formato PAES y en condiciones reales. Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para que avances cada vez más sólido.
+51. P [-] Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.
+    RUNS N:Recuerda que esto es un camino: siempre se puede mejorar, y en M30M vas a ir afinando tu rendimiento en cada etapa.
+52. P [-] Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.”
+    RUNS N:Cuando completes el examen, podrás avanzar al siguiente eje o a lo que venga en tu ruta.”

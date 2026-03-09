@@ -1,0 +1,25 @@
+01. P [-] COVER, this is page 1 of the report and this text should not be on the html
+    RUNS N:COVER, this is page 1 o | N:f the report and this text should not be on the html
+02. P [numId=1;ilvl=0] Puntaje:
+    RUNS N:Puntaje:
+03. P [numId=1;ilvl=0] Correctas totales (incluye piloto): X/NT
+    RUNS N:Correctas totales (incluye piloto): X/NT
+04. P [numId=1;ilvl=0] Correctas para puntaje (sin piloto): X/NT
+    RUNS N:Correctas para puntaje (sin piloto): X/NT
+05. P [numId=1;ilvl=0] Tabla de dominio por eje tipo:
+    RUNS N:Tabla de dominio por eje tipo:
+06. T
+    row1: ['', 'Eje 1', 'Eje 2', 'Eje 3', 'Eje 4']
+    row2: ['Número de correctas totales / Número total de preguntas', 'NC/NT', '..', '..', '..']
+    row3: ['Porcentaje de dominio actual', '..', '..', '…', '…']
+07. P [-] *Recuerda: para el cálculo de tu puntaje, las preguntas piloto no se consideran. Da lo mismo si están correctas o incorrectas: no suman ni restan en el resultado final.
+    RUNS N:*Recuerda: para el cálculo de tu puntaje, las preguntas piloto no se consideran. Da lo mismo si están correctas o incorrectas: no suman ni restan en el resultado final.
+08. P [-] this page is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+    RUNS N:this page  | N:is generated based on the results of the student and should not be on the html, it should be added from the generator. and this text should not be on the html
+09. P [-] Reporte Rápido
+    RUNS N:Reporte Rápido
+10. T
+    row1: ['', 'Unidad', 'Habilidad', 'Clave correcta', 'Clave que marcaste', 'Lección']
+    row2: ['Pregunta 1', '', '', '', '', '']
+    row3: ['Pregunta 2', '', '', '', '', '']
+    row4: ['Pregunta N', '', '', '', '', '']

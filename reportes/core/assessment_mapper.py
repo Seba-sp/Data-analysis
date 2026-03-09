@@ -39,7 +39,7 @@ _VALID_HEX_ID_RE = re.compile(r"^[a-fA-F0-9]{24}$")
 # placeholders — all L30M rows are rejected at _register_route with "invalid_assessment_id"
 # until valid hex IDs are provided. L30M is intentionally excluded from this set to keep
 # rejection reason as "unsupported_group" so the startup summary log surfaces the issue.
-_ALLOWED_GROUPS = {"M1", "M2", "H30M", "Q30M", "F30M", "B30M", "CL"}
+_ALLOWED_GROUPS = {"M1", "M2", "H30M", "Q30M", "F30M", "B30M", "L30M"}
 _GROUP_ALIASES = {
     "M30M2": "M2",
     "M30M1": "M1",
@@ -71,6 +71,7 @@ class AssessmentMapper:
         self._routes: Dict[str, Tuple[str, str]] = {}
         self._names: Dict[str, str] = {}       # normalized_id -> assessment_name
         self._rejected_names: List[str] = []   # names rejected for invalid_assessment_id
+        self._ids_rows: List[Tuple[int, str, str]] = []
         self.validation_counters: Dict[str, int] = {"accepted": 0, "rejected": 0}
         self.validation_errors: Dict[str, int] = {}
         self.mapping_source = self._select_source()
@@ -110,7 +111,7 @@ class AssessmentMapper:
         return "local"
 
     def _resolve_local_ids_path(self) -> Path:
-        configured = os.getenv("IDS_XLSX_LOCAL_PATH", "inputs/ids.xlsx").strip()
+        configured = os.getenv("IDS_XLSX_LOCAL_PATH", "ids.xlsx").strip()
         return Path(configured)
 
     def _resolve_gcs_target(self) -> Tuple[str, str]:
@@ -213,6 +214,7 @@ class AssessmentMapper:
             return
 
         rows = self._load_ids_xlsx_rows(workbook_bytes)
+        self._ids_rows = list(rows)
         accepted_before = self.validation_counters["accepted"]
         rejected_before = self.validation_counters["rejected"]
         for row_index, assessment_id, assessment_name in rows:
@@ -220,7 +222,7 @@ class AssessmentMapper:
 
         accepted_new = self.validation_counters["accepted"] - accepted_before
         rejected_new = self.validation_counters["rejected"] - rejected_before
-        logger.info(
+        logger.debug(
             "Loaded ids.xlsx routes",
             extra={
                 "mapping_source": self.mapping_source,
@@ -229,18 +231,23 @@ class AssessmentMapper:
                 "rejected_new": rejected_new,
             },
         )
-        # Always emit a startup summary warning so Cloud Run logs show which assessment
-        # names were rejected due to invalid_assessment_id. Emitted unconditionally
-        # (even when rejected_names is empty) so log presence is predictable.
-        logger.warning(
+        # Emit one startup summary per load. Only warn when there are rejections.
+        summary_level = logging.WARNING if rejected_new > 0 else logging.INFO
+        logger.log(
+            summary_level,
             "ids.xlsx startup summary",
             extra={
                 "mapping_source": self.mapping_source,
                 "accepted": accepted_new,
                 "rejected": rejected_new,
                 "rejected_names": list(self._rejected_names),
+                "validation_errors": dict(self.validation_errors),
             },
         )
+
+    def get_ids_rows(self) -> List[Tuple[int, str, str]]:
+        """Return parsed ids.xlsx rows from current mapper load."""
+        return list(self._ids_rows)
 
     def _normalize_text(self, value: str) -> str:
         """Normalize text for deterministic parser behavior."""
@@ -252,46 +259,55 @@ class AssessmentMapper:
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
-    def _parse_assessment_name(self, name: str) -> Optional[Tuple[str, str, str]]:
+    def _parse_assessment_name(
+        self,
+        name: str,
+        *,
+        log_rejections: bool = True,
+    ) -> Optional[Tuple[str, str, str]]:
         """Parse `[GROUP]-[TYPE N]-DATA` into `(group, report_type, assessment_type)`."""
         normalized = self._normalize_text(name)
         normalized = re.sub(r"\s*-\s*", "-", normalized)
         match = re.match(r"^([A-Z0-9]+)-(.+)-DATA$", normalized)
         if not match:
-            logger.warning(
-                "Rejected assessment row: invalid name pattern",
-                extra={"reason": "invalid_pattern", "assessment_name": name},
-            )
+            if log_rejections:
+                logger.warning(
+                    "Rejected assessment row: invalid name pattern",
+                    extra={"reason": "invalid_pattern", "assessment_name": name},
+                )
             return None
 
         raw_group = match.group(1)
         group = _GROUP_ALIASES.get(raw_group, raw_group)
         type_with_number = match.group(2).strip()
         if group not in _ALLOWED_GROUPS:
-            logger.warning(
-                "Rejected assessment row: unsupported group",
-                extra={
-                    "reason": "unsupported_group",
-                    "assessment_name": name,
-                    "group": raw_group,
-                },
-            )
+            if log_rejections:
+                logger.warning(
+                    "Rejected assessment row: unsupported group",
+                    extra={
+                        "reason": "unsupported_group",
+                        "assessment_name": name,
+                        "group": raw_group,
+                    },
+                )
             return None
 
         type_match = re.match(r"^(.+?)\s+(\d+)$", type_with_number)
         if not type_match:
-            logger.warning(
-                "Rejected assessment row: invalid type segment",
-                extra={"reason": "invalid_type_segment", "assessment_name": name},
-            )
+            if log_rejections:
+                logger.warning(
+                    "Rejected assessment row: invalid type segment",
+                    extra={"reason": "invalid_type_segment", "assessment_name": name},
+                )
             return None
 
         report_type = _TYPE_TO_REPORT.get(type_match.group(1).strip())
         if report_type is None:
-            logger.warning(
-                "Rejected assessment row: unsupported type",
-                extra={"reason": "unsupported_type", "assessment_name": name},
-            )
+            if log_rejections:
+                logger.warning(
+                    "Rejected assessment row: unsupported type",
+                    extra={"reason": "unsupported_type", "assessment_name": name},
+                )
             return None
 
         assessment_type = group
@@ -310,7 +326,7 @@ class AssessmentMapper:
         # summary can surface which assessments are missing valid hex IDs.
         if reason == "invalid_assessment_id" and assessment_name:
             self._rejected_names.append(assessment_name)
-        logger.warning(
+        logger.debug(
             "Rejected ids mapping row",
             extra={
                 "reason": reason,
@@ -371,7 +387,9 @@ class AssessmentMapper:
             )
             return False
 
-        parsed = self._parse_assessment_name(assessment_name)
+        # During workbook ingestion emit one startup summary instead of one
+        # parser warning per rejected row.
+        parsed = self._parse_assessment_name(assessment_name, log_rejections=False)
         if parsed is None:
             self._record_rejection(
                 "invalid_assessment_name", row_index, assessment_id, assessment_name

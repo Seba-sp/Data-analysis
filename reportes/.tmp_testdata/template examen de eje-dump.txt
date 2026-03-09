@@ -1,0 +1,38 @@
+01. P [-] COVER, this is page 1 of the report and this text should not be on the html
+    RUNS N:COVER, this is page 1 o | N:f the  | N:report | N: and this text should not be on the html
+02. P [-] Reporte Examen de Eje
+    RUNS N:Reporte Examen de Eje
+03. P [-] Qué mide este examen
+    RUNS N:Qué mide este examen
+04. P [-] Este examen mide tu aplicación de los contenidos en formato PAES a nivel global. No reemplaza el test de diagnóstico ni los tests de unidad (que evalúan conocimiento). Su objetivo es orientarte para que sigas avanzando cada vez más sólido.
+    RUNS N:Este examen mide tu aplicación de los contenidos en formato PAES a nivel global. No reemplaza  | N:el test | N: de diagnóstico ni los  | N:tests | N: de unidad (que evalúan conocimiento). Su objetivo es orientarte para que sigas avanzando cada vez más sólido.
+05. P [-] Importante
+    RUNS N:Importante
+06. P [-] Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para mejorar tu aplicación PAES en lo que viene.
+    RUNS N:Este examen no detiene tu avance. Si aparece alguna unidad por reforzar, te dejaremos una recomendación de práctica para mejorar tu aplicación PAES en lo que viene.
+07. P [-] Estados (cómo interpretarlos)
+    RUNS N:Estados (cómo interpretarlos)
+08. P [-] Sólido: Estás aplicando bien en formato PAES. Puedes avanzar con confianza.
+    RUNS N:Sólido: Estás aplicando bien en formato PAES. Puedes avanzar con confianza.
+09. P [-] En desarrollo: Estás cerca, pero conviene reforzar para que la aplicación salga más consistente.
+    RUNS N:En desarrollo: Estás cerca, pero conviene reforzar para que la aplicación salga más consistente.
+10. P [-] Riesgo: Hoy hay señales claras de que la aplicación PAES en esta unidad aún no está sólida. Se recomienda priorizar práctica antes o durante el siguiente eje para evitar que se acumule.
+    RUNS N:Riesgo: Hoy hay señales claras de que la aplicación PAES en esta unidad aún no está sólida. Se recomienda priorizar práctica antes o durante el siguiente eje para evitar que se acumule.
+11. P [-] Cómo usar este reporte
+    RUNS N:Cómo usar este reporte
+12. P [numId=1;ilvl=0] Revisa la tabla de la siguiente página: ahí verás el estado de cada unidad y la recomendación concreta.
+    RUNS N:Revisa la tabla de la siguiente página: ahí verás el estado de cada unidad y la recomendación concreta.
+13. P [numId=1;ilvl=0] Enfócate primero en las unidades “Riesgo”, luego “En desarrollo”.
+    RUNS N:Enfócate primero en las unidades “Riesgo”, luego “En desarrollo”.
+14. P [numId=1;ilvl=0] No intentes hacerlo todo. Prioriza y ejecuta en orden.
+    RUNS N:No intentes hacerlo todo. Prioriza y ejecuta en orden.
+15. T
+    row1: ['Unidad', 'Estado', 'Recomendación']
+    row2: ['NOMBRE UNIDAD 1', '{Sólido, En desarrollo, Riesgo}', '{RS,RD,RR}']
+    row3: ['NOMBRE UNIDAD 2', '{Sólido, En desarrollo, Riesgo}', '{RS,RD,RR}']
+    row4: ['NOMBRE UNIDAD 3', '{Sólido, En desarrollo, Riesgo}', '{RS,RD,RR}']
+    row5: ['NOMBRE UNIDAD N', '{Sólido, En desarrollo, Riesgo}', '{RS,RD,RR}']
+16. P [-] Prioriza así: primero las unidades en Riesgo, luego las unidades En desarrollo. Las unidades en Sólido no requieren refuerzo por ahora. Este reporte no detiene tu avance: puedes seguir con el siguiente eje y aplicar el refuerzo recomendado en paralelo para avanzar cada vez más sólido.
+    RUNS N:Prioriza así: primero las unidades en Riesgo, luego las unidades En desarrollo. Las unidades en Sólido no requieren refuerzo por ahora. Este reporte no detiene tu avance: puedes seguir con el siguiente eje y aplicar el refuerzo recomendado en paralelo para avanzar cada vez más sólido.
+17. P [-] Recuerda: esto es un camino. Hoy medimos cómo estás y mañana lo mejoras. Quédate con lo importante: no necesitas hacerlo perfecto para avanzar, necesitas hacerlo constante. Ejecuta el refuerzo recomendado y sigue avanzando en tu ruta.
+    RUNS N:Recuerda: esto es un camino. Hoy medimos cómo estás y mañana lo mejoras. Quédate con lo importante: no necesitas hacerlo perfecto para avanzar, necesitas hacerlo constante. Ejecuta el refuerzo recomendado y sigue avanzando en tu ruta.

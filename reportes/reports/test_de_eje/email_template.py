@@ -6,14 +6,11 @@ Each report type can provide its own subject and body by creating an
 this module at send time — no changes to shared runner or sender code needed.
 """
 
-SUBJECT = "Tu informe Test de Eje"
+SUBJECT = "Tu plan de estudio personalizado"
 
 BODY = """Hola,
 
-Has completado tu Test de Eje correctamente. En el informe adjunto encontrarás:
-1. Tu nivel de dominio por unidad
-2. Un plan de estudio personalizado con las lecciones recomendadas
-3. El detalle de tu rendimiento en cada pregunta
+Has completado tu Test de Eje correctamente. En el informe adjunto encontrarás tú plan de estudio personalizado con las lecciones a realizar
 
 Cualquier consulta, estamos aquí para ayudarte.
 

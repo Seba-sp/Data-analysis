@@ -93,9 +93,6 @@ Un abrazo a la distancia
 """
             body_text = body if body else _default_body
 
-            if drive_link:
-                body_text += f"\n\nTambién puedes acceder al informe desde Google Drive: {drive_link}"
-
             msg.attach(MIMEText(body_text, "plain", "utf-8"))
 
             # Attach PDF report

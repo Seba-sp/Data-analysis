@@ -1,5 +1,5 @@
-"""
-Tests for core/runner.py — PipelineRunner and PipelineResult.
+﻿"""
+Tests for core/runner.py â€” PipelineRunner and PipelineResult.
 
 TDD RED phase: these tests are written before the implementation exists.
 """
@@ -34,13 +34,13 @@ if "google.cloud.firestore_v1" not in sys.modules:
     sys.modules["google.cloud.firestore_v1"] = fake_firestore_v1_module
 sys.modules["google.cloud"].firestore = sys.modules["google.cloud.firestore"]
 
-# ── Imports under test ─────────────────────────────────────────────────────────
+# â”€â”€ Imports under test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 from core.runner import PipelineRunner, PipelineResult
 from core.email_sender import EmailSender
 from core.batch_processor import BatchProcessor
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _make_pdf_dir(tmp_path: Path, filenames: list[str]) -> Path:
     """Create a temporary directory with fake PDF files."""
@@ -51,7 +51,17 @@ def _make_pdf_dir(tmp_path: Path, filenames: list[str]) -> Path:
     return out_dir
 
 
-# ── PipelineResult structure ───────────────────────────────────────────────────
+@pytest.fixture(autouse=True)
+def _isolate_processed_emails_ledger(tmp_path, monkeypatch):
+    """Prevent cross-test dedupe interference from shared ledgers."""
+
+    def _ledger_path(self):
+        return tmp_path / f"{self.report_type}_processed_emails.xlsx"
+
+    monkeypatch.setattr(PipelineRunner, "_processed_emails_xlsx_path", _ledger_path)
+
+
+# â”€â”€ PipelineResult structure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestPipelineResultStructure:
     def test_has_four_keys(self):
@@ -68,7 +78,7 @@ class TestPipelineResultStructure:
         assert PR is not None
 
 
-# ── PipelineRunner instantiation ──────────────────────────────────────────────
+# â”€â”€ PipelineRunner instantiation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestPipelineRunnerInit:
     def test_stores_report_type(self):
@@ -92,23 +102,34 @@ class TestPipelineRunnerInit:
         assert runner.test_email == "dev@example.com"
 
 
-# ── _extract_email_from_pdf ────────────────────────────────────────────────────
+# â”€â”€ _extract_email_from_pdf â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestExtractEmailFromPdf:
     def _runner(self):
         return PipelineRunner("diagnosticos")
 
     def test_standard_pattern(self, tmp_path):
-        pdf = tmp_path / "informe_alice@school.com_M1.pdf"
+        pdf = tmp_path / "informe_diagnosticos_M1_alice@school.com.pdf"
         pdf.write_bytes(b"")
         assert self._runner()._extract_email_from_pdf(pdf) == "alice@school.com"
 
     def test_email_with_underscores(self, tmp_path):
-        # email itself has underscores: informe_first_last@school.com_CL.pdf
-        pdf = tmp_path / "informe_first_last@school.com_CL.pdf"
+        # email itself has underscores in the locked contract:
+        # informe_{report_type}_{assessment_name}_{email}.pdf
+        pdf = tmp_path / "informe_diagnosticos_CL_first_last@school.com.pdf"
         pdf.write_bytes(b"")
-        result = self._runner()._extract_email_from_pdf(pdf)
+        result = PipelineRunner("diagnosticos", assessment_name="CL")._extract_email_from_pdf(pdf)
         assert result == "first_last@school.com"
+
+    def test_email_with_underscores_is_rejected_when_assessment_unknown(self, tmp_path):
+        # Without assessment_name, split can be ambiguous:
+        # CL_first_last@school.com could split as:
+        #   assessment=CL email=first_last@school.com
+        #   assessment=CL_first email=last@school.com
+        pdf = tmp_path / "informe_diagnosticos_CL_first_last@school.com.pdf"
+        pdf.write_bytes(b"")
+        result = PipelineRunner("diagnosticos")._extract_email_from_pdf(pdf)
+        assert result is None
 
     def test_missing_informe_prefix_returns_none(self, tmp_path):
         pdf = tmp_path / "alice@school.com_M1.pdf"
@@ -121,14 +142,14 @@ class TestExtractEmailFromPdf:
         assert self._runner()._extract_email_from_pdf(pdf) is None
 
     def test_exactly_three_parts(self, tmp_path):
-        # informe_email@x.com_ATYPE — minimal valid
-        pdf = tmp_path / "informe_a@b.com_HYST.pdf"
+        # informe_email@x.com_ATYPE â€” minimal valid
+        pdf = tmp_path / "informe_diagnosticos_HYST_a@b.com.pdf"
         pdf.write_bytes(b"")
         result = self._runner()._extract_email_from_pdf(pdf)
         assert result == "a@b.com"
 
 
-# ── run() — dry-run mode ───────────────────────────────────────────────────────
+# â”€â”€ run() â€” dry-run mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestRunDryRun:
     """In dry_run=True mode: generate() runs, no emails sent, no Drive upload."""
@@ -136,8 +157,8 @@ class TestRunDryRun:
     def test_dry_run_no_email_calls(self, tmp_path):
         runner = PipelineRunner("diagnosticos", dry_run=True)
         out_dir = _make_pdf_dir(tmp_path, [
-            "informe_alice@s.com_M1.pdf",
-            "informe_bob@s.com_CL.pdf",
+            "informe_diagnosticos_M1_alice@s.com.pdf",
+            "informe_diagnosticos_CL_bob@s.com.pdf",
         ])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
@@ -159,9 +180,9 @@ class TestRunDryRun:
     def test_dry_run_records_processed_equals_pdf_count(self, tmp_path):
         runner = PipelineRunner("diagnosticos", dry_run=True)
         out_dir = _make_pdf_dir(tmp_path, [
-            "informe_a@x.com_M1.pdf",
-            "informe_b@x.com_CL.pdf",
-            "informe_c@x.com_CIEN.pdf",
+            "informe_diagnosticos_M1_a@x.com.pdf",
+            "informe_diagnosticos_CL_b@x.com.pdf",
+            "informe_diagnosticos_CIEN_c@x.com.pdf",
         ])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
@@ -177,14 +198,14 @@ class TestRunDryRun:
         assert result["records_processed"] == 3
 
 
-# ── run() — test-email mode ────────────────────────────────────────────────────
+# â”€â”€ run() â€” test-email mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestRunTestEmail:
     """In test_email mode: emails go to override address, Drive suppressed."""
 
     def test_email_sent_to_test_address(self, tmp_path):
         runner = PipelineRunner("diagnosticos", test_email="dev@example.com")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_M1.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_M1_student@s.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -212,7 +233,7 @@ class TestRunTestEmail:
 
     def test_drive_suppressed_in_test_email_mode(self, tmp_path):
         runner = PipelineRunner("diagnosticos", test_email="dev@example.com")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_x@y.com_CL.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_CL_x@y.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -231,14 +252,14 @@ class TestRunTestEmail:
         mock_drive_cls.assert_not_called()
 
 
-# ── run() — normal mode ────────────────────────────────────────────────────────
+# â”€â”€ run() â€” normal mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestRunNormalMode:
     """Normal mode: email to student, Drive upload attempted."""
 
     def test_email_sent_to_student_address(self, tmp_path):
         runner = PipelineRunner("diagnosticos")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_M1.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_M1_student@s.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -261,13 +282,13 @@ class TestRunNormalMode:
         call_kwargs = mock_sender.send_comprehensive_report_email.call_args
         recipient = call_kwargs.kwargs.get("recipient_email") or call_kwargs.args[0]
         assert recipient == "student@s.com"
-        assert call_kwargs.kwargs["filename"] == "informe_student@s.com_M1.pdf"
-        assert call_kwargs.kwargs["correlation_key"] == "student@s.com|M1"
+        assert call_kwargs.kwargs["filename"] == "informe_diagnosticos_M1_student@s.com.pdf"
+        assert call_kwargs.kwargs["correlation_key"] == "diagnosticos|M1|student@s.com"
         assert result["emails_sent"] == 1
 
     def test_drive_upload_attempted_in_normal_mode(self, tmp_path):
         runner = PipelineRunner("diagnosticos")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_a@b.com_M1.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_M1_a@b.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -291,7 +312,7 @@ class TestRunNormalMode:
         mock_drive.upload_file.assert_called_once()
 
 
-# ── run() — error handling ─────────────────────────────────────────────────────
+# â”€â”€ run() â€” error handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestRunErrorHandling:
     def test_generate_failure_returns_success_false(self):
@@ -312,8 +333,8 @@ class TestRunErrorHandling:
         """If one email fails, the loop must continue to the next student."""
         runner = PipelineRunner("diagnosticos")
         out_dir = _make_pdf_dir(tmp_path, [
-            "informe_fail@s.com_M1.pdf",
-            "informe_ok@s.com_M1.pdf",
+            "informe_diagnosticos_M1_fail@s.com.pdf",
+            "informe_diagnosticos_M1_ok@s.com.pdf",
         ])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
@@ -345,7 +366,7 @@ class TestRunErrorHandling:
 
     def test_send_returning_false_appended_to_errors(self, tmp_path):
         runner = PipelineRunner("diagnosticos")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_x@y.com_M1.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_M1_x@y.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -368,8 +389,8 @@ class TestRunErrorHandling:
         assert result["emails_sent"] == 0
         assert len(result["errors"]) == 1
         assert "recipient=x@y.com" in result["errors"][0]
-        assert "attachment=informe_x@y.com_M1.pdf" in result["errors"][0]
-        assert "event_key=x@y.com|M1" in result["errors"][0]
+        assert "attachment=informe_diagnosticos_M1_x@y.com.pdf" in result["errors"][0]
+        assert "event_key=diagnosticos|M1|x@y.com" in result["errors"][0]
 
     def test_unextractable_email_skipped_with_error(self, tmp_path):
         runner = PipelineRunner("diagnosticos")
@@ -393,7 +414,7 @@ class TestRunErrorHandling:
     def test_drive_upload_failure_does_not_abort(self, tmp_path):
         """Drive upload failure (exception or None) must not stop the email loop."""
         runner = PipelineRunner("diagnosticos")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_s@x.com_M1.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_M1_s@x.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -418,7 +439,7 @@ class TestRunErrorHandling:
         assert result["success"] is True
 
 
-# ── run() — always returns PipelineResult ─────────────────────────────────────
+# â”€â”€ run() â€” always returns PipelineResult â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestRunAlwaysReturnsResult:
     def test_result_never_none_on_success(self, tmp_path):
@@ -447,7 +468,7 @@ class TestRunAlwaysReturnsResult:
         assert result["success"] is False
 
 
-# ── Logging (no bare print calls) ─────────────────────────────────────────────
+# â”€â”€ Logging (no bare print calls) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestNoBarePrints:
     def test_runner_module_has_no_print_calls(self):
@@ -467,10 +488,10 @@ class TestNoBarePrints:
         assert print_calls == [], f"Found {len(print_calls)} bare print() calls in runner.py"
 
 
-# ── Task 1 TDD: email_template module ─────────────────────────────────────────
+# â”€â”€ Task 1 TDD: email_template module â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestTestDeEjeEmailTemplate:
-    """tests/test_runner.py — Task 1 RED: email_template module contract."""
+    """tests/test_runner.py â€” Task 1 RED: email_template module contract."""
 
     def test_template_module_importable(self):
         from reports.test_de_eje.email_template import SUBJECT, BODY
@@ -487,11 +508,11 @@ class TestTestDeEjeEmailTemplate:
 
     def test_subject_differs_from_generic_diagnostic(self):
         from reports.test_de_eje.email_template import SUBJECT
-        assert "Resultados de Diagnóstico" not in SUBJECT
+        assert "Resultados de DiagnÃ³stico" not in SUBJECT
 
     def test_body_differs_from_generic_diagnostic(self):
         from reports.test_de_eje.email_template import BODY
-        assert "test de diagnóstico" not in BODY
+        assert "test de diagnÃ³stico" not in BODY
 
     def test_import_is_idempotent(self):
         import importlib
@@ -501,7 +522,7 @@ class TestTestDeEjeEmailTemplate:
         assert mod1.BODY is mod2.BODY
 
 
-# ── Task 2 TDD: EmailSender subject/body overrides + runner template resolution ─
+# â”€â”€ Task 2 TDD: EmailSender subject/body overrides + runner template resolution â”€
 
 class TestEmailSenderSubjectBodyOverrides:
     """Task 2 RED: EmailSender accepts optional subject/body without breaking callers."""
@@ -527,7 +548,7 @@ class TestEmailSenderSubjectBodyOverrides:
                 recipient_email="student@example.com",
                 pdf_content=b"%PDF fake",
                 username="student@example.com",
-                filename="informe_student@example.com_M1.pdf",
+                filename="informe_diagnosticos_M1_student@example.com.pdf",
                 subject="Tu informe Test de Eje",
             )
 
@@ -554,7 +575,7 @@ class TestEmailSenderSubjectBodyOverrides:
                 recipient_email="student@example.com",
                 pdf_content=b"%PDF fake",
                 username="student@example.com",
-                filename="informe_student@example.com_M1.pdf",
+                filename="informe_diagnosticos_M1_student@example.com.pdf",
             )
 
         assert captured.get("subject") == "Resultados de Diagnóstico"
@@ -581,7 +602,7 @@ class TestEmailSenderSubjectBodyOverrides:
                 recipient_email="student@example.com",
                 pdf_content=b"%PDF fake",
                 username="student@example.com",
-                filename="informe_student@example.com_M1.pdf",
+                filename="informe_diagnosticos_M1_student@example.com.pdf",
                 body="Custom body for test_de_eje",
             )
 
@@ -609,7 +630,7 @@ class TestEmailSenderSubjectBodyOverrides:
                 recipient_email="student@example.com",
                 pdf_content=b"%PDF fake",
                 username="student@example.com",
-                filename="informe_student@example.com_M1.pdf",
+                filename="informe_diagnosticos_M1_student@example.com.pdf",
                 subject=None,
             )
 
@@ -623,7 +644,7 @@ class TestRunnerEmailTemplateResolution:
         runner = PipelineRunner("test_de_eje")
         subject, body = runner._get_email_template()
         assert subject is not None
-        assert subject != "Resultados de Diagnóstico"
+        assert subject != "Resultados de DiagnÃ³stico"
         assert len(subject) > 0
 
     def test_test_de_eje_sends_typed_email_body(self):
@@ -646,7 +667,7 @@ class TestRunnerEmailTemplateResolution:
 
     def test_runner_passes_subject_to_sender_for_test_de_eje(self, tmp_path):
         runner = PipelineRunner("test_de_eje")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_TDE.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_test_de_eje_TDE_student@s.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -669,11 +690,11 @@ class TestRunnerEmailTemplateResolution:
         call_kwargs = mock_sender.send_comprehensive_report_email.call_args
         subject_kwarg = call_kwargs.kwargs.get("subject")
         assert subject_kwarg is not None
-        assert subject_kwarg != "Resultados de Diagnóstico"
+        assert subject_kwarg != "Resultados de DiagnÃ³stico"
 
     def test_runner_passes_none_subject_for_templateless_type(self, tmp_path):
         runner = PipelineRunner("diagnosticos")
-        out_dir = _make_pdf_dir(tmp_path, ["informe_student@s.com_M1.pdf"])
+        out_dir = _make_pdf_dir(tmp_path, ["informe_diagnosticos_M1_student@s.com.pdf"])
 
         with patch("core.runner.get_generator") as mock_get_gen, \
              patch("core.runner.EmailSender") as mock_email_cls, \
@@ -694,7 +715,7 @@ class TestRunnerEmailTemplateResolution:
             runner.run()
 
         call_kwargs = mock_sender.send_comprehensive_report_email.call_args
-        # diagnosticos has no email_template.py — subject should be None (fallback)
+        # diagnosticos has no email_template.py â€” subject should be None (fallback)
         subject_kwarg = call_kwargs.kwargs.get("subject")
         assert subject_kwarg is None
 
@@ -710,8 +731,8 @@ class TestEmailSenderValidation:
                 recipient_email="student@example.com",
                 pdf_content=b"",
                 username="student@example.com",
-                filename="informe_student@example.com_M1.pdf",
-                correlation_key="student@example.com|M1",
+                filename="informe_diagnosticos_M1_student@example.com.pdf",
+                correlation_key="diagnosticos|M1|student@example.com",
             )
 
         assert sent is False
@@ -805,8 +826,10 @@ class TestBatchProcessorResultSemantics:
                 pdf_content=b"%PDF fake",
                 username="student@example.com",
                 filename="not-a-pdf.txt",
-                correlation_key="student@example.com|M1",
+                correlation_key="diagnosticos|M1|student@example.com",
             )
 
         assert sent is False
         mock_smtp.assert_not_called()
+
+

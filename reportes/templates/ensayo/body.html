@@ -1,0 +1,134 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Ensayo - Cuerpo</title>
+  <style>
+    @page { margin: 0; size: A4; }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, "DejaVu Sans", sans-serif;
+      font-size: 11pt;
+      line-height: 1.15;
+      color: #111827;
+    }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      position: relative;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .page + .page { page-break-before: always; }
+    .content {
+      position: absolute;
+      inset: 0;
+      padding: 25mm;
+      box-sizing: border-box;
+    }
+    p { margin: 0 0 8pt; }
+    .list { margin: 0 0 8pt 18pt; padding: 0; }
+    .list li { margin: 0 0 4pt; }
+    table { width: 100%; border-collapse: collapse; font-size: 11pt; margin: 0 0 8pt; }
+    th, td { border: 1px solid #111827; padding: 6pt; text-align: left; vertical-align: top; font-weight: 400; }
+  </style>
+</head>
+<body>
+  <section class="page" data-page="1">
+    <div class="content">
+      <p><strong>Resultados Ensayo</strong></p>
+      <ul class="list">
+        <li><span data-placeholder="report_title">Puntaje:</span> <span data-placeholder="overall_score">X/NT</span></li>
+        <li>Correctas totales (incluye piloto): <span data-placeholder="correct_total_with_pilot">X/NT</span></li>
+        <li>Correctas para puntaje (sin piloto): <span data-placeholder="correct_total_without_pilot">X/NT</span></li>
+        <li data-placeholder="domain_table_title">Tabla de dominio por eje tipo:</li>
+      </ul>
+
+      <div data-table-anchor="ensayo_dominio_por_eje">
+        <table aria-label="Tabla de dominio por eje tipo">
+          <thead>
+            <tr>
+              <th></th>
+              <th><span data-placeholder="domain_axis_1_label">Eje 1</span></th>
+              <th><span data-placeholder="domain_axis_2_label">Eje 2</span></th>
+              <th><span data-placeholder="domain_axis_3_label">Eje 3</span></th>
+              <th><span data-placeholder="domain_axis_4_label">Eje 4</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Numero de correctas totales / Numero total de preguntas</td>
+              <td><span data-placeholder="domain_axis_1_correctness">NC/NT</span></td>
+              <td><span data-placeholder="domain_axis_2_correctness">..</span></td>
+              <td><span data-placeholder="domain_axis_3_correctness">..</span></td>
+              <td><span data-placeholder="domain_axis_4_correctness">..</span></td>
+            </tr>
+            <tr>
+              <td>Porcentaje de dominio actual</td>
+              <td><span data-placeholder="domain_axis_1_percentage">..</span></td>
+              <td><span data-placeholder="domain_axis_2_percentage">..</span></td>
+              <td><span data-placeholder="domain_axis_3_percentage">..</span></td>
+              <td><span data-placeholder="domain_axis_4_percentage">..</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p data-placeholder="pilot_note">
+        *Recuerda: para el calculo de tu puntaje, las preguntas piloto no se consideran. Da lo mismo
+        si estan correctas o incorrectas: no suman ni restan en el resultado final.
+      </p>
+    </div>
+  </section>
+
+  <section class="page" data-page="2">
+    <div class="content">
+      <p data-placeholder="quick_report_title"><strong>Reporte Rapido</strong></p>
+      <div data-table-anchor="ensayo_reporte_rapido">
+        <table aria-label="Reporte rapido">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Unidad</th>
+              <th>Habilidad</th>
+              <th>Clave correcta</th>
+              <th>Clave que marcaste</th>
+              <th>Leccion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span data-placeholder="quick_row_1_question">Pregunta 1</span></td>
+              <td><span data-placeholder="quick_row_1_unit"></span></td>
+              <td><span data-placeholder="quick_row_1_skill"></span></td>
+              <td><span data-placeholder="quick_row_1_correct_key"></span></td>
+              <td><span data-placeholder="quick_row_1_selected_key"></span></td>
+              <td><span data-placeholder="quick_row_1_lesson"></span></td>
+            </tr>
+            <tr>
+              <td><span data-placeholder="quick_row_2_question">Pregunta 2</span></td>
+              <td><span data-placeholder="quick_row_2_unit"></span></td>
+              <td><span data-placeholder="quick_row_2_skill"></span></td>
+              <td><span data-placeholder="quick_row_2_correct_key"></span></td>
+              <td><span data-placeholder="quick_row_2_selected_key"></span></td>
+              <td><span data-placeholder="quick_row_2_lesson"></span></td>
+            </tr>
+            <tr>
+              <td><span data-placeholder="quick_row_n_question">Pregunta N</span></td>
+              <td><span data-placeholder="quick_row_n_unit"></span></td>
+              <td><span data-placeholder="quick_row_n_skill"></span></td>
+              <td><span data-placeholder="quick_row_n_correct_key"></span></td>
+              <td><span data-placeholder="quick_row_n_selected_key"></span></td>
+              <td><span data-placeholder="quick_row_n_lesson"></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

@@ -1,5 +1,5 @@
 # Allow planning docs to be tracked despite parent .gitignore
-!.planning/
+.planning/
 !.planning/*.json
 !.planning/*.md
 .claude/

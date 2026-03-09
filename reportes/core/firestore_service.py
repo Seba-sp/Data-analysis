@@ -25,29 +25,55 @@ class FirestoreService:
         self.state_collection = f"report_types/{report_type}/state"
         self.counters_collection = f"report_types/{report_type}/counters"
 
-    def increment_counter(self, assessment_type: str) -> bool:
+    def increment_counter(self, assessment_type: str, event_key: Optional[str] = None) -> bool:
         """Atomically increment counter for assessment type.
 
         Args:
             assessment_type: Assessment type document ID (e.g. 'M1', 'CL').
+            event_key: Optional idempotency key. If already processed, the
+                       counter is not incremented again.
 
         Returns:
             True if successful, False otherwise.
         """
         try:
+            if not assessment_type:
+                logger.error("Cannot increment counter: empty assessment_type")
+                return False
+
             counter_ref = self.db.collection(self.counters_collection).document(assessment_type)
 
             @firestore.transactional
             def increment_in_transaction(transaction: Transaction, counter_ref):
                 counter_doc = counter_ref.get(transaction=transaction)
+                existing_event_keys = set()
                 if counter_doc.exists:
-                    current_count = counter_doc.to_dict().get('count', 0)
-                    transaction.update(counter_ref, {'count': current_count + 1})
+                    counter_data = counter_doc.to_dict()
+                    current_count = counter_data.get('count', 0)
+                    existing_event_keys = set(counter_data.get('event_keys', []))
+                    if event_key and event_key in existing_event_keys:
+                        return False
+                    next_event_keys = list(existing_event_keys)
+                    if event_key:
+                        next_event_keys.append(event_key)
+                    payload = {'count': current_count + 1}
+                    if next_event_keys:
+                        payload['event_keys'] = sorted(set(next_event_keys))[-200:]
+                    transaction.update(counter_ref, payload)
                 else:
-                    transaction.set(counter_ref, {'count': 1})
+                    payload = {'count': 1}
+                    if event_key:
+                        payload['event_keys'] = [event_key]
+                    transaction.set(counter_ref, payload)
+                return True
 
             transaction = self.db.transaction()
-            increment_in_transaction(transaction, counter_ref)
+            incremented = increment_in_transaction(transaction, counter_ref)
+            if not incremented:
+                logger.info(
+                    f"Skipped duplicate counter increment for {assessment_type} event_key={event_key}"
+                )
+                return True
 
             logger.info(f"Incremented counter for {assessment_type}")
             return True
@@ -111,9 +137,18 @@ class FirestoreService:
             True if successful, False otherwise.
         """
         try:
+            incoming_report_type = student_data.get('report_type')
+            if incoming_report_type and incoming_report_type != self.report_type:
+                logger.error(
+                    f"Namespace mismatch while queuing student: expected report_type={self.report_type}, "
+                    f"got report_type={incoming_report_type}"
+                )
+                return False
+
             if 'timestamp' not in student_data:
                 student_data['timestamp'] = time.time()
 
+            student_data['report_type'] = self.report_type
             student_data['status'] = 'queued'
 
             result = self.db.collection(self.queue_collection).add(student_data)
