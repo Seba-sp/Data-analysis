@@ -129,14 +129,23 @@ Success criteria:
 | 11. Examen de Eje Plugin | v1.1 | 0/3 | Pending | - |
 | 12. Ensayo Plugin + Integration Hardening | v1.1 | 0/0 | Pending | - |
 | 13. Full New-Plugin GCP Deployment Validation | v1.1 | 0/0 | Pending | - |
-| 14. GCP and GCS Webhook Fixes | v1.1 | 0/0 | Pending | - |
+| 14. GCP and GCS Webhook Fixes | v1.1 | 0/3 | Pending | - |
 
 ### Phase 14: GCP and GCS Webhook Fixes
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 13
-**Plans:** 0 plans
+**Goal:** Fix the broken end-to-end webhook pipeline for `test_de_eje` and `examen_de_eje` by correcting PDF filename contract, adding AssessmentMapper startup observability, and implementing per-assessment queue architecture.
+**Requirements**: MAIL-01, ROUT-04, ROUT-05, PLUG-01, PLUG-02, DEPL-02
+**Depends on:** Phase 13 (plan-level; Plans 01 and 02 are independent and can run immediately)
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 14 to break down)
+- [ ] 14-01-PLAN.md — Fix PDF filename contract in both generators (silent email delivery failure)
+- [ ] 14-02-PLAN.md — Add get_route_full(), startup summary log, and review _ALLOWED_GROUPS
+- [ ] 14-03-PLAN.md — Per-assessment queue architecture: assessment_name flows webhook -> Firestore -> BatchProcessor -> generator
+
+Success criteria:
+1. Both generators produce filenames that PipelineRunner can parse — zero silent skips.
+2. Startup log lists every rejected assessment name so missing IDs are immediately visible.
+3. Each webhook event queues students tagged with the specific assessment_name that fired.
+4. BatchProcessor downloads only the specific assessment that triggered each webhook, not all assessments for the report_type.
+5. Full automated test suite passes with no regressions on existing report types.
