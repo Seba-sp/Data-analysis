@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Phases
 status: executing
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-03-09T00:46:08.549Z"
+stopped_at: Completed 14-03-PLAN.md
+last_updated: "2026-03-09T00:53:26.447Z"
 last_activity: 2026-03-08 - Executed plan 10-04 with per-report-type email templates via importlib plugin pattern and created 10-04-SUMMARY.md
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 ---
@@ -93,6 +93,8 @@ Progress: [█████████░] 93% (13/14 plans)
 - [Phase 14-gcp-and-gcs-webhook-fixes]: _ALLOWED_GROUPS keeps CL, excludes L30M with comment explaining 3 active but invalid-ID rows
 - [Phase 14-gcp-and-gcs-webhook-fixes]: AssessmentMapper._names dict and get_route_full() 3-tuple provide assessment_name to webhook queue handler without secondary lookup
 - [Phase 14-gcp-and-gcs-webhook-fixes]: Startup warning log always emitted unconditionally after ids.xlsx load, listing rejected_names for operational visibility
+- [Phase 14]: assessment_name kwarg propagated via BaseReportGenerator.generate() -> download() to keep base lifecycle intact without duplicating logic
+- [Phase 14]: download() filters applied in generator using normalized assessment_name match — empty string means no filter (legacy behaviour)
 
 ## Accumulated Context
 
@@ -105,6 +107,6 @@ Progress: [█████████░] 93% (13/14 plans)
 
 ## Session Continuity
 
-Last session: 2026-03-09T00:46:08.546Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-03-09T00:53:21.396Z
+Stopped at: Completed 14-03-PLAN.md
 Resume file: None

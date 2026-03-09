@@ -129,14 +129,14 @@ Success criteria:
 | 11. Examen de Eje Plugin | v1.1 | 0/3 | Pending | - |
 | 12. Ensayo Plugin + Integration Hardening | v1.1 | 0/0 | Pending | - |
 | 13. Full New-Plugin GCP Deployment Validation | v1.1 | 0/0 | Pending | - |
-| 14. GCP and GCS Webhook Fixes | 2/3 | In Progress|  | - |
+| 14. GCP and GCS Webhook Fixes | 3/3 | Complete   | 2026-03-09 | - |
 
 ### Phase 14: GCP and GCS Webhook Fixes
 
 **Goal:** Fix the broken end-to-end webhook pipeline for `test_de_eje` and `examen_de_eje` by correcting PDF filename contract, adding AssessmentMapper startup observability, and implementing per-assessment queue architecture.
 **Requirements**: MAIL-01, ROUT-04, ROUT-05, PLUG-01, PLUG-02, DEPL-02
 **Depends on:** Phase 13 (plan-level; Plans 01 and 02 are independent and can run immediately)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 14-01-PLAN.md — Fix PDF filename contract in both generators (silent email delivery failure)
