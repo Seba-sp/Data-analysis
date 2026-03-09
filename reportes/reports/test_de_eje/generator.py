@@ -529,10 +529,9 @@ class TestDeEjeGenerator(BaseReportGenerator):
             final_html = _compose_cover_plus_body_html(cover_html, rendered_body)
 
             pdf_bytes = HTML(string=final_html, base_url=str(Path.cwd())).write_pdf()
-            assessment_label = _strip_data_suffix(plan.assessment_name or plan.assessment_type)
             pdf_path = output_dir / (
-                f"{_safe_filename_component(assessment_label)}__"
-                f"{_safe_filename_component(email)}.pdf"
+                f"informe_{_safe_filename_component(email)}"
+                f"_{_safe_filename_component(plan.assessment_type)}.pdf"
             )
             pdf_path.write_bytes(pdf_bytes)
 

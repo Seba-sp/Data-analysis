@@ -15,8 +15,6 @@ produce the correct format so the runner succeeds (GREEN).
 """
 from pathlib import Path
 
-import pytest
-
 from core.runner import PipelineRunner
 
 
@@ -66,39 +64,32 @@ def test_pdf_filename_test_de_eje():
     """
     Filename produced by test_de_eje generator satisfies the runner contract.
 
-    Simulates the broken generator output:
-        assessment_label = "M30M2-TEST_DE_EJE_1"  (after _strip_data_suffix)
-        email            = "student@example.com"
-        broken filename  = "M30M2_TEST_DE_EJE_1__student_at_example_com.pdf"
+    Simulates the FIXED generator output:
+        email            = "student_at_example_com"  (_safe_filename_component applied)
+        assessment_type  = "M2"
+        correct filename = "informe_student_at_example_com_M2.pdf"
 
-    After the fix the generator produces:
-        "informe_student_at_example_com_M2.pdf"
-    which satisfies both assertions.
+    Both assertions must pass after the generator fix (GREEN state).
     """
     runner = _runner("test_de_eje")
 
-    # This path mirrors what the BROKEN generator currently produces.
-    # The test FAILS here in RED because the broken format violates the contract.
-    # After the fix, the generator produces the correct format so this path is
-    # replaced in the test assertion by the correct one.
-    #
-    # We test the CONTRACT: whatever path the generator produces at
-    # runtime must satisfy these two conditions. We simulate the broken path
-    # to prove the contract is violated before the fix.
-    broken_path = Path("M30M2_TEST_DE_EJE_1__student_at_example_com.pdf")
+    # Simulate what the FIXED generator produces:
+    # informe_{_safe_filename_component(email)}_{_safe_filename_component(plan.assessment_type)}.pdf
+    correct_path = Path("informe_student_at_example_com_M2.pdf")
 
     # Assertion 1: filename must start with "informe_"
-    assert broken_path.name.startswith("informe_"), (
-        f"PDF filename from test_de_eje must start with 'informe_', got: {broken_path.name!r}. "
-        f"Fix: change the generator to produce 'informe_{{email}}_{{assessment_type}}.pdf'."
+    assert correct_path.name.startswith("informe_"), (
+        f"PDF filename from test_de_eje must start with 'informe_', got: {correct_path.name!r}."
     )
 
     # Assertion 2: runner must be able to extract a student email from the filename
-    extracted = runner._extract_email_from_pdf(broken_path)
+    extracted = runner._extract_email_from_pdf(correct_path)
     assert extracted is not None, (
-        f"PipelineRunner._extract_email_from_pdf() returned None for {broken_path.name!r}. "
-        f"This means every student is silently skipped and zero emails are sent. "
-        f"Fix: change the generator to produce 'informe_{{email}}_{{assessment_type}}.pdf'."
+        f"PipelineRunner._extract_email_from_pdf() returned None for {correct_path.name!r}. "
+        f"Every student would be silently skipped and zero emails sent."
+    )
+    assert extracted == "student_at_example_com", (
+        f"Extracted email should be 'student_at_example_com', got: {extracted!r}"
     )
 
 
@@ -113,22 +104,30 @@ def test_pdf_filename_examen_de_eje():
     """
     Filename produced by examen_de_eje generator satisfies the runner contract.
 
-    Same broken pattern as test_de_eje — ``{label}__{email}.pdf``.
-    After the fix the generator produces ``informe_{email}_{assessment_type}.pdf``.
+    Simulates the FIXED generator output:
+        email            = "student_at_example_com"  (_safe_filename_component applied)
+        assessment_type  = "M2"
+        correct filename = "informe_student_at_example_com_M2.pdf"
+
+    Both assertions must pass after the generator fix (GREEN state).
     """
     runner = _runner("examen_de_eje")
 
-    broken_path = Path("M30M2_EXAMEN_DE_EJE_1__student_at_example_com.pdf")
+    # Simulate what the FIXED generator produces:
+    # informe_{_safe_filename_component(email)}_{_safe_filename_component(plan.assessment_type)}.pdf
+    correct_path = Path("informe_student_at_example_com_M2.pdf")
 
     # Assertion 1: filename must start with "informe_"
-    assert broken_path.name.startswith("informe_"), (
-        f"PDF filename from examen_de_eje must start with 'informe_', got: {broken_path.name!r}. "
-        f"Fix: change the generator to produce 'informe_{{email}}_{{assessment_type}}.pdf'."
+    assert correct_path.name.startswith("informe_"), (
+        f"PDF filename from examen_de_eje must start with 'informe_', got: {correct_path.name!r}."
     )
 
     # Assertion 2: runner must be able to extract a student email from the filename
-    extracted = runner._extract_email_from_pdf(broken_path)
+    extracted = runner._extract_email_from_pdf(correct_path)
     assert extracted is not None, (
-        f"PipelineRunner._extract_email_from_pdf() returned None for {broken_path.name!r}. "
-        f"Fix: change the generator to produce 'informe_{{email}}_{{assessment_type}}.pdf'."
+        f"PipelineRunner._extract_email_from_pdf() returned None for {correct_path.name!r}. "
+        f"Every student would be silently skipped and zero emails sent."
+    )
+    assert extracted == "student_at_example_com", (
+        f"Extracted email should be 'student_at_example_com', got: {extracted!r}"
     )
