@@ -48,6 +48,8 @@ _GROUP_ALIASES = {
 _TYPE_TO_REPORT = {
     "TEST DE EJE": "test_de_eje",
     "EXAMEN DE EJE": "examen_de_eje",
+    "TEST DE HABILIDAD": "test_de_habilidad",
+    "EXAMEN DE HABILIDAD": "examen_de_habilidad",
     "ENSAYO": "ensayo",
 }
 _PRODUCTION_MARKERS = {"production", "prod"}

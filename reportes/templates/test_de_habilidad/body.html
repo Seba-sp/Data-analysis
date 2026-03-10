@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Test de Habilidad - Cuerpo</title>
+  <style>
+    @page { margin: 0; size: A4; }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, "DejaVu Sans", sans-serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #111827;
+    }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      position: relative;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .page + .page { page-break-before: always; }
+    .content {
+      position: absolute;
+      inset: 0;
+      padding: 25mm;
+      box-sizing: border-box;
+    }
+    p { margin: 0 0 10pt; }
+    .state-section { margin: 0 0 14pt; }
+    .state-label { font-size: 11pt; font-weight: 700; margin: 0 0 4pt; }
+    .habilidad-label { font-size: 11pt; margin: 0 0 6pt; }
+    table {
+      width: 80%;
+      border-collapse: collapse;
+      font-size: 11pt;
+      margin: 16pt auto 0;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #111827;
+      padding: 8pt;
+      text-align: center;
+      vertical-align: middle;
+      font-weight: 400;
+    }
+    th { font-weight: 700; }
+  </style>
+</head>
+<body data-template="test_de_habilidad_body">
+
+  <!-- Página 1: Introducción al reporte -->
+  <section class="page" data-page="1">
+    <div class="content">
+      <p>
+        Este reporte personalizado te permitirá tener una visión mucho más clara y detallada de tu desempeño en las
+        distintas tareas lectoras asociadas a la habilidad de <strong>Competencia Lectora</strong>.
+      </p>
+      <p>
+        A través de este análisis, podrás identificar con mayor precisión cuáles son las tareas lectoras que ya manejas
+        y en cuáles todavía necesitas seguir avanzando para alcanzar tu mejor versión.
+      </p>
+      <p>
+        Según tu porcentaje de dominio en cada tarea lectora, se te asignará un estado específico. Este estado no solo
+        te mostrará en qué nivel te encuentras, sino que además vendrá acompañado de una recomendación especial pensada
+        para orientarte de la mejor manera posible en tu proceso de preparación.
+      </p>
+
+      <p>Los estados que puedes encontrar son los siguientes:</p>
+
+      <div class="state-section">
+        <p class="state-label">✅ Dominada</p>
+        <p>
+          Este estado indica que ya cuentas con un buen dominio de esa tarea lectora. ¡Muy bien! Esto significa que
+          has logrado desarrollar de buena forma esa habilidad y que vas avanzando con una base cada vez más sólida
+          en tu camino hacia un gran puntaje.
+        </p>
+      </div>
+
+      <div class="state-section">
+        <p class="state-label">🔧 En desarrollo</p>
+        <p>
+          Este estado indica que todavía necesitas seguir fortaleciendo esa tarea lectora. Pero tranquilo, porque eso
+          es parte del proceso.
+        </p>
+        <p>
+          La mejor forma de trabajarla es revisando y estudiando las lecciones del <strong>Programa 800</strong>, ya
+          que cada una de ellas apunta al desarrollo de tareas lectoras específicas. Recuerda que en cada lección
+          encontrarás, entre paréntesis, la tarea lectora que se trabaja, para que puedas enfocarte de manera mucho
+          más estratégica y consciente.
+        </p>
+      </div>
+
+      <p>
+        Además, al final de tu plan siempre encontrarás el <strong>Examen del eje</strong>. Este examen es una parte
+        fundamental de tu recorrido, porque debes rendirlo antes de continuar con tu viaje en <strong>M30M</strong>.
+        ¿Por qué es tan importante? Porque es la instancia en la que confirmamos cómo estás aplicando realmente estos
+        contenidos en formato PAES, permitiéndote medir tu avance de forma concreta y seguir avanzando con mayor
+        seguridad y claridad en tu preparación.
+      </p>
+    </div>
+  </section>
+
+  <!-- Página 2: Tabla de resultados por tarea lectora -->
+  <section class="page" data-page="2">
+    <div class="content">
+      <p class="habilidad-label">Habilidad: <strong><span data-placeholder="habilidad_name">NOMBRE HABILIDAD</span></strong></p>
+      <table aria-label="Resultados por tarea lectora">
+        <thead>
+          <tr>
+            <th>Tarea lectora</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody data-table-anchor="tarea_status_rows">
+          <tr>
+            <td>TL 1</td>
+            <td>{Dominada, En desarrollo}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</body>
+</html>

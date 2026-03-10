@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Examen de Eje - Cuerpo</title>
+  <style>
+    @page { margin: 0; size: A4; }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, "DejaVu Sans", sans-serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #111827;
+    }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      position: relative;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    .page + .page { page-break-before: always; }
+    .content {
+      position: absolute;
+      inset: 0;
+      padding: 25mm;
+      box-sizing: border-box;
+    }
+    p { margin: 0 0 8pt; }
+    h2 { margin: 0 0 12pt; font-size: 18pt; font-weight: 700; }
+    h3 { margin: 0 0 6pt; font-size: 12pt; font-weight: 700; }
+    .bullet-list { margin: 0 0 10pt 0; padding: 0; list-style: disc; padding-left: 18pt; }
+    .bullet-list li { margin: 0 0 4pt; }
+    .numbered { margin: 0 0 10pt 22pt; padding: 0; }
+    .numbered li { margin: 0 0 4pt; }
+    .placeholder-shadow { display: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 11pt; margin: 0 0 10pt; }
+    th, td { border: 1px solid #111827; padding: 6pt; text-align: left; vertical-align: top; font-weight: 400; }
+    .state-section { margin: 0 0 10pt; }
+    .state-label { font-size: 12pt; font-weight: 700; margin: 0 0 2pt; }
+    .state-desc { margin: 0 0 4pt; }
+  </style>
+</head>
+<body data-template-id="examen_de_habilidad" data-template-version="2">
+
+  <!-- Página 1: Narrativa del reporte -->
+  <section class="page" data-page="1" data-placeholder="page_portada">
+    <div class="content">
+      <div class="placeholder-shadow" aria-hidden="true">
+        <span data-placeholder="student_name"></span>
+        <span data-placeholder="course_name"></span>
+        <span data-placeholder="generated_at"></span>
+        <span data-placeholder="period_label"></span>
+      </div>
+
+      <h2 data-placeholder="report_title">📊 Reporte: Examen de Eje Temático</h2>
+
+      <p data-placeholder="intro_body">
+        ¡Felicidades por cerrar este eje! Para concluir este viaje, hemos generado este <strong>último check</strong>. Este examen mide tu progreso en la <strong>aplicación de contenidos</strong> frente a preguntas reales formato PAES, orientándote para que tu base sea cada vez más sólida.
+      </p>
+
+      <h3 data-placeholder="what_to_know_heading">💡 Lo que debes saber</h3>
+      <ul class="bullet-list" data-placeholder="what_to_know_list">
+        <li><strong>No es un diagnóstico:</strong> A diferencia de los tests de unidad (que miden conocimiento), este evalúa tu desempeño global bajo el estándar PAES.</li>
+        <li><strong>Tu avance continúa:</strong> Este examen no detiene tu progreso. Si hay temas por reforzar, te daremos recomendaciones de práctica para mejorar mientras sigues adelante.</li>
+      </ul>
+
+      <h3 data-placeholder="how_to_interpret_heading">🚦 ¿Cómo interpretar tus resultados?</h3>
+      <p data-placeholder="how_to_interpret_intro">Revisa la tabla en la siguiente página. Tu estado en cada unidad te indicará el camino a seguir:</p>
+      <table aria-label="Interpretación de estados">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Interpretación</th>
+            <th>Recomendación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sólido</td>
+            <td>Aplicación efectiva en formato PAES.</td>
+            <td>Puedes avanzar con total confianza.</td>
+          </tr>
+          <tr>
+            <td>En desarrollo</td>
+            <td>Estás cerca de la meta.</td>
+            <td>Refuerza esta unidad para ganar consistencia.</td>
+          </tr>
+          <tr>
+            <td>Riesgo</td>
+            <td>La aplicación en formato PAES aún no es sólida.</td>
+            <td>Prioriza la práctica antes de acumular más materia.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 data-placeholder="roadmap_heading">🚀 Hoja de ruta para tu mejora</h3>
+      <p data-placeholder="roadmap_intro">Una vez que revises tus resultados, no intentes abarcarlo todo de inmediato. <strong>Prioriza y ejecuta en este orden:</strong></p>
+      <ol class="numbered" data-placeholder="roadmap_steps">
+        <li><strong>Primer paso:</strong> Sigue la recomendación de las unidades en <strong>Riesgo</strong>.</li>
+        <li><strong>Segundo paso:</strong> Sigue la recomendación de las unidades <strong>En desarrollo</strong>.</li>
+        <li><strong>Tercer paso:</strong> Continúa con el siguiente eje temático.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Página 2: Informe por unidad + Guía de Recomendaciones -->
+  <section class="page" data-page="2" data-placeholder="page_resultados">
+    <div class="content">
+      <h3 data-placeholder="unit_report_heading">📊 Informe por unidad</h3>
+      <div data-table-anchor="unit_status_recommendations">
+        <table aria-label="Informe por unidad">
+          <thead>
+            <tr>
+              <th>Unidad</th>
+              <th>Estado</th>
+              <th>Recomendación</th>
+            </tr>
+          </thead>
+          <tbody data-table-anchor="unit_status_rows">
+            <tr>
+              <td>NOMBRE UNIDAD 1</td>
+              <td>{Sólido, En desarrollo, Riesgo}</td>
+              <td>{RS,RD,RR}</td>
+            </tr>
+            <tr>
+              <td>NOMBRE UNIDAD 2</td>
+              <td>{Sólido, En desarrollo, Riesgo}</td>
+              <td>{RS,RD,RR}</td>
+            </tr>
+            <tr>
+              <td>NOMBRE UNIDAD 3</td>
+              <td>{Sólido, En desarrollo, Riesgo}</td>
+              <td>{RS,RD,RR}</td>
+            </tr>
+            <tr>
+              <td>NOMBRE UNIDAD 4</td>
+              <td>{Sólido, En desarrollo, Riesgo}</td>
+              <td>{RS,RD,RR}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div data-table-anchor="unit_priority_summary"></div>
+
+      <h3 data-placeholder="guide_heading">📋 Guía de Recomendaciones Personalizadas</h3>
+      <p data-placeholder="guide_intro">Busca el estado de cada unidad en tu tabla de resultados y sigue estos pasos para fortalecer tu rendimiento:</p>
+
+      <div class="state-section">
+        <p class="state-label" data-placeholder="rs_heading">🟢 RS (Sólido)</p>
+        <p class="state-desc" data-placeholder="rs_estado"><strong>Estado:</strong> Dominio demostrado de la unidad.</p>
+        <ul class="bullet-list" data-placeholder="rs_actions">
+          <li><strong>Acción:</strong> Solo revisa las resoluciones de las preguntas en las que hayas fallado para despejar dudas puntuales y perfeccionar tu técnica.</li>
+        </ul>
+      </div>
+
+      <div class="state-section">
+        <p class="state-label" data-placeholder="rd_heading">🟡 RD (En Desarrollo)</p>
+        <p class="state-desc" data-placeholder="rd_estado"><strong>Estado:</strong> Aplicación en progreso, requiere mayor consistencia.</p>
+        <ol class="numbered" data-placeholder="rd_actions">
+          <li><strong>Analiza tus errores:</strong> Revisa detalladamente las preguntas que fallaste en este examen.</li>
+          <li><strong>Refuerza lo previo:</strong> Si ya completaste la <strong>Guía Temática 1</strong>, vuelve a resolver solo aquellos ejercicios en los que te equivocaste la primera vez.</li>
+          <li><strong>Amplía tu práctica:</strong> Realiza la guía temática de esta unidad que no hayas realizado (ya sea la <strong>1</strong> o la <strong>2</strong>).</li>
+        </ol>
+      </div>
+
+      <div class="state-section">
+        <p class="state-label" data-placeholder="rr_heading">🔴 RR (Riesgo)</p>
+        <p class="state-desc" data-placeholder="rr_estado"><strong>Estado:</strong> Nivel de aplicación crítico. Es necesario asegurar la base.</p>
+        <ol class="numbered" data-placeholder="rr_actions">
+          <li><strong>Nivela contenidos:</strong> Rinde el <strong>Test de Unidad</strong> correspondiente para asegurarte que comprendes los conceptos fundamentales y repasar lo necesario.</li>
+          <li><strong>Corrige el camino:</strong> Si ya habías resuelto la <strong>Guía Temática 1</strong>, revisa y resuelve nuevamente los ejercicios que fallaste anteriormente.</li>
+          <li><strong>Práctica obligatoria:</strong> Completa la guía temática que te falte realizar (la <strong>1</strong> o la <strong>2</strong>) para cerrar las brechas de aprendizaje.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
