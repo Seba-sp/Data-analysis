@@ -57,33 +57,10 @@
   },
   "examen_de_habilidad": {
     "computed": [
-      "student_name",
-      "course_name",
-      "generated_at",
-      "period_label"
+      "habilidad_name",
+      "recomendacion"
     ],
-    "static": [
-      "page_portada",
-      "report_name",
-      "cover_page_label",
-      "report_title",
-      "what_it_measures_heading",
-      "what_it_measures_body",
-      "important_heading",
-      "important_body",
-      "states_heading",
-      "state_solido_text",
-      "state_desarrollo_text",
-      "state_riesgo_text",
-      "how_to_use_heading",
-      "how_to_use_line_1",
-      "how_to_use_line_2",
-      "how_to_use_line_3",
-      "page_resultados",
-      "table_section_heading",
-      "priority_guidance",
-      "closing_message"
-    ]
+    "static": []
   },
   "ensayo": {
     "computed": [
