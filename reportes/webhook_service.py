@@ -222,15 +222,22 @@ def handle_webhook(request: Request):
         route_full = _am.get_route_full(assessment_id)
         if route_full is None:
             mapping_source = getattr(_am, "mapping_source", "unknown")
+            validation_counters = getattr(_am, "validation_counters", {})
             logger.warning(
-                f"Rejected webhook: unknown assessment_id={assessment_id}",
+                f"Rejected webhook: unknown assessment_id={assessment_id} "
+                f"routes_loaded={len(getattr(_am, '_routes', {}))} "
+                f"accepted={validation_counters.get('accepted', 0)} "
+                f"rejected={validation_counters.get('rejected', 0)}",
                 extra={"context": _webhook_log_context(
                     payload,
                     request_id,
                     assessment_id=assessment_id,
                     mapping_source=mapping_source,
                     ids_path=_ids_path_hint(),
-                    rejected_rows=getattr(_am, "validation_counters", {}).get("rejected", 0),
+                    routes_loaded=len(getattr(_am, "_routes", {})),
+                    validation_counters=validation_counters,
+                    validation_errors=getattr(_am, "validation_errors", {}),
+                    rejected_names=getattr(_am, "_rejected_names", []),
                 )},
             )
             return jsonify({'error': f'Unknown assessment ID: {assessment_id}'}), 400
