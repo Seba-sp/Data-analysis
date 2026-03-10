@@ -223,7 +223,7 @@ def handle_webhook(request: Request):
         if route_full is None:
             mapping_source = getattr(_am, "mapping_source", "unknown")
             logger.warning(
-                "Rejected webhook: unknown assessment_id route",
+                f"Rejected webhook: unknown assessment_id={assessment_id}",
                 extra={"context": _webhook_log_context(
                     payload,
                     request_id,
