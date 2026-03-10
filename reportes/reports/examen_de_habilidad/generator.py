@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 MASTERY_PERCENT = 80.0
 REC_DOMINADA = "HD"
 REC_POR_DOMINAR = "HPD"
+MIN_TAREA_ROWS = 4
 
 IDS_LOCAL_PATH = Path("inputs/ids.xlsx")
 BANKS_DIR = Path("inputs")
@@ -107,6 +108,13 @@ def _compose_cover_plus_body_html(cover_html: str, body_html: str) -> str:
         f"{body_inner}"
         "</body></html>"
     )
+
+
+def _pad_tarea_rows(rows: list[dict[str, str]], min_rows: int) -> list[dict[str, str]]:
+    padded = list(rows)
+    while len(padded) < min_rows:
+        padded.append({"tarea_lectora": " ", "estado": " "})
+    return padded
 
 
 @dataclass
@@ -344,6 +352,7 @@ class ExamenDeHabilidadGenerator(BaseReportGenerator):
                 }
                 for t in ordered_tareas
             ]
+            tarea_rows = _pad_tarea_rows(tarea_rows, MIN_TAREA_ROWS)
 
             recomendacion = REC_DOMINADA if plan.overall_percent >= MASTERY_PERCENT else REC_POR_DOMINAR
 
