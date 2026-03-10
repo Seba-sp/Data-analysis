@@ -42,7 +42,6 @@ TASK_MASTERY_PERCENT = 80.0
 ESTADO_DOMINADA = "Dominada"
 ESTADO_EN_DESARROLLO = "En desarrollo"
 ESTADO_REALIZAR = "Realizar"
-MIN_TAREA_ROWS = 4
 
 IDS_LOCAL_PATH = Path("inputs/ids.xlsx")
 BANKS_DIR = Path("inputs")
@@ -120,13 +119,6 @@ def _compose_cover_plus_body_html(cover_html: str, body_html: str) -> str:
         "</body>"
         "</html>"
     )
-
-
-def _pad_tarea_rows(rows: list[dict[str, str]], min_rows: int) -> list[dict[str, str]]:
-    padded = list(rows)
-    while len(padded) < min_rows:
-        padded.append({"tarea_lectora": " ", "estado": " "})
-    return padded
 
 
 @dataclass
@@ -365,7 +357,6 @@ class TestDeHabilidadGenerator(BaseReportGenerator):
             if not ordered_tareas:
                 continue
 
-            # Keep table height stable by padding task rows before fixed actions.
             tarea_rows = [
                 {
                     "tarea_lectora": t.name,
@@ -373,7 +364,6 @@ class TestDeHabilidadGenerator(BaseReportGenerator):
                 }
                 for t in ordered_tareas
             ]
-            tarea_rows = _pad_tarea_rows(tarea_rows, MIN_TAREA_ROWS)
             tarea_rows.append({"tarea_lectora": "Gu\u00edas tem\u00e1ticas", "estado": ESTADO_REALIZAR})
             tarea_rows.append({"tarea_lectora": "Examen", "estado": ESTADO_REALIZAR})
 

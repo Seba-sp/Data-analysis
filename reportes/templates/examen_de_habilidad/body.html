@@ -36,7 +36,9 @@
     .habilidad-label { font-size: 11pt; margin: 0 0 6pt; }
     .recomendacion-label { font-size: 11pt; margin: 16pt 0 0; }
     table {
-      width: 80%;
+      width: 160mm;
+      min-width: 160mm;
+      max-width: 160mm;
       border-collapse: collapse;
       font-size: 11pt;
       margin: 16pt auto 0;
@@ -79,6 +81,10 @@
     <div class="content">
       <p class="habilidad-label">Habilidad: <strong><span data-placeholder="habilidad_name">NOMBRE HABILIDAD</span></strong></p>
       <table aria-label="Resultados por tarea lectora">
+        <colgroup>
+          <col style="width: 96mm;" />
+          <col style="width: 64mm;" />
+        </colgroup>
         <thead>
           <tr>
             <th>Tarea lectora</th>
