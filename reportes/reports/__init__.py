@@ -6,16 +6,20 @@ from reports.ensayos_generales.generator import EnsayosGeneralesGenerator
 from reports.test_diagnostico.generator import TestDiagnosticoGenerator
 from reports.test_de_eje.generator import TestDeEjeGenerator
 from reports.examen_de_eje.generator import ExamenDeEjeGenerator
+from reports.test_de_habilidad.generator import TestDeHabilidadGenerator
+from reports.examen_de_habilidad.generator import ExamenDeHabilidadGenerator
 
 # Plugin registry — maps report type name strings to generator classes.
 # To add a new report type: import its generator class and add one entry here.
 REGISTRY: Dict[str, Type[BaseReportGenerator]] = {
-    "diagnosticos":      DiagnosticosGenerator,
-    "diagnosticos_uim":  DiagnosticosUIMGenerator,
-    "ensayos_generales": EnsayosGeneralesGenerator,
-    "test_diagnostico":  TestDiagnosticoGenerator,
-    "test_de_eje":       TestDeEjeGenerator,
-    "examen_de_eje":     ExamenDeEjeGenerator,
+    "diagnosticos":        DiagnosticosGenerator,
+    "diagnosticos_uim":    DiagnosticosUIMGenerator,
+    "ensayos_generales":   EnsayosGeneralesGenerator,
+    "test_diagnostico":    TestDiagnosticoGenerator,
+    "test_de_eje":         TestDeEjeGenerator,
+    "examen_de_eje":       ExamenDeEjeGenerator,
+    "test_de_habilidad":   TestDeHabilidadGenerator,
+    "examen_de_habilidad": ExamenDeHabilidadGenerator,
 }
 
 
