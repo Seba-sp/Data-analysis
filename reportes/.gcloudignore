@@ -8,5 +8,6 @@ __pycache__/
 .tmp_testdata*/
 zztemp/
 inputs/
+ignorar/
 ~$*
 *.tmp
