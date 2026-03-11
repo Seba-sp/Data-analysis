@@ -1,0 +1,44 @@
+﻿{
+  "report_type": "ensayo",
+  "version": 1,
+  "anchors": [
+    {
+      "anchor": "ensayo_dominio_por_eje",
+      "description": "Tabla de dominio por eje tipo.",
+      "required_columns": [
+        "eje",
+        "correctas_totales",
+        "porcentaje_dominio"
+      ],
+      "sample_payload": [
+        {
+          "eje": "Eje 1",
+          "correctas_totales": "12/20",
+          "porcentaje_dominio": "60%"
+        }
+      ]
+    },
+    {
+      "anchor": "ensayo_reporte_rapido",
+      "description": "Detalle por pregunta para reporte rapido.",
+      "required_columns": [
+        "pregunta",
+        "unidad",
+        "habilidad",
+        "clave_correcta",
+        "clave_marcada",
+        "leccion"
+      ],
+      "sample_payload": [
+        {
+          "pregunta": "Pregunta 1",
+          "unidad": "Unidad 1",
+          "habilidad": "Comprension lectora",
+          "clave_correcta": "A",
+          "clave_marcada": "C",
+          "leccion": "Leccion 3"
+        }
+      ]
+    }
+  ]
+}

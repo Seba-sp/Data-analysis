@@ -1,0 +1,32 @@
+{
+  "template": "test_de_habilidad",
+  "anchors": [
+    {
+      "anchor": "tarea_status_rows",
+      "description": "Tbody-level insertion target for dynamic tarea lectora rows. Generator appends fixed 'Guias tematicas' and 'Examen' rows at the end.",
+      "required_columns": [
+        "tarea_lectora",
+        "estado"
+      ],
+      "row_order": "input",
+      "sample_payload": [
+        {
+          "tarea_lectora": "Localizar informacion",
+          "estado": "Dominada"
+        },
+        {
+          "tarea_lectora": "Interpretar e integrar",
+          "estado": "En desarrollo"
+        },
+        {
+          "tarea_lectora": "Guias tematicas",
+          "estado": "Realizar"
+        },
+        {
+          "tarea_lectora": "Examen",
+          "estado": "Realizar"
+        }
+      ]
+    }
+  ]
+}

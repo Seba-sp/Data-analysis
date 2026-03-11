@@ -1,0 +1,58 @@
+{
+  "template_id": "examen_de_eje",
+  "template_version": 1,
+  "anchors": [
+    {
+      "anchor": "unit_status_recommendations",
+      "description": "Main table block showing per-unit status and recommendation.",
+      "required_columns": [
+        "unidad",
+        "estado",
+        "recomendacion"
+      ],
+      "row_order": "input",
+      "sample_payload": [
+        {
+          "unidad": "Ecuaciones lineales",
+          "estado": "En desarrollo",
+          "recomendacion": "RD"
+        }
+      ]
+    },
+    {
+      "anchor": "unit_status_rows",
+      "description": "Tbody-level insertion target for dynamic rows.",
+      "required_columns": [
+        "unidad",
+        "estado",
+        "recomendacion"
+      ],
+      "row_order": "input",
+      "sample_payload": [
+        {
+          "unidad": "Funciones",
+          "estado": "Riesgo",
+          "recomendacion": "RR"
+        }
+      ]
+    },
+    {
+      "anchor": "unit_priority_summary",
+      "description": "Optional summary list grouped by priority levels.",
+      "required_columns": [
+        "prioridad",
+        "unidades"
+      ],
+      "row_order": "priority_desc",
+      "sample_payload": [
+        {
+          "prioridad": "Riesgo",
+          "unidades": [
+            "Funciones",
+            "Problemas de razonamiento"
+          ]
+        }
+      ]
+    }
+  ]
+}

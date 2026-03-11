@@ -1,0 +1,25 @@
+{
+  "template_id": "examen_de_habilidad",
+  "template_version": 1,
+  "anchors": [
+    {
+      "anchor": "tarea_status_rows",
+      "description": "Tbody-level insertion for dynamic tarea lectora rows. Estado column contains percentage string (e.g. '75%').",
+      "required_columns": [
+        "tarea_lectora",
+        "estado"
+      ],
+      "row_order": "input",
+      "sample_payload": [
+        {
+          "tarea_lectora": "Localizar informacion",
+          "estado": "80%"
+        },
+        {
+          "tarea_lectora": "Interpretar e integrar",
+          "estado": "60%"
+        }
+      ]
+    }
+  ]
+}

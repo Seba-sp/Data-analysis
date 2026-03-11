@@ -1,0 +1,59 @@
+{
+  "template": "test_de_eje",
+  "anchors": [
+    {
+      "anchor_id": "unit_1_activity_status",
+      "description": "Tabla de actividades y accion para la unidad 1.",
+      "required_columns": [
+        "activity",
+        "action"
+      ],
+      "sample_payload": [
+        {
+          "activity": "Leccion X",
+          "action": "completed"
+        },
+        {
+          "activity": "Guia tematica",
+          "action": "pending"
+        }
+      ]
+    },
+    {
+      "anchor_id": "unit_2_activity_status",
+      "description": "Tabla de actividades y accion para la unidad 2.",
+      "required_columns": [
+        "activity",
+        "action"
+      ],
+      "sample_payload": [
+        {
+          "activity": "Leccion Y",
+          "action": "completed"
+        },
+        {
+          "activity": "Test de unidad",
+          "action": "not_required"
+        }
+      ]
+    },
+    {
+      "anchor_id": "unit_3_activity_status",
+      "description": "Tabla de actividades y accion para la unidad 3.",
+      "required_columns": [
+        "activity",
+        "action"
+      ],
+      "sample_payload": [
+        {
+          "activity": "Leccion Z",
+          "action": "pending"
+        },
+        {
+          "activity": "Examen",
+          "action": "required"
+        }
+      ]
+    }
+  ]
+}

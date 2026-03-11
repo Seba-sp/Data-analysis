@@ -4,6 +4,7 @@
 !.planning/*.md
 .claude/
 ignorar/
+!*.json
 assessment-analysis-project/
 # Allow .env.example — it is documentation, not a secrets file (parent .gitignore blocks .env.*)
 /.env.example

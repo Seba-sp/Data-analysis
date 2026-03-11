@@ -10,3 +10,4 @@ data/
 *.csv
 __pycache__/
 .env.* 
+*.mp4

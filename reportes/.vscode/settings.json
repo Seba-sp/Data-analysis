@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.sandbox.linuxFileSystem": {
+        "denyRead": [],
+        "allowWrite": [
+            "."
+        ],
+        "denyWrite": []
+    }
+}
