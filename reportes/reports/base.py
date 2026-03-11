@@ -8,7 +8,7 @@ import os
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class BaseReportGenerator(ABC):
 
         # Ensure runtime directories exist
         self._ensure_data_dirs()
+        self._generation_context: dict[str, Any] = {}
 
     def _ensure_data_dirs(self) -> None:
         """Create per-report data directories at runtime if they don't exist."""
@@ -64,6 +65,31 @@ class BaseReportGenerator(ABC):
             self.questions_dir,
         ]:
             os.makedirs(directory, exist_ok=True)
+
+    def set_generation_context(
+        self,
+        *,
+        report_type: str,
+        assessment_name: str,
+        processed_email_keys: Optional[set[tuple[str, str, str]]] = None,
+        processed_emails_for_current_assessment: Optional[set[str]] = None,
+    ) -> None:
+        """Store runtime context injected by PipelineRunner.
+
+        This is optional and non-breaking for existing generators.
+        """
+        self._generation_context = {
+            "report_type": report_type,
+            "assessment_name": assessment_name,
+            "processed_email_keys": processed_email_keys or set(),
+            "processed_emails_for_current_assessment": (
+                processed_emails_for_current_assessment or set()
+            ),
+        }
+
+    def get_generation_context(self) -> dict[str, Any]:
+        """Return the injected runtime context, or an empty default mapping."""
+        return dict(self._generation_context)
 
     @abstractmethod
     def download(self, assessment_name: str = "") -> Any:

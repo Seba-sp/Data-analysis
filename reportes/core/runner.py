@@ -359,11 +359,26 @@ class PipelineRunner:
         records_processed = 0
         emails_sent = 0
         errors: List[str] = []
+        processed_email_keys = self._load_processed_email_keys()
+        processed_emails_for_current_assessment = {
+            email
+            for report_type, assessment_name, email in processed_email_keys
+            if report_type == self.report_type
+            and (not self.assessment_name or assessment_name == self.assessment_name)
+        }
 
         # ── Step 1: Generate reports ───────────────────────────────────────────
         try:
             GeneratorClass = get_generator(self.report_type)
             generator = GeneratorClass()
+            context_setter = getattr(generator, "set_generation_context", None)
+            if callable(context_setter):
+                context_setter(
+                    report_type=self.report_type,
+                    assessment_name=self.assessment_name,
+                    processed_email_keys=processed_email_keys,
+                    processed_emails_for_current_assessment=processed_emails_for_current_assessment,
+                )
             output_path = generator.generate(assessment_name=self.assessment_name)
         except Exception as exc:
             errors.append(str(exc))
@@ -383,7 +398,6 @@ class PipelineRunner:
 
         pdfs = self._filter_duplicate_test_de_eje_artifacts(pdfs, errors)
         records_processed = len(pdfs)
-        processed_email_keys = self._load_processed_email_keys()
 
         # ── Step 3: Email loop ─────────────────────────────────────────────────
         for pdf_path in pdfs:

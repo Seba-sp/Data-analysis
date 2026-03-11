@@ -289,6 +289,11 @@ class TestDeHabilidadGenerator(BaseReportGenerator):
         mapping_by_key = {
             f"{m.assessment_type}_TEST_DE_HABILIDAD_{m.assessment_number}": m for m in mapping
         }
+        context = self.get_generation_context()
+        processed_email_keys = context.get("processed_email_keys") or set()
+        processed_emails_for_current_assessment = (
+            context.get("processed_emails_for_current_assessment") or set()
+        )
 
         student_plans: dict[tuple[str, str], HabilidadPlan] = {}
 
@@ -316,6 +321,11 @@ class TestDeHabilidadGenerator(BaseReportGenerator):
                 email = _normalize_text(student_row.get("email") or student_row.get("username") or "")
                 student_id = _normalize_text(student_row.get("user_id") or email)
                 if not email:
+                    continue
+                if email in processed_emails_for_current_assessment:
+                    continue
+                dedupe_key = (REPORT_TYPE, map_row.assessment_name, email)
+                if dedupe_key in processed_email_keys:
                     continue
 
                 plan_key = (map_row.assessment_type, email)

@@ -197,6 +197,41 @@ class TestRunDryRun:
 
         assert result["records_processed"] == 3
 
+    def test_injects_generation_context_before_generate(self, tmp_path, monkeypatch):
+        runner = PipelineRunner("test_de_eje", dry_run=True, assessment_name="M30M2-TEST DE EJE 1-DATA")
+        out_dir = _make_pdf_dir(tmp_path, [])
+        processed_keys = {
+            ("test_de_eje", "M30M2-TEST DE EJE 1-DATA", "done@example.com"),
+            ("test_de_eje", "M30M2-TEST DE EJE 2-DATA", "other@example.com"),
+        }
+        monkeypatch.setattr(runner, "_load_processed_email_keys", lambda: processed_keys)
+
+        events: list[str] = []
+        captured_kwargs: dict = {}
+
+        def _capture_context(**kwargs):
+            events.append("set_context")
+            captured_kwargs.update(kwargs)
+
+        def _capture_generate(*args, **kwargs):
+            events.append("generate")
+            return out_dir
+
+        with patch("core.runner.get_generator") as mock_get_gen:
+            mock_gen = MagicMock()
+            mock_gen.set_generation_context.side_effect = _capture_context
+            mock_gen.generate.side_effect = _capture_generate
+            mock_get_gen.return_value = MagicMock(return_value=mock_gen)
+
+            result = runner.run()
+
+        assert result["success"] is True
+        assert events == ["set_context", "generate"]
+        assert captured_kwargs["report_type"] == "test_de_eje"
+        assert captured_kwargs["assessment_name"] == "M30M2-TEST DE EJE 1-DATA"
+        assert captured_kwargs["processed_email_keys"] == processed_keys
+        assert captured_kwargs["processed_emails_for_current_assessment"] == {"done@example.com"}
+
 
 # â”€â”€ run() â€” test-email mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
