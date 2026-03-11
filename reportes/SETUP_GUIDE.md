@@ -264,11 +264,11 @@ Antes de comenzar, aquí tienes una explicación breve de los servicios de Googl
 | `ASSESSMENT_MAPPING_SOURCE` | `gcs` | Usar siempre `gcs` para Cloud Run |
 | `BANKS_GCS_PREFIX` | `inputs/` | Dejar como `inputs/` (valor predeterminado) |
 | `LEARNWORLDS_WEBHOOK_SECRET` | El secreto del webhook | LearnWorlds → Configuración → Webhooks → secreto |
-| `CLIENT_ID` | ID de cliente LearnWorlds | LearnWorlds → Configuración → API |
-| `SCHOOL_DOMAIN` | Dominio de tu escuela | Por ejemplo: `miescuela.learnworlds.com` |
-| `ACCESS_TOKEN` | Token de acceso LearnWorlds | LearnWorlds → Configuración → API |
-| `EMAIL_FROM` | Correo Gmail que envía informes | Tu dirección Gmail corporativa |
-| `EMAIL_PASS` | Contraseña de aplicación Gmail | Ver instrucciones abajo |
+x| `CLIENT_ID` | ID de cliente LearnWorlds | LearnWorlds → Configuración → API |
+x| `SCHOOL_DOMAIN` | Dominio de tu escuela | Por ejemplo: `miescuela.learnworlds.com` |
+x| `ACCESS_TOKEN` | Token de acceso LearnWorlds | LearnWorlds → Configuración → API |
+x| `EMAIL_FROM` | Correo Gmail que envía informes | Tu dirección Gmail corporativa |
+x| `EMAIL_PASS` | Contraseña de aplicación Gmail | Ver instrucciones abajo |
 | `TASK_QUEUE_ID` | `batch-processing-queue` | El nombre de la cola del Paso 10 |
 | `TASK_LOCATION` | `us-central1` | Dejar como está |
 | `PROCESS_BATCH_URL` | URL del servicio Cloud Run + `/process-batch` | **Dejar en blanco por ahora** — se obtiene en el Paso 12 |

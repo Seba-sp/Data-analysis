@@ -16,6 +16,7 @@ import time
 import uuid
 import hmac
 import os
+import re
 from flask import Request, jsonify
 from typing import Optional
 
@@ -64,6 +65,7 @@ _am: Optional[AssessmentMapper] = None
 _ts: Optional[TaskService] = None
 _bp: Optional[BatchProcessor] = None
 _SERVICES_AVAILABLE = False
+_HEX_24_RE = re.compile(r"^[a-fA-F0-9]{24}$")
 
 
 def _ids_path_hint() -> str:
@@ -98,6 +100,60 @@ def _initialize_services() -> bool:
         logger.error(f"Failed to initialize webhook services: {exc}")
         _SERVICES_AVAILABLE = False
         return False
+
+
+def _build_unknown_assessment_diagnostics(assessment_id: str) -> dict:
+    """Build detailed diagnostics for unknown-assessment webhook rejections."""
+    mapper = _am
+    diagnostics = {
+        "assessment_id": assessment_id,
+        "assessment_id_valid_hex24": bool(_HEX_24_RE.match(assessment_id or "")),
+        "routes_loaded": len(getattr(mapper, "_routes", {}) if mapper else {}),
+        "ids_row_matches": [],
+        "ids_row_match_count": 0,
+        "reason_codes": [],
+    }
+    if mapper is None:
+        diagnostics["reason_codes"] = ["mapper_not_initialized"]
+        return diagnostics
+
+    ids_rows = []
+    get_rows = getattr(mapper, "get_ids_rows", None)
+    if callable(get_rows):
+        try:
+            ids_rows = list(get_rows())
+        except Exception:
+            ids_rows = []
+
+    target = (assessment_id or "").strip().lower()
+    matching_rows = []
+    for row_index, raw_id, assessment_name in ids_rows:
+        normalized_raw_id = str(raw_id or "").strip().lower()
+        if normalized_raw_id == target:
+            matching_rows.append(
+                {
+                    "row_index": row_index,
+                    "assessment_name": assessment_name,
+                    "raw_assessment_id": raw_id,
+                }
+            )
+
+    diagnostics["ids_row_matches"] = matching_rows[:5]
+    diagnostics["ids_row_match_count"] = len(matching_rows)
+
+    reasons = []
+    if not diagnostics["assessment_id_valid_hex24"]:
+        reasons.append("malformed_assessment_id")
+    if diagnostics["routes_loaded"] == 0:
+        reasons.append("no_routes_loaded")
+    if matching_rows:
+        reasons.append("ids_row_present_but_not_routed")
+    else:
+        reasons.append("assessment_id_not_present_in_ids_rows")
+    if not reasons:
+        reasons.append("unknown")
+    diagnostics["reason_codes"] = reasons
+    return diagnostics
 
 
 # ---------------------------------------------------------------------------
@@ -223,11 +279,9 @@ def handle_webhook(request: Request):
         if route_full is None:
             mapping_source = getattr(_am, "mapping_source", "unknown")
             validation_counters = getattr(_am, "validation_counters", {})
+            rejection_diag = _build_unknown_assessment_diagnostics(assessment_id)
             logger.warning(
-                f"Rejected webhook: unknown assessment_id={assessment_id} "
-                f"routes_loaded={len(getattr(_am, '_routes', {}))} "
-                f"accepted={validation_counters.get('accepted', 0)} "
-                f"rejected={validation_counters.get('rejected', 0)}",
+                "Rejected webhook: unknown assessment_id route",
                 extra={"context": _webhook_log_context(
                     payload,
                     request_id,
@@ -236,8 +290,23 @@ def handle_webhook(request: Request):
                     ids_path=_ids_path_hint(),
                     routes_loaded=len(getattr(_am, "_routes", {})),
                     validation_counters=validation_counters,
+                    rejected_rows=validation_counters.get("rejected", 0),
                     validation_errors=getattr(_am, "validation_errors", {}),
                     rejected_names=getattr(_am, "_rejected_names", []),
+                )},
+            )
+            logger.warning(
+                f"Rejected webhook detail: assessment_id={assessment_id} "
+                f"reasons={','.join(rejection_diag.get('reason_codes', []))} "
+                f"ids_row_match_count={rejection_diag.get('ids_row_match_count', 0)}",
+                extra={"context": _webhook_log_context(
+                    payload,
+                    request_id,
+                    assessment_id=assessment_id,
+                    mapping_source=mapping_source,
+                    ids_path=_ids_path_hint(),
+                    rejection_diagnostics=rejection_diag,
+                    validation_errors=getattr(_am, "validation_errors", {}),
                 )},
             )
             return jsonify({'error': f'Unknown assessment ID: {assessment_id}'}), 400
